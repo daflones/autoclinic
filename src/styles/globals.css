@@ -1,0 +1,259 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Paleta Automaclinic */
+    --primary-50: #fceff7;
+    --primary-100: #f8e1ef;
+    --primary-200: #f1c4e0;
+    --primary-300: #eaa6d1;
+    --primary-400: #e189c1;
+    --primary-500: #c265a3;
+    --primary-600: #a15486;
+    --primary-700: #814469;
+    --primary-800: #61334d;
+    --primary-900: #412230;
+
+    --secondary-50: #fbfaff;
+    --secondary-100: #f3eeff;
+    --secondary-200: #e6ddff;
+    --secondary-300: #d8c5ff;
+    --secondary-400: #bda0ff;
+    --secondary-500: #a27aff;
+    --secondary-600: #8655ff;
+    --secondary-700: #6a30f0;
+    --secondary-800: #4e1ec5;
+    --secondary-900: #331599;
+
+    --tertiary-200: #f8eef3;
+    --tertiary-300: #f0dde7;
+    --tertiary-400: #e7cddb;
+
+    --neutral-50: #f7f4fb;
+    --neutral-100: #eae6f2;
+    --neutral-200: #dcd5e5;
+    --neutral-400: #a095b7;
+    --neutral-600: #5b536f;
+    --neutral-800: #322c3f;
+    --neutral-900: #1b1b1f;
+
+    /* Status */
+    --success: #3baa84;
+    --success-light: #57c49d;
+    --success-dark: #2f8869;
+
+    --error: #e86e6e;
+    --error-light: #f18a8a;
+    --error-dark: #c75959;
+
+    --warning: #f6b27a;
+    --warning-light: #f8c49a;
+    --warning-dark: #d99156;
+
+    --info: #6a9bef;
+    --info-light: #8ab4f5;
+    --info-dark: #4a7bd0;
+
+    --pending: #f09fad;
+    --pending-light: #f6bac4;
+    --pending-dark: #d17987;
+
+    /* Superfícies */
+    --bg-primary: #f7f4fb;
+    --bg-secondary: #f2ecf7;
+    --bg-tertiary: rgba(255, 255, 255, 0.65);
+
+    /* Tokens shadcn */
+    --background: 288 30% 96%;
+    --foreground: 288 20% 12%;
+    --card: 0 0% 100% / 0.78;
+    --card-foreground: 288 25% 16%;
+    --popover: 284 35% 18% / 0.92;
+    --popover-foreground: 318 49% 93%;
+    --primary: 323 44% 59%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 261 100% 88%;
+    --secondary-foreground: 236 11% 11%;
+    --muted: 283 27% 92% / 0.65;
+    --muted-foreground: 260 13% 41%;
+    --accent: 266 68% 88% / 0.7;
+    --accent-foreground: 236 11% 11%;
+    --destructive: 1 69% 67%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 284 30% 86%;
+    --input: 284 30% 86%;
+    --ring: 323 44% 59%;
+    --radius: 0.75rem;
+  }
+
+  .dark {
+    --background: 284 35% 8%;
+    --foreground: 318 49% 93%;
+    --card: 284 29% 14% / 0.85;
+    --card-foreground: 318 49% 93%;
+    --popover: 284 35% 12% / 0.92;
+    --popover-foreground: 318 49% 93%;
+    --primary: 323 44% 59%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 266 88% 72%;
+    --secondary-foreground: 284 35% 8%;
+    --muted: 285 25% 18%;
+    --muted-foreground: 274 21% 68%;
+    --accent: 266 68% 72% / 0.6;
+    --accent-foreground: 318 49% 93%;
+    --destructive: 1 69% 52%;
+    --destructive-foreground: 318 49% 93%;
+    --border: 285 32% 20%;
+    --input: 285 32% 20%;
+    --ring: 323 44% 59%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  
+  body {
+    @apply bg-background text-foreground font-sans;
+    font-feature-settings: "rlig" 1, "calt" 1;
+    background-image: radial-gradient(circle at top right, rgba(210, 180, 255, 0.2), transparent 55%),
+      radial-gradient(circle at 20% 20%, rgba(194, 101, 163, 0.18), transparent 45%);
+  }
+  
+  h1 {
+    @apply font-display tracking-tight;
+  }
+  
+  h2 {
+    @apply font-display tracking-tight;
+  }
+  
+  h3, h4 {
+    @apply font-display tracking-tight;
+  }
+}
+
+@layer components {
+  .gradient-primary {
+    @apply bg-gradient-to-r from-primary-500 to-primary-700;
+  }
+  
+  .gradient-secondary {
+    @apply bg-gradient-to-r from-secondary-400 to-secondary-600;
+  }
+  
+  .card-hover {
+    @apply transition-all duration-200 hover:shadow-lg hover:-translate-y-1;
+  }
+  
+  .btn-primary {
+    @apply bg-primary-600 text-white hover:bg-primary-700 transition-colors;
+  }
+  
+  .btn-secondary {
+    @apply bg-secondary-500 text-white hover:bg-secondary-600 transition-colors;
+  }
+}
+
+/* Custom Scrollbar Styles - Discrete and Elegant */
+@layer base {
+  /* Webkit browsers (Chrome, Safari, Edge) */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+    border-radius: 3px;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: rgba(156, 163, 175, 0.2);
+    border-radius: 3px;
+    transition: background-color 0.2s ease;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(156, 163, 175, 0.4);
+  }
+
+  ::-webkit-scrollbar-thumb:active {
+    background: rgba(156, 163, 175, 0.6);
+  }
+
+  /* Firefox */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(156, 163, 175, 0.2) transparent;
+  }
+
+  /* Hide scrollbar on mobile devices */
+  @media (max-width: 768px) {
+    ::-webkit-scrollbar {
+      width: 3px;
+      height: 3px;
+    }
+    
+    ::-webkit-scrollbar-thumb {
+      background: rgba(156, 163, 175, 0.15);
+    }
+  }
+}
+
+@layer components {
+  /* Specific styles for Kanban board */
+  .kanban-scroll-container::-webkit-scrollbar {
+    height: 4px;
+  }
+
+  .kanban-scroll-container::-webkit-scrollbar-track {
+    background: rgba(241, 245, 249, 0.3);
+    border-radius: 2px;
+  }
+
+  .kanban-scroll-container::-webkit-scrollbar-thumb {
+    background: rgba(156, 163, 175, 0.3);
+    border-radius: 2px;
+  }
+
+  .kanban-scroll-container::-webkit-scrollbar-thumb:hover {
+    background: rgba(156, 163, 175, 0.5);
+  }
+
+  /* Ultra-discrete scrollbar for tables and lists */
+  .discrete-scroll::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+  }
+
+  .discrete-scroll::-webkit-scrollbar-thumb {
+    background: rgba(156, 163, 175, 0.15);
+  }
+
+  .discrete-scroll::-webkit-scrollbar-thumb:hover {
+    background: rgba(156, 163, 175, 0.3);
+  }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  ::-webkit-scrollbar-thumb {
+    background: rgba(75, 85, 99, 0.3) !important;
+  }
+  
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(75, 85, 99, 0.5) !important;
+  }
+  
+  .kanban-scroll-container::-webkit-scrollbar-track {
+    background: rgba(31, 41, 55, 0.2) !important;
+  }
+  
+  .kanban-scroll-container::-webkit-scrollbar-thumb {
+    background: rgba(75, 85, 99, 0.4) !important;
+  }
+}

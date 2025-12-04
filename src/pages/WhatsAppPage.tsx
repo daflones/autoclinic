@@ -1,0 +1,368 @@
+import { useState, useEffect } from 'react'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Badge } from '@/components/ui/badge'
+import { Separator } from '@/components/ui/separator'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { 
+  MessageCircle, 
+  QrCode, 
+  Smartphone, 
+  CheckCircle, 
+  XCircle, 
+  Clock, 
+  Trash2,
+  RefreshCw,
+  AlertTriangle
+} from 'lucide-react'
+import { 
+  useWhatsAppInstance, 
+  useCreateWhatsAppInstance, 
+  useWhatsAppStatus,
+  useWhatsAppQRCode,
+  useDeleteWhatsAppInstance
+} from '@/hooks/useWhatsApp'
+import { useProfile } from '@/hooks/useConfiguracoes'
+import { QRCodeDisplay } from '@/components/whatsapp/QRCodeDisplay'
+
+export default function WhatsAppPage() {
+  const [instanceName, setInstanceName] = useState('')
+  const [phoneNumber, setPhoneNumber] = useState('')
+  const [showCreateForm, setShowCreateForm] = useState(false)
+
+  const { data: instance, isLoading: instanceLoading } = useWhatsAppInstance()
+  const { data: profile } = useProfile()
+  
+  // Determinar se deve fazer polling baseado no status da instância
+  const shouldPoll = Boolean(instance?.instanceName && (!instance.status || instance.status !== 'open'))
+  
+  const { data: status, isLoading: statusLoading } = useWhatsAppStatus(instance?.instanceName || undefined, shouldPoll)
+  const { data: qrCode, isLoading: qrLoading } = useWhatsAppQRCode(instance?.instanceName || undefined, status?.status)
+  
+  const createInstance = useCreateWhatsAppInstance()
+  const deleteInstance = useDeleteWhatsAppInstance()
+
+  // Função para gerar nome da instância baseado no nome da empresa
+  const generateInstanceName = (companyName: string) => {
+    return companyName
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '') // Remove acentos
+      .replace(/[^a-z0-9\s]/g, '') // Remove caracteres especiais
+      .replace(/\s+/g, '-') // Substitui espaços por hífens
+      .replace(/-+/g, '-') // Remove hífens duplicados
+      .replace(/^-|-$/g, '') // Remove hífens no início e fim
+  }
+
+  // Atualizar nome da instância quando o perfil carregar
+  useEffect(() => {
+    if (profile?.full_name && !instanceName) {
+      const generatedName = generateInstanceName(profile.full_name)
+      setInstanceName(generatedName)
+    }
+  }, [profile?.full_name, instanceName])
+
+  const handleCreateInstance = async () => {
+    if (!instanceName.trim() || !phoneNumber.trim()) return
+    
+    try {
+      await createInstance.mutateAsync({ 
+        instanceName: instanceName.trim(), 
+        number: phoneNumber.trim() 
+      })
+      setInstanceName('')
+      setPhoneNumber('')
+      setShowCreateForm(false)
+    } catch (error) {
+      // Error handled by hook
+    }
+  }
+
+
+  const handleDelete = async () => {
+    if (!instance?.instanceName) return
+    if (!confirm('Tem certeza que deseja remover completamente esta instância? Esta ação não pode ser desfeita.')) return
+    
+    try {
+      await deleteInstance.mutateAsync(instance.instanceName)
+      // Forçar reset do estado local após delete bem-sucedido
+      setShowCreateForm(false)
+      setInstanceName('')
+      setPhoneNumber('')
+    } catch (error) {
+      // Error handled by hook
+    }
+  }
+
+  const getStatusBadge = (currentStatus?: string) => {
+    switch (currentStatus) {
+      case 'open':
+        return <Badge className="bg-green-100 text-green-800"><CheckCircle className="w-3 h-3 mr-1" />Conectado</Badge>
+      case 'connecting':
+        return <Badge className="bg-yellow-100 text-yellow-800"><Clock className="w-3 h-3 mr-1" />Conectando</Badge>
+      case 'close':
+        return <Badge className="bg-red-100 text-red-800"><XCircle className="w-3 h-3 mr-1" />Desconectado</Badge>
+      default:
+        return <Badge variant="secondary"><AlertTriangle className="w-3 h-3 mr-1" />Verificando...</Badge>
+    }
+  }
+
+  const shouldShowQRCode = instance?.instanceName && (status?.status === 'connecting' || status?.status === 'close' || !status?.status)
+  
+  // Debug logs (removido para reduzir spam no console)
+  // console.log('Debug WhatsApp Page:', {
+  //   instanceName: instance?.instanceName,
+  //   status: status?.status,
+  //   shouldShowQRCode,
+  //   qrCode: qrCode?.base64 ? 'QR code received' : 'No QR code',
+  //   qrLoading
+  // })
+
+  if (instanceLoading) {
+    return (
+      <div className="container mx-auto p-6">
+        <div className="flex items-center justify-center h-64">
+          <RefreshCw className="w-8 h-8 animate-spin text-muted-foreground" />
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight flex items-center gap-3">
+            <MessageCircle className="h-8 w-8 text-primary" />
+            Automação & Disparos
+          </h1>
+          <p className="text-muted-foreground mt-1">
+            Configure sua integração com WhatsApp Business
+          </p>
+        </div>
+      </div>
+
+      {!instance?.instanceName ? (
+        // Nenhuma instância configurada
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Smartphone className="w-5 h-5" />
+              Configurar WhatsApp
+            </CardTitle>
+            <CardDescription>
+              Configure uma instância do WhatsApp Business para sua empresa
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {!showCreateForm ? (
+              <div className="text-center py-8">
+                <MessageCircle className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-lg font-semibold mb-2">Nenhuma instância configurada</h3>
+                <p className="text-muted-foreground mb-4">
+                  Configure uma instância do WhatsApp para começar a receber e enviar mensagens
+                </p>
+                <Button onClick={() => setShowCreateForm(true)}>
+                  Configurar WhatsApp
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="instanceName">Nome da Instância</Label>
+                  <Input
+                    id="instanceName"
+                    placeholder="Nome gerado automaticamente"
+                    value={instanceName}
+                    readOnly
+                    disabled
+                    className="mt-1 bg-muted"
+                  />
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Nome gerado automaticamente baseado no nome da empresa configurado no perfil.
+                  </p>
+                </div>
+                
+                <div>
+                  <Label htmlFor="phoneNumber">Número do WhatsApp</Label>
+                  <Input
+                    id="phoneNumber"
+                    placeholder="Ex: 5511999999999"
+                    value={phoneNumber}
+                    onChange={(e) => setPhoneNumber(e.target.value)}
+                    className="mt-1"
+                  />
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Digite o número com código do país (ex: 55 para Brasil). Apenas números.
+                  </p>
+                </div>
+                
+                <div className="flex gap-2">
+                  <Button 
+                    onClick={handleCreateInstance}
+                    disabled={!instanceName.trim() || !phoneNumber.trim() || createInstance.isPending}
+                  >
+                    {createInstance.isPending ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                        Criando...
+                      </>
+                    ) : (
+                      'Criar Instância'
+                    )}
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    onClick={() => {
+                      setShowCreateForm(false)
+                      setInstanceName('')
+                      setPhoneNumber('')
+                    }}
+                  >
+                    Cancelar
+                  </Button>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      ) : (
+        // Instância configurada
+        <div className={`grid gap-6 ${status?.status === 'open' ? 'md:grid-cols-1' : 'md:grid-cols-2'}`}>
+          {/* Status da Instância */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                <span className="flex items-center gap-2">
+                  <Smartphone className="w-5 h-5" />
+                  Status da Instância
+                </span>
+                {statusLoading ? (
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                ) : (
+                  getStatusBadge(status?.status)
+                )}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Nome do Perfil */}
+              {status?.profileName && (
+                <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-lg border border-green-200 dark:border-green-800">
+                  <div className="w-12 h-12 rounded-full bg-green-500 flex items-center justify-center text-white font-bold text-lg">
+                    {status.profileName.charAt(0).toUpperCase()}
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm text-gray-600 dark:text-gray-400">Nome</p>
+                    <p className="font-semibold text-gray-900 dark:text-white">{status.profileName}</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Status e Conectado */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Status</p>
+                  <p className="font-semibold text-blue-900 dark:text-blue-100">
+                    {status?.status === 'open' ? 'Ativo' : status?.status === 'connecting' ? 'Conectando' : 'Desconectado'}
+                  </p>
+                </div>
+                <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Conexão</p>
+                  <p className="font-semibold text-green-900 dark:text-green-100">
+                    {status?.status === 'open' ? 'Conectado' : 'Aguardando'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Informações Adicionais */}
+              <div className="space-y-3 pt-2">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-600 dark:text-gray-400">Nome da Instância</span>
+                  <span className="text-sm font-medium text-gray-900 dark:text-white">{instance.instanceName}</span>
+                </div>
+                {status?.owner && (
+                  <>
+                    <Separator />
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-600 dark:text-gray-400">Número</span>
+                      <span className="text-sm font-medium text-gray-900 dark:text-white">{status.owner}</span>
+                    </div>
+                  </>
+                )}
+                {instance.connectedAt && (
+                  <>
+                    <Separator />
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-600 dark:text-gray-400">Conectado em</span>
+                      <span className="text-sm font-medium text-gray-900 dark:text-white">
+                        {new Date(instance.connectedAt).toLocaleString('pt-BR')}
+                      </span>
+                    </div>
+                  </>
+                )}
+              </div>
+
+              <Separator />
+
+              <div className="flex gap-2">
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={handleDelete}
+                  disabled={deleteInstance.isPending}
+                >
+                  {deleteInstance.isPending ? (
+                    <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <Trash2 className="w-4 h-4 mr-2" />
+                  )}
+                  Remover Instância
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* QR Code - Ocultar quando conectado */}
+          {status?.status !== 'open' && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <QrCode className="w-5 h-5" />
+                  Conexão WhatsApp
+                </CardTitle>
+                <CardDescription>
+                  Escaneie o QR Code com seu WhatsApp
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {shouldShowQRCode ? (
+                  <QRCodeDisplay 
+                    instanceName={instance.instanceName}
+                    qrCode={qrCode?.base64}
+                    isLoading={qrLoading}
+                  />
+                ) : (
+                  <div className="text-center py-8">
+                    <RefreshCw className="w-8 h-8 animate-spin text-muted-foreground mx-auto mb-4" />
+                    <p className="text-muted-foreground">Verificando status da conexão...</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      )}
+
+      {/* Informações importantes */}
+      <Alert>
+        <AlertTriangle className="h-4 w-4" />
+        <AlertDescription>
+          <strong>Importante:</strong> Apenas uma instância WhatsApp pode ser configurada por empresa. 
+          Certifique-se de usar um número WhatsApp Business dedicado para esta integração.
+        </AlertDescription>
+      </Alert>
+    </div>
+  )
+}

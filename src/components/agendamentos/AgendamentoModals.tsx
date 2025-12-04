@@ -1,0 +1,516 @@
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
+import { Badge } from '@/components/ui/badge'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { Edit, Trash2 } from 'lucide-react'
+import { format, parseISO } from 'date-fns'
+import { ptBR } from 'date-fns/locale'
+import type {
+  AgendamentoClinica,
+  AgendamentoClinicaCreateData,
+  StatusAgendamentoClinica,
+} from '@/services/api/agendamentos-clinica'
+import type { Paciente } from '@/services/api/pacientes'
+import type { ProfissionalClinica } from '@/services/api/profissionais-clinica'
+
+const STATUS_CONFIG: Record<
+  StatusAgendamentoClinica,
+  { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline'; icon: any }
+> = {
+  agendado: { label: 'Agendado', variant: 'default', icon: null },
+  confirmado: { label: 'Confirmado', variant: 'default', icon: null },
+  check_in: { label: 'Check-in', variant: 'secondary', icon: null },
+  em_andamento: { label: 'Em Andamento', variant: 'secondary', icon: null },
+  concluido: { label: 'Concluído', variant: 'outline', icon: null },
+  cancelado: { label: 'Cancelado', variant: 'destructive', icon: null },
+  nao_compareceu: { label: 'Não Compareceu', variant: 'destructive', icon: null },
+  remarcado: { label: 'Remarcado', variant: 'outline', icon: null },
+}
+
+interface AgendamentoModalsProps {
+  isCreateModalOpen: boolean
+  setIsCreateModalOpen: (open: boolean) => void
+  isDetailsModalOpen: boolean
+  setIsDetailsModalOpen: (open: boolean) => void
+  isEditModalOpen: boolean
+  setIsEditModalOpen: (open: boolean) => void
+  isDeleteConfirmOpen: boolean
+  setIsDeleteConfirmOpen: (open: boolean) => void
+  selectedAgendamento: AgendamentoClinica | null
+  formState: AgendamentoClinicaCreateData
+  setFormState: (state: AgendamentoClinicaCreateData) => void
+  editFormState: AgendamentoClinicaCreateData
+  setEditFormState: (state: AgendamentoClinicaCreateData) => void
+  pacientes: Paciente[]
+  profissionais: ProfissionalClinica[]
+  onCreateAgendamento: () => void
+  onSaveEdit: () => void
+  onRequestDelete: () => void
+  onConfirmDelete: () => void
+  onUpdateStatus: (status: StatusAgendamentoClinica) => void
+  onOpenEditModal: () => void
+  createPending: boolean
+  updatePending: boolean
+  deletePending: boolean
+  updateStatusPending: boolean
+}
+
+export function AgendamentoModals({
+  isCreateModalOpen,
+  setIsCreateModalOpen,
+  isDetailsModalOpen,
+  setIsDetailsModalOpen,
+  isEditModalOpen,
+  setIsEditModalOpen,
+  isDeleteConfirmOpen,
+  setIsDeleteConfirmOpen,
+  selectedAgendamento,
+  formState,
+  setFormState,
+  editFormState,
+  setEditFormState,
+  pacientes,
+  profissionais,
+  onCreateAgendamento,
+  onSaveEdit,
+  onRequestDelete,
+  onConfirmDelete,
+  onUpdateStatus,
+  onOpenEditModal,
+  createPending,
+  updatePending,
+  deletePending,
+  updateStatusPending,
+}: AgendamentoModalsProps) {
+  const formatDateTime = (dateString: string) => {
+    try {
+      return format(parseISO(dateString), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })
+    } catch {
+      return dateString
+    }
+  }
+
+  return (
+    <>
+      {/* Modal de Criação */}
+      <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Novo Agendamento</DialogTitle>
+            <DialogDescription>Crie um novo agendamento clínico</DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="create-titulo">Título *</Label>
+              <Input
+                id="create-titulo"
+                value={formState.titulo}
+                onChange={(e) => setFormState({ ...formState, titulo: e.target.value })}
+                placeholder="Ex: Consulta de avaliação"
+              />
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="create-paciente">Paciente</Label>
+                <Select
+                  value={formState.paciente_id || 'none'}
+                  onValueChange={(v) =>
+                    setFormState({ ...formState, paciente_id: v === 'none' ? null : v })
+                  }
+                >
+                  <SelectTrigger id="create-paciente">
+                    <SelectValue placeholder="Selecione o paciente" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Nenhum</SelectItem>
+                    {pacientes.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        {p.nome_completo}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="create-profissional">Profissional</Label>
+                <Select
+                  value={formState.profissional_id || 'none'}
+                  onValueChange={(v) =>
+                    setFormState({ ...formState, profissional_id: v === 'none' ? null : v })
+                  }
+                >
+                  <SelectTrigger id="create-profissional">
+                    <SelectValue placeholder="Selecione o profissional" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Nenhum</SelectItem>
+                    {profissionais.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        {p.nome}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="create-data-inicio">Data/Hora Início *</Label>
+                <Input
+                  id="create-data-inicio"
+                  type="datetime-local"
+                  value={formState.data_inicio}
+                  onChange={(e) => setFormState({ ...formState, data_inicio: e.target.value })}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="create-data-fim">Data/Hora Fim *</Label>
+                <Input
+                  id="create-data-fim"
+                  type="datetime-local"
+                  value={formState.data_fim}
+                  onChange={(e) => setFormState({ ...formState, data_fim: e.target.value })}
+                />
+              </div>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="create-sala">Sala/Consultório</Label>
+                <Input
+                  id="create-sala"
+                  value={formState.sala || ''}
+                  onChange={(e) => setFormState({ ...formState, sala: e.target.value })}
+                  placeholder="Ex: Sala 1"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="create-status">Status</Label>
+                <Select
+                  value={formState.status}
+                  onValueChange={(v) =>
+                    setFormState({ ...formState, status: v as StatusAgendamentoClinica })
+                  }
+                >
+                  <SelectTrigger id="create-status">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(STATUS_CONFIG).map(([key, config]) => (
+                      <SelectItem key={key} value={key}>
+                        {config.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="create-descricao">Descrição</Label>
+              <Textarea
+                id="create-descricao"
+                value={formState.descricao || ''}
+                onChange={(e) => setFormState({ ...formState, descricao: e.target.value })}
+                placeholder="Detalhes do agendamento..."
+                rows={3}
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsCreateModalOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={onCreateAgendamento} disabled={createPending}>
+              {createPending ? 'Criando...' : 'Criar Agendamento'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de Detalhes */}
+      <Dialog open={isDetailsModalOpen} onOpenChange={setIsDetailsModalOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          {selectedAgendamento && (
+            <>
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  {selectedAgendamento.titulo}
+                  <Badge variant={STATUS_CONFIG[selectedAgendamento.status].variant}>
+                    {STATUS_CONFIG[selectedAgendamento.status].label}
+                  </Badge>
+                </DialogTitle>
+                <DialogDescription>Detalhes do agendamento clínico</DialogDescription>
+              </DialogHeader>
+
+              <div className="space-y-4">
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div>
+                    <Label className="text-muted-foreground">Data/Hora Início</Label>
+                    <p className="font-medium">{formatDateTime(selectedAgendamento.data_inicio)}</p>
+                  </div>
+                  <div>
+                    <Label className="text-muted-foreground">Data/Hora Fim</Label>
+                    <p className="font-medium">{formatDateTime(selectedAgendamento.data_fim)}</p>
+                  </div>
+                </div>
+
+                {selectedAgendamento.paciente && (
+                  <div>
+                    <Label className="text-muted-foreground">Paciente</Label>
+                    <p className="font-medium">{selectedAgendamento.paciente.nome_completo}</p>
+                    {selectedAgendamento.paciente.telefone && (
+                      <p className="text-sm text-muted-foreground">
+                        {selectedAgendamento.paciente.telefone}
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {selectedAgendamento.profissional && (
+                  <div>
+                    <Label className="text-muted-foreground">Profissional</Label>
+                    <p className="font-medium">{selectedAgendamento.profissional.nome}</p>
+                    {selectedAgendamento.profissional.conselho && (
+                      <p className="text-sm text-muted-foreground">
+                        {selectedAgendamento.profissional.conselho}
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {selectedAgendamento.sala && (
+                  <div>
+                    <Label className="text-muted-foreground">Sala/Consultório</Label>
+                    <p className="font-medium">{selectedAgendamento.sala}</p>
+                  </div>
+                )}
+
+                {selectedAgendamento.descricao && (
+                  <div>
+                    <Label className="text-muted-foreground">Descrição</Label>
+                    <p className="font-medium whitespace-pre-wrap">{selectedAgendamento.descricao}</p>
+                  </div>
+                )}
+
+                <div className="pt-4 border-t">
+                  <Label className="text-muted-foreground">Atualizar Status</Label>
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {Object.entries(STATUS_CONFIG).map(([key, config]) => (
+                      <Button
+                        key={key}
+                        variant={selectedAgendamento.status === key ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => onUpdateStatus(key as StatusAgendamentoClinica)}
+                        disabled={updateStatusPending}
+                      >
+                        {config.label}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <DialogFooter className="flex gap-2">
+                <Button variant="outline" onClick={() => setIsDetailsModalOpen(false)}>
+                  Fechar
+                </Button>
+                <Button variant="outline" onClick={onOpenEditModal}>
+                  <Edit className="mr-2 h-4 w-4" />
+                  Editar
+                </Button>
+                <Button variant="destructive" onClick={onRequestDelete}>
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Excluir
+                </Button>
+              </DialogFooter>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de Edição */}
+      <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Editar Agendamento</DialogTitle>
+            <DialogDescription>Atualize as informações do agendamento</DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-titulo">Título *</Label>
+              <Input
+                id="edit-titulo"
+                value={editFormState.titulo}
+                onChange={(e) => setEditFormState({ ...editFormState, titulo: e.target.value })}
+              />
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="edit-paciente">Paciente</Label>
+                <Select
+                  value={editFormState.paciente_id || 'none'}
+                  onValueChange={(v) =>
+                    setEditFormState({ ...editFormState, paciente_id: v === 'none' ? null : v })
+                  }
+                >
+                  <SelectTrigger id="edit-paciente">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Nenhum</SelectItem>
+                    {pacientes.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        {p.nome_completo}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-profissional">Profissional</Label>
+                <Select
+                  value={editFormState.profissional_id || 'none'}
+                  onValueChange={(v) =>
+                    setEditFormState({ ...editFormState, profissional_id: v === 'none' ? null : v })
+                  }
+                >
+                  <SelectTrigger id="edit-profissional">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Nenhum</SelectItem>
+                    {profissionais.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        {p.nome}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="edit-data-inicio">Data/Hora Início *</Label>
+                <Input
+                  id="edit-data-inicio"
+                  type="datetime-local"
+                  value={editFormState.data_inicio}
+                  onChange={(e) => setEditFormState({ ...editFormState, data_inicio: e.target.value })}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-data-fim">Data/Hora Fim *</Label>
+                <Input
+                  id="edit-data-fim"
+                  type="datetime-local"
+                  value={editFormState.data_fim}
+                  onChange={(e) => setEditFormState({ ...editFormState, data_fim: e.target.value })}
+                />
+              </div>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="edit-sala">Sala/Consultório</Label>
+                <Input
+                  id="edit-sala"
+                  value={editFormState.sala || ''}
+                  onChange={(e) => setEditFormState({ ...editFormState, sala: e.target.value })}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-status">Status</Label>
+                <Select
+                  value={editFormState.status}
+                  onValueChange={(v) =>
+                    setEditFormState({ ...editFormState, status: v as StatusAgendamentoClinica })
+                  }
+                >
+                  <SelectTrigger id="edit-status">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(STATUS_CONFIG).map(([key, config]) => (
+                      <SelectItem key={key} value={key}>
+                        {config.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="edit-descricao">Descrição</Label>
+              <Textarea
+                id="edit-descricao"
+                value={editFormState.descricao || ''}
+                onChange={(e) => setEditFormState({ ...editFormState, descricao: e.target.value })}
+                rows={3}
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEditModalOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={onSaveEdit} disabled={updatePending}>
+              {updatePending ? 'Salvando...' : 'Salvar Alterações'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de Confirmação de Exclusão */}
+      <Dialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirmar Exclusão</DialogTitle>
+            <DialogDescription>
+              Tem certeza que deseja excluir este agendamento? Esta ação não pode ser desfeita.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsDeleteConfirmOpen(false)}>
+              Cancelar
+            </Button>
+            <Button variant="destructive" onClick={onConfirmDelete} disabled={deletePending}>
+              {deletePending ? 'Excluindo...' : 'Excluir'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
+  )
+}

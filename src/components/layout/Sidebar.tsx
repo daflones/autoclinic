@@ -9,7 +9,6 @@ import {
   ScrollText,
   FolderOpen,
   Settings2,
-  Layers,
   Package,
   Palette,
   LogOut,
@@ -70,12 +69,6 @@ const menuItems: MenuItem[] = [
     icon: Palette,
     href: '/app/categorias',
     color: 'from-primary-300 to-primary-500'
-  },
-  {
-    label: 'Protocolos & Segmentos',
-    icon: Layers,
-    href: '/app/segmentos',
-    color: 'from-secondary-400 to-primary-400'
   },
   {
     label: 'Protocolos/Pacotes',

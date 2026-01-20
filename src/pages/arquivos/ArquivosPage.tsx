@@ -28,7 +28,8 @@ import {
   Plus,
   Tag,
   Share2,
-  Folder
+  Folder,
+  FolderOpen
 } from 'lucide-react'
 import { useArquivos, useArquivosStats, useUploadArquivo, useDeleteArquivo, useUpdateArquivo } from '@/hooks/useArquivos'
 import { type CategoriaArquivo, type Arquivo, arquivosService } from '@/services/api/arquivos'

@@ -14,7 +14,6 @@ const PacientesPage = lazy(() => import('./pages/pacientes/PacientesPage').then(
 const ProfissionaisPage = lazy(() => import('./pages/profissionais/ProfissionaisClinicaPage').then(m => ({ default: m.ProfissionaisClinicaPage })))
 const ProcedimentosPage = lazy(() => import('./pages/procedimentos/ProcedimentosPage').then(m => ({ default: m.ProcedimentosPage })))
 const CategoriasPage = lazy(() => import('./pages/categorias/CategoriasClinicaPage').then(m => ({ default: m.CategoriasClinicaPage })))
-const SegmentosPage = lazy(() => import('./pages/segmentos/SegmentosPage').then(m => ({ default: m.SegmentosPage })))
 const AgendamentosPage = lazy(() => import('./pages/agendamentos/AgendamentosClinicaPage').then(m => ({ default: m.AgendamentosClinicaPage })))
 const PlanosTratamentoPage = lazy(() => import('./pages/planos-tratamento/PlanosTratamentoPage').then(m => ({ default: m.PlanosTratamentoPage })))
 const ArquivosPage = lazy(() => import('./pages/arquivos/ArquivosPage').then(m => ({ default: m.ArquivosPage })))
@@ -128,10 +127,6 @@ export const router = createBrowserRouter([
       {
         path: 'categorias',
         element: withSuspense(CategoriasPage),
-      },
-      {
-        path: 'segmentos',
-        element: withSuspense(SegmentosPage),
       },
       {
         path: 'protocolos-pacotes',

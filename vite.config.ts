@@ -72,6 +72,8 @@ export default defineConfig({
       'www.crm.nanosync.com.br',
       'www.nanosync.com.br',
       'nanosync.com.br',
+      'autoclinic.nanosync.com.br',
+      'automaclinic-autoclinic.owelyh.easypanel.host',
       'localhost',
       '127.0.0.1'
     ]
@@ -84,6 +86,8 @@ export default defineConfig({
       'www.crm.nanosync.com.br',
       'www.nanosync.com.br',
       'nanosync.com.br',
+      'autoclinic.nanosync.com.br',
+      'automaclinic-autoclinic.owelyh.easypanel.host',
       'localhost',
       '127.0.0.1'
     ]

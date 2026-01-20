@@ -88,7 +88,7 @@ export function AgendamentosClinicaPage() {
   const [statusFilter, setStatusFilter] = useState<StatusAgendamentoClinica | 'all'>('all')
   const [pacienteFilter, setPacienteFilter] = useState<string>('all')
   const [profissionalFilter, setProfissionalFilter] = useState<string>('all')
-  const [agendaView, setAgendaView] = useState<AgendaView>('calendario')
+  const [agendaView, setAgendaView] = useState<AgendaView>('lista')
   const [calendarView, setCalendarView] = useState<CalendarView>('timeGridWeek')
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false)

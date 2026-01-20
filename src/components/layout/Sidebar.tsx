@@ -10,16 +10,13 @@ import {
   FolderOpen,
   Settings2,
   Layers,
+  Package,
   Palette,
   LogOut,
-  Activity,
   Bot,
   MessageCircle,
   CreditCard,
-  Target,
   QrCode,
-  Building2,
-  Ticket,
   BarChart3
 } from 'lucide-react'
 
@@ -52,20 +49,7 @@ const menuItems: MenuItem[] = [
     icon: Users,
     href: '/app/pacientes',
     color: 'from-secondary-400 to-secondary-600',
-    subItems: [
-      {
-        label: 'Leads e Captação',
-        icon: Target,
-        href: '/app/clientes-prospeccao',
-        color: 'text-primary-500'
-      },
-      {
-        label: 'Atendimentos & Tickets',
-        icon: Ticket,
-        href: '/app/tickets-suporte',
-        color: 'text-primary-500'
-      }
-    ]
+    subItems: []
   },
   {
     label: 'Profissionais',
@@ -73,13 +57,6 @@ const menuItems: MenuItem[] = [
     icon: UserSquare,
     href: '/app/profissionais',
     color: 'from-primary-500 to-primary-700'
-  },
-  {
-    label: 'Setores & Ambientes',
-    description: 'Salas, cabines e rotinas',
-    icon: Building2,
-    href: '/app/setores-atendimento',
-    color: 'from-tertiary-300 to-tertiary-400'
   },
   {
     label: 'Procedimentos',
@@ -99,6 +76,13 @@ const menuItems: MenuItem[] = [
     icon: Layers,
     href: '/app/segmentos',
     color: 'from-secondary-400 to-primary-400'
+  },
+  {
+    label: 'Protocolos/Pacotes',
+    description: 'Biblioteca de pacotes e protocolos',
+    icon: Package,
+    href: '/app/protocolos-pacotes',
+    color: 'from-secondary-300 to-primary-300'
   },
   {
     label: 'Agenda Inteligente',
@@ -140,16 +124,10 @@ const menuItems: MenuItem[] = [
     color: 'from-neutral-200 to-neutral-400'
   },
   {
-    label: 'Fluxos de IA',
+    label: 'Configurações de IA',
     icon: QrCode,
     href: '/app/configuracoes-ia',
     color: 'from-primary-500 to-secondary-500'
-  },
-  {
-    label: 'Resumo de Atividades',
-    icon: Activity,
-    href: '/app/atividades',
-    color: 'from-primary-300 to-secondary-400'
   },
   {
     label: 'Relatórios',
@@ -171,7 +149,7 @@ export function Sidebar() {
   const navigate = useNavigate()
   const { user, signOut } = useAuthStore()
   const { planoAtivo } = usePlanoAtivo()
-  const { data: iaConfigData } = useIAConfig()
+  const { data: iaConfigData } = useIAConfig() as any
 
   const handleDashboardClick = (e: React.MouseEvent) => {
     e.preventDefault()
@@ -190,7 +168,7 @@ export function Sidebar() {
     if (item.href === '/planos' && planoAtivo) return false
     
     // Ocultar Arquivos IA se envia_documento não for explicitamente true
-    if (item.href === '/app/arquivos-ia' && iaConfigData?.envia_documento !== true) return false
+    if (item.href === '/app/arquivos-ia' && (iaConfigData as any)?.envia_documento !== true) return false
     
     // Ocultar WhatsApp Web da sidebar (funcionalidade existe mas aba fica oculta)
     if (item.href === '/app/whatsapp-web') return false

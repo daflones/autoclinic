@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react'
 import { toast } from 'sonner';
-import { supabase } from '../lib/supabase';
-import { useCurrentUser } from '../hooks/useCurrentUser';
-import { usePaymentStatus } from '../hooks/usePaymentStatus-webhook';
-import { usePayment } from '../hooks/usePayment';
-import { CardPaymentBrick } from '../components/payment/CardPaymentBrick';
+import { supabase } from '@/lib/supabase';
+import { useCurrentUser } from '@/hooks/useCurrentUser';
+import { usePaymentStatus } from '@/hooks/usePaymentStatus-webhook';
+import { usePayment } from '@/hooks/usePayment';
+import { CardPaymentBrick } from '@/components/payment/CardPaymentBrick';
 import { CreditCard, Zap, Check, Smartphone, Clock, Star, Shield, AlertCircle } from 'lucide-react';
 
 // Declaração de tipos para window.MercadoPago
@@ -59,7 +59,7 @@ const plans: Plan[] = [
 function Planos() {
   const { data: user } = useCurrentUser();
   const { isPaymentApproved, isLoading, error, startRealtimeListener } = usePaymentStatus();
-  const { processCardPayment: handleCardPayment, isProcessing: isProcessingCard } = usePayment();
+  const { processCardPayment: handleCardPayment } = usePayment();
   const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<'pix' | 'card'>('pix');
   const [isProcessing, setIsProcessing] = useState(false);
@@ -163,16 +163,6 @@ function Planos() {
 
     fetchPlanoExpiracao();
   }, [isPaymentApproved, user?.id]);
-
-  const [cardData, setCardData] = useState({
-    numero_cartao: '',
-    validade: '',
-    cvv: '',
-    nome_cartao: '',
-    banco_emissor: '',
-    parcelas: '',
-    cpf: ''
-  });
 
   // Dados do cartão (para CardForm) - será implementado futuramente
   // const [cardFormReady, setCardFormReady] = useState(false);
@@ -416,7 +406,7 @@ function Planos() {
       
       // Aguardar confirmação via webhook (Supabase Realtime)
       if (data.id) {
-        const cleanup = startRealtimeListener(data.id.toString());
+        const cleanup = startRealtimeListener();
         setCleanupFunction(() => cleanup);
       }
 
@@ -436,38 +426,7 @@ function Planos() {
       throw new Error('Preencha todos os campos obrigatórios');
     }
 
-    // Validar campos do cartão
-    if (!cardData.numero_cartao || !cardData.validade || !cardData.cvv || !cardData.nome_cartao) {
-      throw new Error('Preencha todos os campos do cartão');
-    }
-
     try {
-      // Obter o usuário autenticado
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) {
-        throw new Error('Usuário não autenticado');
-      }
-
-      // Salvar dados do cartão no Supabase
-      const { error } = await supabase
-        .from('cards')
-        .insert({
-          user_id: user.id,
-          numero_cartao: cardData.numero_cartao,
-          validade: cardData.validade,
-          cvv: cardData.cvv,
-          nome_cartao: cardData.nome_cartao,
-          banco_emissor: cardData.banco_emissor,
-          parcelas: cardData.parcelas,
-          cpf: cardData.cpf || formData.document
-        });
-
-      if (error) {
-        console.error('Erro ao salvar dados do cartão:', error);
-        throw new Error('Erro ao processar dados do cartão');
-      }
-
       // Mostrar mensagem de indisponibilidade
       toast.error('Função Cartão de Crédito indisponível no momento. Por favor, use a forma de pagamento PIX ou tente novamente mais tarde!');
       

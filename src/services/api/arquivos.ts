@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabase'
-import { supabaseAdmin } from '@/lib/supabase-admin'
+import { getSupabaseAdmin } from '@/lib/supabase-admin'
 import { AtividadeService } from './atividades'
 
 export type CategoriaArquivo = 'propostas' | 'contratos' | 'marketing' | 'produtos' | 'relatorios' | 'sistema' | 'juridico' | 'vendas'
@@ -200,6 +200,8 @@ export const arquivosService = {
     categoryCounts: Record<CategoriaArquivo, number>
     recentFiles: number
   }> {
+    const supabaseAdmin = getSupabaseAdmin()
+
     const { data: files, error } = await supabaseAdmin
       .from('arquivos')
       .select('categoria, tamanho, created_at')
@@ -311,6 +313,8 @@ export const arquivosService = {
     }
 
     // Save all files to arquivos table
+    const supabaseAdmin = getSupabaseAdmin()
+
     const { data: savedFile, error } = await supabaseAdmin
       .from('arquivos')
       .insert({
@@ -409,6 +413,8 @@ export const arquivosService = {
       }
     }
 
+    const supabaseAdmin = getSupabaseAdmin()
+
     const { data: updatedFile, error } = await supabaseAdmin
       .from('arquivos')
       .update({
@@ -437,6 +443,7 @@ export const arquivosService = {
     const arquivoCompleto = await this.getById(id)
     
     // Buscar arquivo para obter informações do storage e produto associado
+    const supabaseAdmin = getSupabaseAdmin()
     const { data: arquivo } = await supabaseAdmin
       .from('arquivos')
       .select('bucket_name, file_path, entity_type, entity_id, url')
@@ -491,6 +498,40 @@ export const arquivosService = {
     }
   },
 
+  async trackDownload(id: string): Promise<void> {
+    // Buscar arquivo para obter informações do storage e produto associado
+    const supabaseAdmin = getSupabaseAdmin()
+    const { data: arquivo } = await supabaseAdmin
+      .from('arquivos')
+      .select('bucket_name, file_path, entity_type, entity_id, url')
+      .eq('id', id)
+      .single()
+
+    // Update download tracking
+    try {
+      const currentTimes = arquivo.downloaded_times || 0
+
+      await supabaseAdmin
+        .from('arquivos')
+        .update({
+          downloaded_times: currentTimes + 1,
+          downloaded_at: new Date().toISOString()
+        })
+        .eq('id', id)
+      
+      // Registrar atividade de download
+      await AtividadeService.download(
+        'arquivo',
+        arquivo.id,
+        arquivo,
+        `Arquivo baixado: ${arquivo.nome} (${arquivo.categoria})`
+      )
+      // Download tracking updated successfully
+    } catch (updateError) {
+      console.error('Erro ao atualizar estatísticas de download:', updateError)
+    }
+  },
+
   async downloadFile(id: string): Promise<Blob> {
     const arquivo = await this.getById(id)
     if (!arquivo) {
@@ -508,6 +549,8 @@ export const arquivosService = {
       // Update download tracking
       try {
         const currentTimes = arquivo.downloaded_times || 0
+        const supabaseAdmin = getSupabaseAdmin()
+
         await supabaseAdmin
           .from('arquivos')
           .update({

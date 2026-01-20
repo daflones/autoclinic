@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { getIAConfig, upsertIAConfig, testIAConfig, type IAConfig } from '@/services/api/ia-config'
+import { upsertIAConfig, testIAConfig, type IAConfig } from '@/services/api/ia-config'
 import { useAuthStore } from '@/stores/authStore'
 import { toast } from 'sonner'
 
@@ -10,18 +10,9 @@ export const useIAConfig = () => {
   return useQuery({
     queryKey: ['ia-config', user?.id],
     queryFn: async () => {
-      try {
-        return await getIAConfig(user?.id || '')
-      } catch (error: any) {
-        // Se a tabela não existe (404), retornar null silenciosamente
-        if (error?.code === 'PGRST116' || error?.message?.includes('404')) {
-          console.info('Tabela ia_config não existe ainda. Retornando configuração vazia.')
-          return { data: null }
-        }
-        throw error
-      }
+      return { data: null }
     },
-    enabled: !!user?.id,
+    enabled: false,
     staleTime: 5 * 60 * 1000, // 5 minutos
     select: (response) => response?.data,
     retry: false // Não tentar novamente em caso de 404
@@ -34,7 +25,12 @@ export const useUpdateIAConfig = () => {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (config: Partial<IAConfig>) => upsertIAConfig(user?.id || '', config),
+    mutationFn: async (config: Partial<IAConfig>) => {
+      if (!user?.id) {
+        throw new Error('Usuário não autenticado')
+      }
+      return upsertIAConfig(user.id, config)
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['ia-config'] })
       toast.success('Configurações de IA atualizadas com sucesso!')

@@ -164,6 +164,7 @@ export function ClientesProspeccaoPage() {
   
   // Buscar tags disponíveis
   const { data: tagsDisponiveis = [] } = useTags()
+  const tagNomesDisponiveis = tagsDisponiveis.map(tag => tag.nome)
   
   // Criar mapa de cores para as tags
   const tagColors: Record<string, string> = {}
@@ -1195,7 +1196,7 @@ export function ClientesProspeccaoPage() {
                   Tags/Marcadores
                 </Label>
                 <div className="mt-2 flex flex-wrap gap-2">
-                  {TAGS_DISPONIVEIS.map((tag) => (
+                  {tagNomesDisponiveis.map((tag) => (
                     <button
                       key={tag}
                       type="button"
@@ -1547,7 +1548,7 @@ export function ClientesProspeccaoPage() {
                   Tags/Marcadores
                 </Label>
                 <div className="mt-2 flex flex-wrap gap-2">
-                  {TAGS_DISPONIVEIS.map((tag) => (
+                  {tagNomesDisponiveis.map((tag) => (
                     <button
                       key={tag}
                       type="button"

@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
 import { Label } from '@/components/ui/label'
 import {
@@ -21,6 +22,7 @@ import {
 } from '@/components/ui/select'
 import { Plus, Search, Filter, UserSquare, Edit, Trash2, Mail, Phone, Award } from 'lucide-react'
 import { toast } from 'sonner'
+import { deleteMidia, getSignedMidiaUrl, uploadMidia } from '@/services/api/storage-midias'
 import {
   useProfissionaisClinica,
   useCreateProfissionalClinica,
@@ -31,7 +33,6 @@ import type {
   ProfissionalClinica,
   ProfissionalCreateData,
   StatusProfissional,
-  ModalidadeAtendimento,
 } from '@/services/api/profissionais-clinica'
 
 const STATUS_CONFIG: Record<StatusProfissional, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
@@ -49,9 +50,12 @@ export function ProfissionaisClinicaPage() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false)
   const [selectedProfissional, setSelectedProfissional] = useState<ProfissionalClinica | null>(null)
+  const [uploadingFoto, setUploadingFoto] = useState(false)
+  const [fotoPreviewUrl, setFotoPreviewUrl] = useState<string>('')
 
   const [formState, setFormState] = useState<ProfissionalCreateData>({
     nome: '',
+    cargo: '',
     documento: '',
     email: '',
     telefone: '',
@@ -59,7 +63,11 @@ export function ProfissionaisClinicaPage() {
     conselho: '',
     registro_profissional: '',
     especialidades: [],
-    modalidade: undefined,
+    experiencia: '',
+    certificacoes: '',
+    procedimentos: '',
+    bio: '',
+    foto_url: '',
     percentual_comissao: undefined,
     meta_mensal: undefined,
     status: 'ativo',
@@ -87,6 +95,55 @@ export function ProfissionaisClinicaPage() {
     }
   }, [profissionais])
 
+  const refreshFotoPreview = async (path: string) => {
+    if (!path) {
+      setFotoPreviewUrl('')
+      return
+    }
+    try {
+      const url = await getSignedMidiaUrl({ bucket: 'profissionais-midias', path })
+      setFotoPreviewUrl(url)
+    } catch {
+      setFotoPreviewUrl('')
+    }
+  }
+
+  const handleUploadFoto = async (file: File) => {
+    setUploadingFoto(true)
+    try {
+      const uploaded = await uploadMidia({ bucket: 'profissionais-midias', file, prefix: 'foto' })
+
+      const prev = formState.foto_url
+      if (prev) {
+        try {
+          await deleteMidia({ bucket: 'profissionais-midias', path: prev })
+        } catch {
+          // ignore
+        }
+      }
+
+      setFormState({ ...formState, foto_url: uploaded.path })
+      await refreshFotoPreview(uploaded.path)
+    } finally {
+      setUploadingFoto(false)
+    }
+  }
+
+  const handleRemoveFoto = async () => {
+    const prev = formState.foto_url
+    if (!prev) return
+    setUploadingFoto(true)
+    try {
+      await deleteMidia({ bucket: 'profissionais-midias', path: prev })
+    } catch {
+      // ignore
+    } finally {
+      setFormState({ ...formState, foto_url: '' })
+      setFotoPreviewUrl('')
+      setUploadingFoto(false)
+    }
+  }
+
   const handleCreateProfissional = async () => {
     if (!formState.nome) {
       toast.error('Preencha o nome do profissional')
@@ -98,6 +155,7 @@ export function ProfissionaisClinicaPage() {
       setIsCreateModalOpen(false)
       setFormState({
         nome: '',
+        cargo: '',
         documento: '',
         email: '',
         telefone: '',
@@ -105,7 +163,11 @@ export function ProfissionaisClinicaPage() {
         conselho: '',
         registro_profissional: '',
         especialidades: [],
-        modalidade: undefined,
+        experiencia: '',
+        certificacoes: '',
+        procedimentos: '',
+        bio: '',
+        foto_url: '',
         percentual_comissao: undefined,
         meta_mensal: undefined,
         status: 'ativo',
@@ -119,6 +181,7 @@ export function ProfissionaisClinicaPage() {
     setSelectedProfissional(profissional)
     setFormState({
       nome: profissional.nome,
+      cargo: profissional.cargo || '',
       documento: profissional.documento || '',
       email: profissional.email || '',
       telefone: profissional.telefone || '',
@@ -126,12 +189,17 @@ export function ProfissionaisClinicaPage() {
       conselho: profissional.conselho || '',
       registro_profissional: profissional.registro_profissional || '',
       especialidades: profissional.especialidades || [],
-      modalidade: profissional.modalidade || undefined,
+      experiencia: profissional.experiencia || '',
+      certificacoes: profissional.certificacoes || '',
+      procedimentos: profissional.procedimentos || '',
+      bio: (profissional as any).bio || '',
+      foto_url: profissional.foto_url || '',
       percentual_comissao: profissional.percentual_comissao || undefined,
       meta_mensal: profissional.meta_mensal || undefined,
       status: profissional.status,
     })
     setIsEditModalOpen(true)
+    refreshFotoPreview(profissional.foto_url || '')
   }
 
   const handleSaveEdit = async () => {
@@ -173,7 +241,12 @@ export function ProfissionaisClinicaPage() {
           <h1 className="text-3xl font-bold tracking-tight">Profissionais da Clínica</h1>
           <p className="text-muted-foreground">Gerencie a equipe clínica e suas especialidades</p>
         </div>
-        <Button onClick={() => setIsCreateModalOpen(true)}>
+        <Button
+          onClick={() => {
+            setIsCreateModalOpen(true)
+            setFotoPreviewUrl('')
+          }}
+        >
           <Plus className="mr-2 h-4 w-4" />
           Novo Profissional
         </Button>
@@ -351,6 +424,16 @@ export function ProfissionaisClinicaPage() {
               </div>
 
               <div className="space-y-2">
+                <Label htmlFor="create-cargo">Cargo</Label>
+                <Input
+                  id="create-cargo"
+                  value={formState.cargo || ''}
+                  onChange={(e) => setFormState({ ...formState, cargo: e.target.value })}
+                  placeholder="Ex: Biomédico, Esteticista, Fisioterapeuta"
+                />
+              </div>
+
+              <div className="space-y-2">
                 <Label htmlFor="create-documento">CPF/Documento</Label>
                 <Input
                   id="create-documento"
@@ -386,6 +469,106 @@ export function ProfissionaisClinicaPage() {
 
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
+                <Label>Foto</Label>
+                <Input
+                  type="file"
+                  accept="image/*"
+                  disabled={uploadingFoto}
+                  onChange={(e) => {
+                    const file = e.target.files?.[0]
+                    if (file) handleUploadFoto(file)
+                    e.currentTarget.value = ''
+                  }}
+                />
+                {formState.foto_url ? (
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      {fotoPreviewUrl ? (
+                        <img src={fotoPreviewUrl} alt="Foto" className="h-16 w-16 object-cover rounded border" />
+                      ) : (
+                        <div className="h-16 w-16 rounded border bg-muted" />
+                      )}
+                      <div className="text-xs text-muted-foreground break-all">{formState.foto_url}</div>
+                    </div>
+                    <Button variant="outline" disabled={uploadingFoto} onClick={handleRemoveFoto}>
+                      Remover
+                    </Button>
+                  </div>
+                ) : null}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="create-whatsapp">WhatsApp</Label>
+                <Input
+                  id="create-whatsapp"
+                  value={formState.whatsapp || ''}
+                  onChange={(e) => setFormState({ ...formState, whatsapp: e.target.value })}
+                  placeholder="(00) 00000-0000"
+                />
+              </div>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="create-especialidades">Especialidades (uma por linha)</Label>
+                <Textarea
+                  id="create-especialidades"
+                  value={(formState.especialidades || []).join('\n')}
+                  onChange={(e) =>
+                    setFormState({
+                      ...formState,
+                      especialidades: e.target.value
+                        .split('\n')
+                        .map((s) => s.trim())
+                        .filter(Boolean),
+                    })
+                  }
+                  rows={3}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="create-experiencia">Experiência</Label>
+                <Textarea
+                  id="create-experiencia"
+                  value={formState.experiencia || ''}
+                  onChange={(e) => setFormState({ ...formState, experiencia: e.target.value })}
+                  rows={3}
+                />
+              </div>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="create-certificacoes">Certificações</Label>
+                <Textarea
+                  id="create-certificacoes"
+                  value={formState.certificacoes || ''}
+                  onChange={(e) => setFormState({ ...formState, certificacoes: e.target.value })}
+                  rows={3}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="create-procedimentos">Procedimentos</Label>
+                <Textarea
+                  id="create-procedimentos"
+                  value={formState.procedimentos || ''}
+                  onChange={(e) => setFormState({ ...formState, procedimentos: e.target.value })}
+                  rows={3}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="create-bio">Bio</Label>
+              <Textarea
+                id="create-bio"
+                value={formState.bio || ''}
+                onChange={(e) => setFormState({ ...formState, bio: e.target.value })}
+                rows={4}
+              />
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
                 <Label htmlFor="create-conselho">Conselho Profissional</Label>
                 <Input
                   id="create-conselho"
@@ -404,23 +587,6 @@ export function ProfissionaisClinicaPage() {
                   placeholder="Ex: 12345/SP"
                 />
               </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="create-modalidade">Modalidade de Atendimento</Label>
-              <Select
-                value={formState.modalidade || ''}
-                onValueChange={(value) => setFormState({ ...formState, modalidade: value as ModalidadeAtendimento })}
-              >
-                <SelectTrigger id="create-modalidade">
-                  <SelectValue placeholder="Selecione a modalidade" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="presencial">Presencial</SelectItem>
-                  <SelectItem value="online">Online</SelectItem>
-                  <SelectItem value="hibrido">Híbrido</SelectItem>
-                </SelectContent>
-              </Select>
             </div>
 
             <div className="grid gap-4 md:grid-cols-2">
@@ -506,6 +672,15 @@ export function ProfissionaisClinicaPage() {
               </div>
 
               <div className="space-y-2">
+                <Label htmlFor="edit-cargo">Cargo</Label>
+                <Input
+                  id="edit-cargo"
+                  value={formState.cargo || ''}
+                  onChange={(e) => setFormState({ ...formState, cargo: e.target.value })}
+                />
+              </div>
+
+              <div className="space-y-2">
                 <Label htmlFor="edit-documento">CPF/Documento</Label>
                 <Input
                   id="edit-documento"
@@ -538,6 +713,105 @@ export function ProfissionaisClinicaPage() {
 
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
+                <Label>Foto</Label>
+                <Input
+                  type="file"
+                  accept="image/*"
+                  disabled={uploadingFoto}
+                  onChange={(e) => {
+                    const file = e.target.files?.[0]
+                    if (file) handleUploadFoto(file)
+                    e.currentTarget.value = ''
+                  }}
+                />
+                {formState.foto_url ? (
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      {fotoPreviewUrl ? (
+                        <img src={fotoPreviewUrl} alt="Foto" className="h-16 w-16 object-cover rounded border" />
+                      ) : (
+                        <div className="h-16 w-16 rounded border bg-muted" />
+                      )}
+                      <div className="text-xs text-muted-foreground break-all">{formState.foto_url}</div>
+                    </div>
+                    <Button variant="outline" disabled={uploadingFoto} onClick={handleRemoveFoto}>
+                      Remover
+                    </Button>
+                  </div>
+                ) : null}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-whatsapp">WhatsApp</Label>
+                <Input
+                  id="edit-whatsapp"
+                  value={formState.whatsapp || ''}
+                  onChange={(e) => setFormState({ ...formState, whatsapp: e.target.value })}
+                />
+              </div>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="edit-especialidades">Especialidades (uma por linha)</Label>
+                <Textarea
+                  id="edit-especialidades"
+                  value={(formState.especialidades || []).join('\n')}
+                  onChange={(e) =>
+                    setFormState({
+                      ...formState,
+                      especialidades: e.target.value
+                        .split('\n')
+                        .map((s) => s.trim())
+                        .filter(Boolean),
+                    })
+                  }
+                  rows={3}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-experiencia">Experiência</Label>
+                <Textarea
+                  id="edit-experiencia"
+                  value={formState.experiencia || ''}
+                  onChange={(e) => setFormState({ ...formState, experiencia: e.target.value })}
+                  rows={3}
+                />
+              </div>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="edit-certificacoes">Certificações</Label>
+                <Textarea
+                  id="edit-certificacoes"
+                  value={formState.certificacoes || ''}
+                  onChange={(e) => setFormState({ ...formState, certificacoes: e.target.value })}
+                  rows={3}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-procedimentos">Procedimentos</Label>
+                <Textarea
+                  id="edit-procedimentos"
+                  value={formState.procedimentos || ''}
+                  onChange={(e) => setFormState({ ...formState, procedimentos: e.target.value })}
+                  rows={3}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="edit-bio">Bio</Label>
+              <Textarea
+                id="edit-bio"
+                value={formState.bio || ''}
+                onChange={(e) => setFormState({ ...formState, bio: e.target.value })}
+                rows={4}
+              />
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
                 <Label htmlFor="edit-conselho">Conselho Profissional</Label>
                 <Input
                   id="edit-conselho"
@@ -554,23 +828,6 @@ export function ProfissionaisClinicaPage() {
                   onChange={(e) => setFormState({ ...formState, registro_profissional: e.target.value })}
                 />
               </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="edit-modalidade">Modalidade de Atendimento</Label>
-              <Select
-                value={formState.modalidade || ''}
-                onValueChange={(value) => setFormState({ ...formState, modalidade: value as ModalidadeAtendimento })}
-              >
-                <SelectTrigger id="edit-modalidade">
-                  <SelectValue placeholder="Selecione a modalidade" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="presencial">Presencial</SelectItem>
-                  <SelectItem value="online">Online</SelectItem>
-                  <SelectItem value="hibrido">Híbrido</SelectItem>
-                </SelectContent>
-              </Select>
             </div>
 
             <div className="grid gap-4 md:grid-cols-2">

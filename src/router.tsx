@@ -11,10 +11,7 @@ const ConfirmationPage = lazy(() => import('./pages/auth/ConfirmationPage').then
 const ResetPasswordPage = lazy(() => import('./pages/auth/ResetPasswordPage').then(m => ({ default: m.ResetPasswordPage })))
 const DashboardPage = lazy(() => import('./pages/dashboard/DashboardPage').then(m => ({ default: m.DashboardPage })))
 const PacientesPage = lazy(() => import('./pages/pacientes/PacientesPage').then(m => ({ default: m.PacientesPage })))
-const ClientesProspeccaoPage = lazy(() => import('./pages/clientes/ClientesProspeccaoPage').then(m => ({ default: m.ClientesProspeccaoPage })))
-const TicketsSuportePage = lazy(() => import('./pages/tickets/TicketsSuportePage').then(m => ({ default: m.TicketsSuportePage })))
 const ProfissionaisPage = lazy(() => import('./pages/profissionais/ProfissionaisClinicaPage').then(m => ({ default: m.ProfissionaisClinicaPage })))
-const SetoresAtendimentoPage = lazy(() => import('./pages/setores-atendimento/SetoresAtendimentoPage'))
 const ProcedimentosPage = lazy(() => import('./pages/procedimentos/ProcedimentosPage').then(m => ({ default: m.ProcedimentosPage })))
 const CategoriasPage = lazy(() => import('./pages/categorias/CategoriasClinicaPage').then(m => ({ default: m.CategoriasClinicaPage })))
 const SegmentosPage = lazy(() => import('./pages/segmentos/SegmentosPage').then(m => ({ default: m.SegmentosPage })))
@@ -23,14 +20,13 @@ const PlanosTratamentoPage = lazy(() => import('./pages/planos-tratamento/Planos
 const ArquivosPage = lazy(() => import('./pages/arquivos/ArquivosPage').then(m => ({ default: m.ArquivosPage })))
 const ArquivosIAPage = lazy(() => import('./pages/arquivos-ia/ArquivosIAPage').then(m => ({ default: m.default })))
 const RelatoriosPage = lazy(() => import('./pages/relatorios/RelatoriosPage').then(m => ({ default: m.RelatoriosPage })))
+const ProtocolosPacotesPage = lazy(() => import('./pages/protocolos-pacotes/ProtocolosPacotesPage').then(m => ({ default: m.ProtocolosPacotesPage })))
 const ConfiguracoesPage = lazy(() => import('./pages/configuracoes/ConfiguracoesPage').then(m => ({ default: m.ConfiguracoesPage })))
-const IAConfigPage = lazy(() => import('./pages/configuracoes/IAConfigPage').then(m => ({ default: m.IAConfigPage })))
-const AtividadesPage = lazy(() => import('./pages/atividades/AtividadesPage').then(m => ({ default: m.AtividadesPage })))
+const ClinicaIAConfigPage = lazy(() => import('./pages/configuracoes/ClinicaIAConfigPage').then(m => ({ default: m.ClinicaIAConfigPage })))
 const WhatsAppPage = lazy(() => import('./pages/WhatsAppPage'))
 const WhatsAppWebPage = lazy(() => import('./pages/whatsapp-web/WhatsAppWebPage'))
 const LandingPage = lazy(() => import('./pages/landing/LandingPage').then(m => ({ default: m.LandingPage })))
 const PlanosPage = lazy(() => import('./pages/Planos'))
-const ProspeccaoPage = lazy(() => import('./pages/prospeccao/ProspeccaoPage').then(m => ({ default: m.default })))
 
 // Loading component for Suspense fallback
 const PageLoader = () => (
@@ -103,11 +99,11 @@ export const router = createBrowserRouter([
       },
       {
         path: 'tickets-suporte',
-        element: withSuspense(TicketsSuportePage),
+        element: <Navigate to="/app/dashboard" replace />,
       },
       {
         path: 'clientes-prospeccao',
-        element: withSuspense(ClientesProspeccaoPage),
+        element: <Navigate to="/app/pacientes" replace />,
       },
       {
         path: 'vendedores',
@@ -119,7 +115,7 @@ export const router = createBrowserRouter([
       },
       {
         path: 'setores-atendimento',
-        element: withSuspense(SetoresAtendimentoPage),
+        element: <Navigate to="/app/configuracoes" replace />,
       },
       {
         path: 'produtos',
@@ -136,6 +132,10 @@ export const router = createBrowserRouter([
       {
         path: 'segmentos',
         element: withSuspense(SegmentosPage),
+      },
+      {
+        path: 'protocolos-pacotes',
+        element: withSuspense(ProtocolosPacotesPage),
       },
       {
         path: 'agendamentos',
@@ -167,11 +167,11 @@ export const router = createBrowserRouter([
       },
       {
         path: 'configuracoes-ia',
-        element: withSuspense(IAConfigPage),
+        element: withSuspense(ClinicaIAConfigPage),
       },
       {
         path: 'atividades',
-        element: withSuspense(AtividadesPage),
+        element: <Navigate to="/app/dashboard" replace />,
       },
       {
         path: 'whatsapp',
@@ -183,7 +183,7 @@ export const router = createBrowserRouter([
       },
       {
         path: 'prospeccao',
-        element: withSuspense(ProspeccaoPage),
+        element: <Navigate to="/app/pacientes" replace />,
       },
     ],
   },

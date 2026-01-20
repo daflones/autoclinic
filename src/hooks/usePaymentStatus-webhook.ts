@@ -1,12 +1,12 @@
 import { useState } from 'react';
-import { supabase } from '../lib/supabase';
+import { supabase } from '@/lib/supabase';
 import { useCurrentUser } from './useCurrentUser';
 
 interface PaymentStatusHook {
   isPaymentApproved: boolean;
   isLoading: boolean;
   error: string | null;
-  startRealtimeListener: (paymentId: string) => () => void;
+  startRealtimeListener: () => () => void;
 }
 
 export function usePaymentStatus(): PaymentStatusHook {
@@ -45,7 +45,7 @@ export function usePaymentStatus(): PaymentStatusHook {
   };
 
   // Função para iniciar listener do plano_ativo na tabela profiles
-  const startRealtimeListener = (paymentId: string) => {
+  const startRealtimeListener = () => {
     setIsLoading(true);
     setError(null);
     

@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabase'
-import { supabaseAdmin } from '@/lib/supabase-admin'
+import { getSupabaseAdmin } from '@/lib/supabase-admin'
 import { AtividadeService } from './atividades'
 
 export interface Agendamento {
@@ -392,14 +392,16 @@ export const agendamentosService = {
       throw new Error('Agendamento não encontrado')
     }
     
-    const { error } = await supabase
+    const supabaseAdmin = getSupabaseAdmin()
+
+    const { error: adminError } = await supabaseAdmin
       .from('agendamentos')
       .delete()
       .eq('id', id)
 
-    if (error) {
-      console.error('Erro ao deletar agendamento:', error)
-      throw new Error(`Erro ao deletar agendamento: ${error.message}`)
+    if (adminError) {
+      console.error('Erro ao deletar agendamento:', adminError)
+      throw new Error(`Erro ao deletar agendamento: ${adminError.message}`)
     }
 
     // Registrar atividade
@@ -412,6 +414,8 @@ export const agendamentosService = {
   },
 
   async updateStatus(id: string, status: string): Promise<Agendamento> {
+    const supabaseAdmin = getSupabaseAdmin()
+
     const { data, error } = await supabaseAdmin
       .from('agendamentos')
       .update({

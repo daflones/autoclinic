@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useCurrentUser } from './useCurrentUser';
-import { supabase } from '../lib/supabase';
+import { supabase } from '@/lib/supabase';
 
 export interface SubscriptionStatus {
   isActive: boolean;

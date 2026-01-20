@@ -22,6 +22,16 @@ export interface Configuracoes {
   updated_at?: string
 }
 
+function isMissingTableError(error: any): boolean {
+  const message = error?.message || ''
+  const code = error?.code || ''
+  return (
+    message.includes('404') ||
+    code === 'PGRST205' ||
+    message.toLowerCase().includes('not found')
+  )
+}
+
 // Buscar configurações do usuário
 export const getConfiguracoes = async (userId: string) => {
   try {
@@ -50,6 +60,25 @@ export const getConfiguracoes = async (userId: string) => {
       .eq('profile', adminId) // Filter by company
       .single()
 
+    if (error && isMissingTableError(error)) {
+      const defaultConfig: Configuracoes = {
+        user_id: userId,
+        profile: adminId,
+        notificacoes_email: true,
+        notificacoes_novos_clientes: true,
+        notificacoes_propostas_vencendo: true,
+        notificacoes_agendamentos: true,
+        tema: 'light',
+        idioma: 'pt-BR',
+        two_factor_enabled: false,
+        backup_automatico: false,
+        logs_auditoria: false,
+        limite_arquivos_mb: 100
+      }
+
+      return { data: defaultConfig, error: null }
+    }
+
     if (error && error.code === 'PGRST116') {
       // Configurações não existem, retornar valores padrão sem criar row
       const defaultConfig: Configuracoes = {
@@ -72,6 +101,10 @@ export const getConfiguracoes = async (userId: string) => {
 
     return { data, error }
   } catch (error) {
+    if (isMissingTableError(error)) {
+      return { data: null, error: null }
+    }
+
     console.error('Erro ao buscar configurações:', error)
     return { data: null, error }
   }
@@ -106,6 +139,8 @@ export const upsertConfiguracoes = async (userId: string, configuracoes: Partial
       .eq('profile', adminId) // Filter by company
       .single()
 
+    // Se a tabela não existe, não fazer nada (schema clínico)
+    // Nota: o PostgREST pode retornar erro aqui via throw; manter try/catch como fallback
     if (existingConfig) {
       // Se existe, fazer UPDATE
       const { data, error } = await supabase
@@ -137,6 +172,10 @@ export const upsertConfiguracoes = async (userId: string, configuracoes: Partial
       return { data, error }
     }
   } catch (error) {
+    if (isMissingTableError(error)) {
+      return { data: null, error: null }
+    }
+
     console.error('Erro ao salvar configurações:', error)
     return { data: null, error }
   }

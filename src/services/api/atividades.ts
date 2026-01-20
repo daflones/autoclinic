@@ -1,4 +1,4 @@
-import { supabase } from '../../lib/supabase'
+import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/stores/authStore'
 
 function getEntityTypeLabel(tipo: string): string {
@@ -88,6 +88,13 @@ export class AtividadeService {
         .insert([atividade])
 
       if (error) {
+        const message = (error as any)?.message || ''
+        const code = (error as any)?.code || ''
+        // Quando a tabela ainda não existe no schema, não poluir o console
+        if (message.includes('404') || code === 'PGRST205' || message.toLowerCase().includes('not found')) {
+          return
+        }
+
         console.error('Erro ao registrar atividade:', error)
       }
     } catch (error) {

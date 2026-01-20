@@ -28,12 +28,22 @@ export const useConfiguracoes = () => {
     queryFn: async () => {
       if (!user?.id) throw new Error('Usuário não autenticado')
       const result = await getConfiguracoes(user.id)
-      if (result.error) throw result.error
+
+      // Se a tabela não existe (404) ou não há registro, retornar defaults
+      if (result.error) {
+        const message = (result.error as any)?.message || ''
+        if (message.includes('404') || message.includes('PGRST') || message.toLowerCase().includes('not found')) {
+          return result.data
+        }
+        throw result.error
+      }
+
       return result.data
     },
     enabled: !!user?.id,
     staleTime: 5 * 60 * 1000, // 5 minutes
     refetchOnWindowFocus: false,
+    retry: false,
   })
 }
 

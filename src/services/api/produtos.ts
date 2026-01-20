@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabase'
-import { supabaseAdmin } from '@/lib/supabase-admin'
+import { getSupabaseAdmin } from '@/lib/supabase-admin'
 import { AtividadeService } from './atividades'
 
 export interface Produto {
@@ -251,6 +251,8 @@ export const produtosService = {
       throw new Error('Código do produto é obrigatório')
     }
 
+    const supabaseAdmin = getSupabaseAdmin()
+
     const { data, error } = await supabaseAdmin
       .from('produtos')
       .insert({
@@ -320,6 +322,8 @@ export const produtosService = {
       }
     })
 
+    const supabaseAdmin = getSupabaseAdmin()
+
     const { data, error } = await supabaseAdmin
       .from('produtos')
       .update(cleanUpdates)
@@ -354,6 +358,8 @@ export const produtosService = {
     
     // First, delete the product image if it exists
     try {
+      const supabaseAdmin = getSupabaseAdmin()
+
       const { data: product } = await supabaseAdmin
         .from('produtos')
         .select('imagem_principal')
@@ -373,6 +379,8 @@ export const produtosService = {
       console.warn('Erro ao deletar imagem do produto:', storageError)
       // Continue with product deletion even if image deletion fails
     }
+
+    const supabaseAdmin = getSupabaseAdmin()
 
     const { error } = await supabaseAdmin
       .from('produtos')

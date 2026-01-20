@@ -2,22 +2,24 @@ import { supabase } from '@/lib/supabase'
 import { getAdminContext } from './_tenant'
 
 export type StatusProfissional = 'ativo' | 'inativo' | 'ferias' | 'afastado' | 'desligado'
-export type ModalidadeAtendimento = 'presencial' | 'online' | 'hibrido'
 
 export interface ProfissionalClinica {
   id: string
   admin_profile_id: string
   profile_id?: string | null
   nome: string
+  cargo?: string | null
   documento?: string | null
   email?: string | null
   telefone?: string | null
   whatsapp?: string | null
+  experiencia?: string | null
+  certificacoes?: string | null
+  procedimentos?: string | null
   foto_url?: string | null
   especialidades?: string[] | null
   conselho?: string | null
   registro_profissional?: string | null
-  modalidade?: ModalidadeAtendimento | null
   percentual_comissao?: number | null
   meta_mensal?: number | null
   horario_atendimento?: Record<string, unknown> | null
@@ -35,15 +37,19 @@ export interface ProfissionalFilters {
 export interface ProfissionalCreateData {
   profile_id?: string | null
   nome: string
+  cargo?: string | null
   documento?: string | null
   email?: string | null
   telefone?: string | null
   whatsapp?: string | null
+  experiencia?: string | null
+  certificacoes?: string | null
+  procedimentos?: string | null
+  bio?: string | null
   foto_url?: string | null
   especialidades?: string[] | null
   conselho?: string | null
   registro_profissional?: string | null
-  modalidade?: ModalidadeAtendimento | null
   percentual_comissao?: number | null
   meta_mensal?: number | null
   horario_atendimento?: Record<string, unknown> | null

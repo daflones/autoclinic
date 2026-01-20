@@ -6,119 +6,196 @@ import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Bot, Check, Loader2, TestTube } from 'lucide-react'
-import { useIAConfig, useUpdateIAConfig, useTestIAConfig } from '@/hooks/useIAConfig'
-import { useVendedores } from '@/hooks/useVendedores'
-import type { IAConfig } from '@/services/api/ia-config'
+import { Bot, Check, Loader2 } from 'lucide-react'
+import { useClinicaIAConfig, useUpdateClinicaIAConfig } from '@/hooks/useClinicaIAConfig'
 
-// Ordem correta dos dias da semana
-const diasDaSemanaOrdem = ['domingo', 'segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado']
+const defaultHorarios = {
+  segunda: { ativo: true, inicio: '08:00', fim: '18:00' },
+  terca: { ativo: true, inicio: '08:00', fim: '18:00' },
+  quarta: { ativo: true, inicio: '08:00', fim: '18:00' },
+  quinta: { ativo: true, inicio: '08:00', fim: '18:00' },
+  sexta: { ativo: true, inicio: '08:00', fim: '18:00' },
+  sabado: { ativo: false, inicio: '08:00', fim: '12:00' },
+  domingo: { ativo: false, inicio: '08:00', fim: '12:00' },
+}
 
-// Função para ordenar os dias da semana
-const ordenarDiasDaSemana = (horarios: any) => {
-  if (!horarios) return []
-  
-  return Object.entries(horarios).sort(([diaA], [diaB]) => {
-    const indexA = diasDaSemanaOrdem.indexOf(diaA.toLowerCase())
-    const indexB = diasDaSemanaOrdem.indexOf(diaB.toLowerCase())
-    return indexA - indexB
-  })
+type TomDeVoz =
+  | 'humanizado'
+  | 'acolhedor'
+  | 'tecnico_especialista'
+  | 'direto_objetivo'
+  | 'vendedor_conversor'
+  | 'sofisticado'
+
+type EstiloComunicacao = 'curto' | 'medio' | 'detalhado'
+
+type PosicionamentoMarca = 'economico' | 'acessivel' | 'intermediario' | 'premium' | 'luxo'
+
+type Nicho = 'facial' | 'corporal' | 'capilar' | 'multiestetica'
+
+interface ProfissionalJSON {
+  id: string
+  nome: string
+  cargo?: string
+  especialidades?: string
+  experiencia?: string
+  certificacoes?: string
+  bio?: string
+  foto_url?: string
+  procedimentos?: string
 }
 
 export function IAConfigPage() {
-  const { data: iaConfigData, isLoading } = useIAConfig()
-  const { data: vendedores = [] } = useVendedores()
-  const updateIAConfig = useUpdateIAConfig()
-  const testIAConfig = useTestIAConfig()
+  const { data: clinicaConfig, isLoading } = useClinicaIAConfig()
+  const updateClinicaConfig = useUpdateClinicaIAConfig()
 
-  const [iaConfig, setIaConfig] = useState<Partial<IAConfig>>({
-    nome_agente: '',
-    tom_fala: 'profissional',
-    tamanho_textos: 'medio',
-    usar_emojis: false,
-    tempo_resposta_ms: 2000,
-    mensagem_ausencia: '',
-    horarios_funcionamento: {
-      segunda: { ativo: true, inicio: '08:00', fim: '18:00' },
-      terca: { ativo: true, inicio: '08:00', fim: '18:00' },
-      quarta: { ativo: true, inicio: '08:00', fim: '18:00' },
-      quinta: { ativo: true, inicio: '08:00', fim: '18:00' },
-      sexta: { ativo: true, inicio: '08:00', fim: '18:00' },
-      sabado: { ativo: false, inicio: '08:00', fim: '12:00' },
-      domingo: { ativo: false, inicio: '08:00', fim: '12:00' }
+  const [identidade, setIdentidade] = useState<Record<string, any>>({
+    nome_clinica: '',
+    nome_fantasia: '',
+    cnpj: '',
+    endereco_completo: '',
+    bairro: '',
+    cidade_estado: '',
+    telefone_principal: '',
+    telefone_recepcao: '',
+    site: '',
+    redes_sociais: [],
+    horarios_funcionamento: defaultHorarios,
+  })
+
+  const [posicionamento, setPosicionamento] = useState<Record<string, any>>({
+    nicho: 'multiestetica' as Nicho,
+    posicionamento_marca: 'intermediario' as PosicionamentoMarca,
+    tom_voz_ia: 'acolhedor' as TomDeVoz,
+    estilo_comunicacao: 'medio' as EstiloComunicacao,
+    persona_marca: '',
+    slogan: '',
+  })
+
+  const [profissionais, setProfissionais] = useState<ProfissionalJSON[]>([])
+
+  const [politicas, setPoliticas] = useState<Record<string, any>>({
+    avaliacao: {
+      obrigatoria: false,
+      gratuita: true,
+      valor: null,
+      ia_pode_agendar: false,
     },
-    agendamento_ia: false,
-    regras_qualificacao: {
-      nome: true,
-      telefone: true,
-      produto_interesse: true,
-      motivacao: true,
-      expectativa: true,
-      analise_cliente: true,
-      cpf: false,
-      cnpj: false,
-      nome_empresa: false,
-      email: false,
-      segmento: false,
-      volume_mensal: false,
-      endereco: {
-        ativo: false,
-        rua: false,
-        numero: false,
-        cidade: false,
-        cep: false
-      }
+    agendamento: {
+      ia_pode_agendar_procedimentos: false,
+      exige_pagamento_antecipado: false,
+      exige_sinal: false,
+      valor_sinal: null,
+      enviar_pagamento_antes: false,
     },
-    detalhes_empresa: {
-      sobre_empresa: '',
-      diferenciais_competitivos: '',
-      portfolio_produtos_servicos: '',
-      principais_clientes: '',
-      produtos_servicos_mais_vendidos: '',
-      informacoes_ia_pode_fornecer: '',
-      informacoes_ia_nao_pode_fornecer: '',
-      operacional_comercial: '',
-      argumentos_venda_por_perfil: '',
-      objecoes_comuns_respostas: '',
-      contatos: { telefone: '', email: '', whatsapp: '', endereco: '' },
-      redes_sociais: { website: '', instagram: '', linkedin: '', facebook: '' }
-    }
+    valores: {
+      ia_pode_informar: 'nao' as 'exato' | 'faixa' | 'nao',
+      texto_padrao: '',
+    },
+    cancelamento_no_show: {
+      regra_atrasos: '',
+      regra_remarcacoes: '',
+      penalidades_ausencia: '',
+      texto_padrao_ia: '',
+    },
+  })
+
+  const [provaSocial, setProvaSocial] = useState<Record<string, any>>({
+    clientes_atendidos: null,
+    procedimentos_realizados: null,
+    premios_reconhecimentos: [],
+    avaliacoes_google_total: null,
+    google_nota_media: null,
+    depoimentos: [],
+    cases: [],
+    fotos_clinica: [],
+  })
+
+  const [midias, setMidias] = useState<Record<string, any>>({
+    imagem_apresentacao: '',
+    foto_fachada: '',
+    fotos_salas: [],
+    video_institucional: '',
+    antes_depois_genericos: [],
+  })
+
+  const [regrasInternas, setRegrasInternas] = useState<Record<string, any>>({
+    tempo_medio_resposta_humana: '',
+    mensagens_proibidas: '',
+    informacoes_sensiveis: '',
+    dias_sem_atendimento: '',
+    quando_transferir_humano: '',
+  })
+
+  const [gatilhos, setGatilhos] = useState<Record<string, any>>({
+    diferenciais: '',
+    o_que_importa_para_cliente: '',
+    motivos_para_escolher: '',
+    garantias: '',
   })
 
   // Atualizar estado local quando os dados chegarem
   useEffect(() => {
-    if (iaConfigData) {
-      setIaConfig(iaConfigData)
+    if (clinicaConfig) {
+      setIdentidade({
+        ...identidade,
+        ...(clinicaConfig.identidade || {}),
+        horarios_funcionamento: (clinicaConfig.identidade as any)?.horarios_funcionamento || defaultHorarios,
+      })
+      setPosicionamento({ ...posicionamento, ...(clinicaConfig.posicionamento || {}) })
+      setProfissionais((clinicaConfig.profissionais as any[]) || [])
+      setPoliticas({ ...politicas, ...(clinicaConfig.politicas || {}) })
+      setProvaSocial({ ...provaSocial, ...(clinicaConfig.prova_social || {}) })
+      setMidias({ ...midias, ...(clinicaConfig.midias || {}) })
+      setRegrasInternas({ ...regrasInternas, ...(clinicaConfig.regras_internas || {}) })
+      setGatilhos({ ...gatilhos, ...(clinicaConfig.gatilhos_diferenciais || {}) })
     }
-  }, [iaConfigData])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [clinicaConfig])
 
   const handleSaveConfig = () => {
-    updateIAConfig.mutate(iaConfig)
+    updateClinicaConfig.mutate({
+      identidade,
+      posicionamento,
+      profissionais,
+      politicas,
+      prova_social: provaSocial,
+      midias,
+      regras_internas: regrasInternas,
+      gatilhos_diferenciais: gatilhos,
+    } as any)
   }
 
-  const handleTestConfig = () => {
-    testIAConfig.mutate(iaConfig)
+  const generateId = () => {
+    if (typeof crypto !== 'undefined' && (crypto as any).randomUUID) {
+      return (crypto as any).randomUUID()
+    }
+    return `${Date.now()}-${Math.random().toString(16).slice(2)}`
   }
 
-  const updateDetalhesEmpresa = (field: string, value: string) => {
-    setIaConfig(prev => ({
+  const addProfissional = () => {
+    setProfissionais((prev) => [
       ...prev,
-      detalhes_empresa: {
-        sobre_empresa: prev.detalhes_empresa?.sobre_empresa || '',
-        diferenciais_competitivos: prev.detalhes_empresa?.diferenciais_competitivos || '',
-        portfolio_produtos_servicos: prev.detalhes_empresa?.portfolio_produtos_servicos || '',
-        principais_clientes: prev.detalhes_empresa?.principais_clientes || '',
-        produtos_servicos_mais_vendidos: prev.detalhes_empresa?.produtos_servicos_mais_vendidos || '',
-        informacoes_ia_pode_fornecer: prev.detalhes_empresa?.informacoes_ia_pode_fornecer || '',
-        informacoes_ia_nao_pode_fornecer: prev.detalhes_empresa?.informacoes_ia_nao_pode_fornecer || '',
-        operacional_comercial: prev.detalhes_empresa?.operacional_comercial || '',
-        argumentos_venda_por_perfil: prev.detalhes_empresa?.argumentos_venda_por_perfil || '',
-        objecoes_comuns_respostas: prev.detalhes_empresa?.objecoes_comuns_respostas || '',
-        contatos: prev.detalhes_empresa?.contatos || { telefone: '', email: '', whatsapp: '', endereco: '' },
-        redes_sociais: prev.detalhes_empresa?.redes_sociais || { website: '', instagram: '', linkedin: '', facebook: '' },
-        [field]: value
-      }
-    }))
+      {
+        id: generateId(),
+        nome: '',
+        cargo: '',
+        especialidades: '',
+        experiencia: '',
+        certificacoes: '',
+        bio: '',
+        foto_url: '',
+        procedimentos: '',
+      },
+    ])
+  }
+
+  const updateProfissional = (id: string, patch: Partial<ProfissionalJSON>) => {
+    setProfissionais((prev) => prev.map((p) => (p.id === id ? { ...p, ...patch } : p)))
+  }
+
+  const removeProfissional = (id: string) => {
+    setProfissionais((prev) => prev.filter((p) => p.id !== id))
   }
 
   if (isLoading) {
@@ -144,9 +221,9 @@ export function IAConfigPage() {
         </div>
         <Button 
           onClick={handleSaveConfig}
-          disabled={updateIAConfig.isPending}
+          disabled={updateClinicaConfig.isPending}
         >
-          {updateIAConfig.isPending ? (
+          {updateClinicaConfig.isPending ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               Salvando...
@@ -161,40 +238,106 @@ export function IAConfigPage() {
       </div>
 
       <div className="space-y-6">
-        {/* Nome e Tom de Fala */}
+        {/* A) Identidade da Clínica */}
         <Card>
           <CardHeader>
-            <CardTitle>Nome e Tom de Fala</CardTitle>
+            <CardTitle>Identidade da Clínica</CardTitle>
             <CardDescription>
-              Personalize o nome do assistente virtual e escolha o estilo de comunicação que melhor representa sua empresa.
+              Informações básicas e operacionais da clínica.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid gap-2">
-              <Label htmlFor="nome-agente">Nome do Agente de IA</Label>
-              <Input
-                id="nome-agente"
-                placeholder="(nomeie seu agente)"
-                value={iaConfig.nome_agente || ''}
-                onChange={(e) => setIaConfig({...iaConfig, nome_agente: e.target.value})}
-              />
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="grid gap-2">
+                <Label>Nome da clínica</Label>
+                <Input value={identidade.nome_clinica || ''} onChange={(e) => setIdentidade({ ...identidade, nome_clinica: e.target.value })} />
+              </div>
+              <div className="grid gap-2">
+                <Label>Nome fantasia</Label>
+                <Input value={identidade.nome_fantasia || ''} onChange={(e) => setIdentidade({ ...identidade, nome_fantasia: e.target.value })} />
+              </div>
+              <div className="grid gap-2">
+                <Label>CNPJ (opcional)</Label>
+                <Input value={identidade.cnpj || ''} onChange={(e) => setIdentidade({ ...identidade, cnpj: e.target.value })} />
+              </div>
+              <div className="grid gap-2">
+                <Label>Cidade / Estado</Label>
+                <Input value={identidade.cidade_estado || ''} onChange={(e) => setIdentidade({ ...identidade, cidade_estado: e.target.value })} />
+              </div>
+              <div className="grid gap-2">
+                <Label>Endereço completo</Label>
+                <Input value={identidade.endereco_completo || ''} onChange={(e) => setIdentidade({ ...identidade, endereco_completo: e.target.value })} />
+              </div>
+              <div className="grid gap-2">
+                <Label>Zona / Bairro</Label>
+                <Input value={identidade.bairro || ''} onChange={(e) => setIdentidade({ ...identidade, bairro: e.target.value })} />
+              </div>
+              <div className="grid gap-2">
+                <Label>Telefone principal</Label>
+                <Input value={identidade.telefone_principal || ''} onChange={(e) => setIdentidade({ ...identidade, telefone_principal: e.target.value })} />
+              </div>
+              <div className="grid gap-2">
+                <Label>Telefone da recepção</Label>
+                <Input value={identidade.telefone_recepcao || ''} onChange={(e) => setIdentidade({ ...identidade, telefone_recepcao: e.target.value })} />
+              </div>
+              <div className="grid gap-2">
+                <Label>Site (opcional)</Label>
+                <Input value={identidade.site || ''} onChange={(e) => setIdentidade({ ...identidade, site: e.target.value })} />
+              </div>
+              <div className="grid gap-2">
+                <Label>Redes sociais (uma por linha)</Label>
+                <Textarea
+                  value={(identidade.redes_sociais || []).join('\n')}
+                  onChange={(e) => setIdentidade({ ...identidade, redes_sociais: e.target.value.split('\n').map((s: string) => s.trim()).filter(Boolean) })}
+                  rows={3}
+                />
+              </div>
             </div>
-            <div className="grid gap-2">
-              <Label htmlFor="tom-fala">Tom de Fala</Label>
-              <Select 
-                value={iaConfig.tom_fala || 'profissional'} 
-                onValueChange={(value) => setIaConfig({...iaConfig, tom_fala: value as any})}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione o tom de fala" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="profissional">Profissional</SelectItem>
-                  <SelectItem value="casual">Casual</SelectItem>
-                  <SelectItem value="formal">Formal</SelectItem>
-                  <SelectItem value="amigavel">Amigável</SelectItem>
-                </SelectContent>
-              </Select>
+
+            <div className="space-y-3 pt-4 border-t">
+              <Label>Horário de funcionamento</Label>
+              {Object.entries(identidade.horarios_funcionamento || defaultHorarios).map(([dia, config]: [string, any]) => (
+                <div key={dia} className="flex items-center gap-4 p-3 border rounded-lg">
+                  <div className="w-24">
+                    <Label className="capitalize">{dia}</Label>
+                  </div>
+                  <Switch
+                    checked={config?.ativo || false}
+                    onCheckedChange={(checked) => {
+                      const horarios = { ...(identidade.horarios_funcionamento || defaultHorarios) }
+                      horarios[dia] = { ...config, ativo: checked }
+                      setIdentidade({ ...identidade, horarios_funcionamento: horarios })
+                    }}
+                  />
+                  {config?.ativo ? (
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="time"
+                        value={config?.inicio || '08:00'}
+                        onChange={(e) => {
+                          const horarios = { ...(identidade.horarios_funcionamento || defaultHorarios) }
+                          horarios[dia] = { ...config, inicio: e.target.value }
+                          setIdentidade({ ...identidade, horarios_funcionamento: horarios })
+                        }}
+                        className="w-24"
+                      />
+                      <span className="text-sm text-gray-500">às</span>
+                      <Input
+                        type="time"
+                        value={config?.fim || '18:00'}
+                        onChange={(e) => {
+                          const horarios = { ...(identidade.horarios_funcionamento || defaultHorarios) }
+                          horarios[dia] = { ...config, fim: e.target.value }
+                          setIdentidade({ ...identidade, horarios_funcionamento: horarios })
+                        }}
+                        className="w-24"
+                      />
+                    </div>
+                  ) : (
+                    <span className="text-sm text-gray-400">Inativo</span>
+                  )}
+                </div>
+              ))}
             </div>
           </CardContent>
         </Card>
@@ -827,25 +970,6 @@ export function IAConfigPage() {
 
         {/* Botões de Ação */}
         <div className="flex gap-4">
-          <Button 
-            onClick={handleTestConfig}
-            disabled={testIAConfig.isPending}
-            variant="outline"
-            className="flex-1"
-          >
-            {testIAConfig.isPending ? (
-              <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Testando...
-              </>
-            ) : (
-              <>
-                <TestTube className="w-4 h-4 mr-2" />
-                Testar Configurações
-              </>
-            )}
-          </Button>
-          
           <Button 
             onClick={handleSaveConfig}
             disabled={updateIAConfig.isPending}

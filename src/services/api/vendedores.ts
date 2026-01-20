@@ -1,6 +1,16 @@
 import { supabase } from '@/lib/supabase'
-import { supabaseAdmin } from '@/lib/supabase-admin'
+import { getSupabaseAdmin } from '@/lib/supabase-admin'
 import { AtividadeService } from './atividades'
+
+function isMissingTableError(error: any): boolean {
+  const message = error?.message || ''
+  const code = error?.code || ''
+  return (
+    message.includes('404') ||
+    code === 'PGRST205' ||
+    message.toLowerCase().includes('not found')
+  )
+}
 
 export interface Vendedor {
   id: string
@@ -168,6 +178,10 @@ export const vendedoresService = {
       `)
       .eq('profile', adminId) // Filter by company
 
+    if (error && isMissingTableError(error)) {
+      return []
+    }
+
     if (error) {
       console.error('Erro ao buscar vendedores:', error)
       throw new Error(`Erro ao buscar vendedores: ${error.message}`)
@@ -189,11 +203,23 @@ export const vendedoresService = {
   },
 
   async getStats() {
+    // Se a tabela não existe no schema clínico, retornar defaults
     // Total de vendedores
     const { count: totalVendedores } = await supabase
       .from('vendedores')
       .select('*', { count: 'exact', head: true })
       .eq('status', 'ativo')
+
+    if (totalVendedores === null) {
+      return {
+        totalVendedores: 0,
+        metaTotal: 0,
+        realizadoTotal: 0,
+        melhorVendedor: 'N/A',
+        melhorVendedorTotal: 0,
+        percentualMeta: 0,
+      }
+    }
 
     // Meta total da equipe
     const { data: metaData } = await supabase
@@ -381,6 +407,8 @@ export const vendedoresService = {
         }
       } else {
         // Step 1: Primeiro, remover a referência vendedor_id do profile para evitar constraint
+        const supabaseAdmin = getSupabaseAdmin()
+
         const { error: updateProfileError } = await supabaseAdmin
           .from('profiles')
           .update({ vendedor_id: null })
@@ -417,7 +445,7 @@ export const vendedoresService = {
             throw new Error(`Erro na Edge Function: ${errorData.error || 'Erro desconhecido'}`)
           }
 
-          const result = await response.json()
+          await response.json()
         } catch (edgeFunctionError) {
           console.error('⚠️ Erro na Edge Function (não crítico):', edgeFunctionError)
           // Não falhar aqui, pois o vendedor já foi deletado da tabela principal

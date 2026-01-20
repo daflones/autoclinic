@@ -43,6 +43,22 @@ const STATUS_CONFIG: Record<
   remarcado: { label: 'Remarcado', variant: 'outline', icon: null },
 }
 
+const toDateTimeLocalValue = (value: string) => {
+  if (!value) return ''
+  const d = new Date(value)
+  if (Number.isNaN(d.getTime())) return value
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
+
+const toUtcIsoFromLocalInput = (value: string) => {
+  if (!value) return ''
+  // value is local time without timezone (YYYY-MM-DDTHH:mm)
+  const d = new Date(value)
+  if (Number.isNaN(d.getTime())) return value
+  return d.toISOString()
+}
+
 interface AgendamentoModalsProps {
   isCreateModalOpen: boolean
   setIsCreateModalOpen: (open: boolean) => void
@@ -179,8 +195,10 @@ export function AgendamentoModals({
                 <Input
                   id="create-data-inicio"
                   type="datetime-local"
-                  value={formState.data_inicio}
-                  onChange={(e) => setFormState({ ...formState, data_inicio: e.target.value })}
+                  value={toDateTimeLocalValue(formState.data_inicio)}
+                  onChange={(e) =>
+                    setFormState({ ...formState, data_inicio: toUtcIsoFromLocalInput(e.target.value) })
+                  }
                 />
               </div>
 
@@ -189,8 +207,8 @@ export function AgendamentoModals({
                 <Input
                   id="create-data-fim"
                   type="datetime-local"
-                  value={formState.data_fim}
-                  onChange={(e) => setFormState({ ...formState, data_fim: e.target.value })}
+                  value={toDateTimeLocalValue(formState.data_fim)}
+                  onChange={(e) => setFormState({ ...formState, data_fim: toUtcIsoFromLocalInput(e.target.value) })}
                 />
               </div>
             </div>
@@ -422,8 +440,10 @@ export function AgendamentoModals({
                 <Input
                   id="edit-data-inicio"
                   type="datetime-local"
-                  value={editFormState.data_inicio}
-                  onChange={(e) => setEditFormState({ ...editFormState, data_inicio: e.target.value })}
+                  value={toDateTimeLocalValue(editFormState.data_inicio)}
+                  onChange={(e) =>
+                    setEditFormState({ ...editFormState, data_inicio: toUtcIsoFromLocalInput(e.target.value) })
+                  }
                 />
               </div>
 
@@ -432,8 +452,8 @@ export function AgendamentoModals({
                 <Input
                   id="edit-data-fim"
                   type="datetime-local"
-                  value={editFormState.data_fim}
-                  onChange={(e) => setEditFormState({ ...editFormState, data_fim: e.target.value })}
+                  value={toDateTimeLocalValue(editFormState.data_fim)}
+                  onChange={(e) => setEditFormState({ ...editFormState, data_fim: toUtcIsoFromLocalInput(e.target.value) })}
                 />
               </div>
             </div>

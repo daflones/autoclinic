@@ -29,7 +29,6 @@ import {
   CalendarX,
   CalendarClock,
   Wand2,
-  ListChecks,
   RefreshCw,
 } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
@@ -41,6 +40,12 @@ import dayGridPlugin from '@fullcalendar/daygrid'
 import interactionPlugin from '@fullcalendar/interaction'
 import type { EventDropArg, EventResizeDoneArg } from '@fullcalendar/core'
 import { DateTimePicker } from '@/components/ui/datetime-picker'
+import {
+  useListaEsperaAgendamentos,
+  useCreateListaEsperaAgendamento,
+  useUpdateListaEsperaAgendamento,
+  useDeleteListaEsperaAgendamento,
+} from '@/hooks/useListaEsperaAgendamentos'
 import {
   useAgendamentosClinica,
   useCreateAgendamentoClinica,
@@ -56,8 +61,13 @@ import type {
   AgendamentoClinicaCreateData,
   StatusAgendamentoClinica,
 } from '@/services/api/agendamentos-clinica'
+import type {
+  ListaEsperaPrioridade,
+  ListaEsperaStatus,
+} from '@/services/api/lista-espera-agendamentos'
 
 type CalendarView = 'timeGridDay' | 'timeGridWeek' | 'dayGridMonth'
+type AgendaView = 'calendario' | 'lista'
 
 const STATUS_CONFIG: Record<
   StatusAgendamentoClinica,
@@ -78,6 +88,7 @@ export function AgendamentosClinicaPage() {
   const [statusFilter, setStatusFilter] = useState<StatusAgendamentoClinica | 'all'>('all')
   const [pacienteFilter, setPacienteFilter] = useState<string>('all')
   const [profissionalFilter, setProfissionalFilter] = useState<string>('all')
+  const [agendaView, setAgendaView] = useState<AgendaView>('calendario')
   const [calendarView, setCalendarView] = useState<CalendarView>('timeGridWeek')
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false)
@@ -128,7 +139,20 @@ export function AgendamentosClinicaPage() {
   const deleteMutation = useDeleteAgendamentoClinica()
   const updateStatusMutation = useUpdateAgendamentoClinicaStatus()
 
-  const [waitlistText, setWaitlistText] = useState('')
+  const { data: waitlistQuery } = useListaEsperaAgendamentos({ limit: 200 })
+  const createWaitlistMutation = useCreateListaEsperaAgendamento()
+  const updateWaitlistMutation = useUpdateListaEsperaAgendamento()
+  const deleteWaitlistMutation = useDeleteListaEsperaAgendamento()
+
+  const [waitlistForm, setWaitlistForm] = useState({
+    paciente_id: 'none',
+    nome_paciente: '',
+    telefone: '',
+    procedimento_id: 'none',
+    preferencia_horario: '',
+    prioridade: 'media' as ListaEsperaPrioridade,
+    observacoes: '',
+  })
 
   const [isRescheduleModalOpen, setIsRescheduleModalOpen] = useState(false)
   const [rescheduleState, setRescheduleState] = useState({
@@ -148,6 +172,28 @@ export function AgendamentosClinicaPage() {
       concluidos: agendamentos.filter((a) => a.status === 'concluido').length,
     }
   }, [agendamentos, count])
+
+  const toDateTimeLocal = (date: Date) => {
+    const pad = (n: number) => String(n).padStart(2, '0')
+    const yyyy = date.getFullYear()
+    const mm = pad(date.getMonth() + 1)
+    const dd = pad(date.getDate())
+    const hh = pad(date.getHours())
+    const mi = pad(date.getMinutes())
+    return `${yyyy}-${mm}-${dd}T${hh}:${mi}`
+  }
+
+  const toUtcIso = (date: Date) => date.toISOString()
+
+  const handleWaitlistAgendar = (itemId: string, pacienteId?: string | null, nome?: string | null) => {
+    setFormState((prev) => ({
+      ...prev,
+      titulo: nome ? `Agendamento - ${nome}` : prev.titulo || 'Agendamento',
+      paciente_id: pacienteId ?? null,
+    }))
+    setIsCreateModalOpen(true)
+    updateWaitlistMutation.mutate({ id: itemId, data: { status: 'agendado' } })
+  }
 
   const handleOpenRescheduleModal = () => {
     if (!selectedAgendamento) return
@@ -195,7 +241,6 @@ export function AgendamentosClinicaPage() {
       console.error('Erro ao reagendar:', error)
     }
   }
-
 
   const noShows = useMemo(() => agendamentos.filter((a) => a.status === 'nao_compareceu'), [agendamentos])
 
@@ -341,6 +386,29 @@ export function AgendamentosClinicaPage() {
   }
 
   const events = useMemo(() => {
+    const filteredAgendamentos = agendamentos.filter((a) => {
+      if (statusFilter !== 'all' && a.status !== statusFilter) return false
+      if (pacienteFilter !== 'all' && (a.paciente_id ?? '') !== pacienteFilter) return false
+      if (profissionalFilter !== 'all' && (a.profissional_id ?? '') !== profissionalFilter) return false
+
+      if (searchTerm.trim()) {
+        const term = searchTerm.trim().toLowerCase()
+        const haystack = [
+          a.titulo,
+          a.descricao || '',
+          a.paciente?.nome_completo || '',
+          a.profissional?.nome || '',
+          a.sala || '',
+        ]
+          .join(' ')
+          .toLowerCase()
+
+        if (!haystack.includes(term)) return false
+      }
+
+      return true
+    })
+
     const baseHueByProcedimento: Record<string, number> = {}
 
     const getColor = (procedimentoId?: string | null) => {
@@ -354,7 +422,7 @@ export function AgendamentosClinicaPage() {
       return { bg: `hsl(${h} 78% 56%)`, border: `hsl(${h} 78% 46%)` }
     }
 
-    return agendamentos.map((a) => {
+    return filteredAgendamentos.map((a) => {
       const color = getColor(a.procedimento_id)
       const patient = a.paciente?.nome_completo ? ` • ${a.paciente.nome_completo}` : ''
       const room = a.sala ? ` • Sala ${a.sala}` : ''
@@ -371,7 +439,7 @@ export function AgendamentosClinicaPage() {
         },
       }
     })
-  }, [agendamentos])
+  }, [agendamentos, pacienteFilter, profissionalFilter, searchTerm, statusFilter])
 
   const handleEventClick = (info: any) => {
     const agendamento = info?.event?.extendedProps?.agendamento as AgendamentoClinica | undefined
@@ -420,10 +488,27 @@ export function AgendamentosClinicaPage() {
           <h1 className="text-3xl font-bold tracking-tight">Agenda Clínica</h1>
           <p className="text-muted-foreground">Gerencie os agendamentos de consultas e procedimentos</p>
         </div>
-        <Button onClick={() => setIsCreateModalOpen(true)}>
-          <Plus className="mr-2 h-4 w-4" />
-          Novo Agendamento
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            type="button"
+            variant={agendaView === 'calendario' ? 'default' : 'outline'}
+            onClick={() => setAgendaView('calendario')}
+          >
+            Calendário
+          </Button>
+          <Button
+            type="button"
+            variant={agendaView === 'lista' ? 'default' : 'outline'}
+            onClick={() => setAgendaView('lista')}
+          >
+            Lista
+          </Button>
+
+          <Button onClick={() => setIsCreateModalOpen(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            Novo Agendamento
+          </Button>
+        </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-4">
@@ -471,94 +556,6 @@ export function AgendamentosClinicaPage() {
           </CardContent>
         </Card>
       </div>
-
-      <Card>
-        <CardHeader className="space-y-3">
-          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-            <div>
-              <CardTitle>Calendário</CardTitle>
-              <CardDescription>Visualização diária, semanal e mensal. Arraste para reagendar.</CardDescription>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2">
-              <Button type="button" variant="outline" onClick={handleCalendarPrev}>
-                ◀
-              </Button>
-              <Button type="button" variant="outline" onClick={handleCalendarToday}>
-                Hoje
-              </Button>
-              <Button type="button" variant="outline" onClick={handleCalendarNext}>
-                ▶
-              </Button>
-
-              <Button
-                type="button"
-                variant={calendarView === 'timeGridDay' ? 'default' : 'outline'}
-                onClick={() => handleChangeView('timeGridDay')}
-              >
-                Dia
-              </Button>
-              <Button
-                type="button"
-                variant={calendarView === 'timeGridWeek' ? 'default' : 'outline'}
-                onClick={() => handleChangeView('timeGridWeek')}
-              >
-                Semana
-              </Button>
-              <Button
-                type="button"
-                variant={calendarView === 'dayGridMonth' ? 'default' : 'outline'}
-                onClick={() => handleChangeView('dayGridMonth')}
-              >
-                Mês
-              </Button>
-            </div>
-          </div>
-        </CardHeader>
-
-        <CardContent>
-          <div className="rounded-xl border overflow-hidden bg-background">
-            <FullCalendar
-              ref={calendarRef as any}
-              plugins={[timeGridPlugin, dayGridPlugin, interactionPlugin]}
-              initialView={calendarView}
-              headerToolbar={false}
-              locale="pt-br"
-              firstDay={1}
-              slotMinTime="06:00:00"
-              slotMaxTime="22:00:00"
-              slotDuration="00:15:00"
-              snapDuration="00:15:00"
-              nowIndicator
-              editable
-              selectable
-              selectMirror
-              dayMaxEvents
-              events={events as any}
-              eventClick={handleEventClick}
-              eventDrop={handleEventDrop}
-              eventResize={handleEventResize}
-              select={(selection) => {
-                setFormState({
-                  titulo: formState.titulo || 'Agendamento',
-                  descricao: formState.descricao || '',
-                  data_inicio: selection.startStr,
-                  data_fim: selection.endStr,
-                  paciente_id: formState.paciente_id ?? null,
-                  profissional_id: formState.profissional_id ?? null,
-                  sala: formState.sala || '',
-                  status: formState.status || 'agendado',
-                })
-                setIsCreateModalOpen(true)
-              }}
-              contentHeight={650}
-              expandRows
-              stickyHeaderDates
-              eventTimeFormat={{ hour: '2-digit', minute: '2-digit', hour12: false } as any}
-            />
-          </div>
-        </CardContent>
-      </Card>
 
       <Card>
         <CardHeader>
@@ -637,77 +634,164 @@ export function AgendamentosClinicaPage() {
         </CardContent>
       </Card>
 
-      <div className="grid gap-4 lg:grid-cols-3">
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <ListChecks className="h-5 w-5" />
-              Ações na agenda
-            </CardTitle>
-            <CardDescription>
-              A IA fará confirmações, lembretes e automações. Aqui você executa ações rápidas.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="flex flex-wrap gap-2">
-              <Button type="button" onClick={() => setIsCreateModalOpen(true)}>
-                <Plus className="mr-2 h-4 w-4" />
-                Criar agendamento
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                disabled={!selectedAgendamento}
-                onClick={() => {
-                  if (!selectedAgendamento) return
-                  setIsDetailsModalOpen(false)
-                  setIsEditModalOpen(true)
-                }}
-              >
-                Editar selecionado
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                disabled={!selectedAgendamento}
-                onClick={() => handleUpdateStatus('cancelado')}
-              >
-                Cancelar
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                disabled={!selectedAgendamento}
-                onClick={handleOpenRescheduleModal}
-              >
-                Reagendar
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                disabled={!selectedAgendamento}
-                onClick={() => handleUpdateStatus('concluido')}
-              >
-                Concluir
-              </Button>
-              <Button
-                type="button"
-                variant="destructive"
-                disabled={!selectedAgendamento}
-                onClick={() => handleUpdateStatus('nao_compareceu')}
-              >
-                No-show
-              </Button>
-            </div>
+      {agendaView === 'calendario' ? (
+        <Card>
+          <CardHeader className="space-y-3">
+            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+              <div>
+                <CardTitle>Calendário</CardTitle>
+                <CardDescription>Visualização diária, semanal e mensal. Arraste para reagendar.</CardDescription>
+              </div>
 
-            <div className="text-sm text-muted-foreground">
-              {selectedAgendamento
-                ? `Selecionado: ${selectedAgendamento.titulo} • ${formatDateTime(selectedAgendamento.data_inicio)}`
-                : 'Selecione um agendamento clicando em um evento no calendário ou na lista.'}
+              <div className="flex flex-wrap items-center gap-2">
+                <Button type="button" variant="outline" onClick={handleCalendarPrev}>
+                  ◀
+                </Button>
+                <Button type="button" variant="outline" onClick={handleCalendarToday}>
+                  Hoje
+                </Button>
+                <Button type="button" variant="outline" onClick={handleCalendarNext}>
+                  ▶
+                </Button>
+
+                <Button
+                  type="button"
+                  variant={calendarView === 'timeGridDay' ? 'default' : 'outline'}
+                  onClick={() => handleChangeView('timeGridDay')}
+                >
+                  Dia
+                </Button>
+                <Button
+                  type="button"
+                  variant={calendarView === 'timeGridWeek' ? 'default' : 'outline'}
+                  onClick={() => handleChangeView('timeGridWeek')}
+                >
+                  Semana
+                </Button>
+                <Button
+                  type="button"
+                  variant={calendarView === 'dayGridMonth' ? 'default' : 'outline'}
+                  onClick={() => handleChangeView('dayGridMonth')}
+                >
+                  Mês
+                </Button>
+              </div>
+            </div>
+          </CardHeader>
+
+          <CardContent>
+            <div className="rounded-xl border overflow-hidden bg-background">
+              <FullCalendar
+                ref={calendarRef as any}
+                plugins={[timeGridPlugin, dayGridPlugin, interactionPlugin]}
+                initialView={calendarView}
+                headerToolbar={false}
+                locale="pt-br"
+                firstDay={1}
+                slotMinTime="06:00:00"
+                slotMaxTime="22:00:00"
+                slotDuration="00:15:00"
+                snapDuration="00:15:00"
+                nowIndicator
+                editable
+                selectable
+                selectMirror
+                dayMaxEvents
+                events={events as any}
+                eventClick={handleEventClick}
+                eventDrop={handleEventDrop}
+                eventResize={handleEventResize}
+                select={(selection) => {
+                  const start = selection.start ? toUtcIso(selection.start) : ''
+                  const end = selection.end ? toUtcIso(selection.end) : ''
+                  setFormState((prev) => ({
+                    ...prev,
+                    titulo: prev.titulo || 'Agendamento',
+                    descricao: prev.descricao || '',
+                    data_inicio: start,
+                    data_fim: end,
+                    status: prev.status || 'agendado',
+                  }))
+                  setIsCreateModalOpen(true)
+                }}
+                contentHeight={650}
+                expandRows
+                stickyHeaderDates
+                eventTimeFormat={{ hour: '2-digit', minute: '2-digit', hour12: false } as any}
+              />
             </div>
           </CardContent>
         </Card>
+      ) : null}
 
+      {agendaView === 'lista' ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Agendamentos ({count})</CardTitle>
+            <CardDescription>Lista de todos os agendamentos clínicos</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+              </div>
+            ) : agendamentos.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">Nenhum agendamento encontrado</div>
+            ) : (
+              <div className="space-y-4">
+                {agendamentos.map((agendamento) => {
+                  const statusConfig = STATUS_CONFIG[agendamento.status]
+                  const StatusIcon = statusConfig.icon
+
+                  return (
+                    <div
+                      key={agendamento.id}
+                      className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent cursor-pointer transition-colors"
+                      onClick={() => handleOpenDetails(agendamento)}
+                    >
+                      <div className="flex-1 space-y-1">
+                        <div className="flex items-center gap-2">
+                          <h3 className="font-semibold">{agendamento.titulo}</h3>
+                          <Badge variant={statusConfig.variant}>
+                            <StatusIcon className="mr-1 h-3 w-3" />
+                            {statusConfig.label}
+                          </Badge>
+                        </div>
+                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                          <span className="flex items-center gap-1">
+                            <Clock className="h-3 w-3" />
+                            {formatDateTime(agendamento.data_inicio)}
+                          </span>
+                          {agendamento.paciente && (
+                            <span className="flex items-center gap-1">
+                              <User className="h-3 w-3" />
+                              {agendamento.paciente.nome_completo}
+                            </span>
+                          )}
+                          {agendamento.profissional && (
+                            <span className="flex items-center gap-1">
+                              <Stethoscope className="h-3 w-3" />
+                              {agendamento.profissional.nome}
+                            </span>
+                          )}
+                          {agendamento.sala && (
+                            <span className="flex items-center gap-1">
+                              <MapPin className="h-3 w-3" />
+                              {agendamento.sala}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      ) : null}
+
+      <div className="grid gap-4 lg:grid-cols-2">
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -715,89 +799,250 @@ export function AgendamentosClinicaPage() {
               Lista de espera
             </CardTitle>
             <CardDescription>
-              Use para registrar pacientes interessados quando não há horário disponível. Você pode copiar/colar a lista abaixo.
+              Registre pacientes interessados quando não há horário disponível. Use prioridade e status para organizar.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
-            <div className="space-y-2">
-              <Label>Itens (um por linha)</Label>
-              <Textarea
-                value={waitlistText}
-                onChange={(e) => setWaitlistText(e.target.value)}
-                placeholder="Ex:\nMaria • Limpeza de pele • Tarde • Alta\nJoão • Botox • Manhã • Média"
-                rows={6}
-              />
+            <div className="grid gap-3">
+              <div className="grid gap-3 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label>Paciente cadastrado (opcional)</Label>
+                  <Select value={waitlistForm.paciente_id} onValueChange={(v) => setWaitlistForm((s) => ({ ...s, paciente_id: v }))}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Nenhum</SelectItem>
+                      {pacientes.map((p) => (
+                        <SelectItem key={p.id} value={p.id}>
+                          {p.nome_completo}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Procedimento desejado (opcional)</Label>
+                  <Input
+                    value={waitlistForm.procedimento_id === 'none' ? '' : waitlistForm.procedimento_id}
+                    onChange={(e) => setWaitlistForm((s) => ({ ...s, procedimento_id: e.target.value || 'none' }))}
+                    placeholder="(por enquanto: informe o ID do procedimento)"
+                  />
+                </div>
+              </div>
+
+              <div className="grid gap-3 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label>Nome (se não cadastrado)</Label>
+                  <Input value={waitlistForm.nome_paciente} onChange={(e) => setWaitlistForm((s) => ({ ...s, nome_paciente: e.target.value }))} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Telefone</Label>
+                  <Input value={waitlistForm.telefone} onChange={(e) => setWaitlistForm((s) => ({ ...s, telefone: e.target.value }))} />
+                </div>
+              </div>
+
+              <div className="grid gap-3 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label>Preferência de horário</Label>
+                  <Input value={waitlistForm.preferencia_horario} onChange={(e) => setWaitlistForm((s) => ({ ...s, preferencia_horario: e.target.value }))} placeholder="Ex: manhã, tarde, seg/qua" />
+                </div>
+                <div className="space-y-2">
+                  <Label>Prioridade</Label>
+                  <Select value={waitlistForm.prioridade} onValueChange={(v) => setWaitlistForm((s) => ({ ...s, prioridade: v as ListaEsperaPrioridade }))}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="alta">Alta</SelectItem>
+                      <SelectItem value="media">Média</SelectItem>
+                      <SelectItem value="baixa">Baixa</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Observações</Label>
+                <Textarea value={waitlistForm.observacoes} onChange={(e) => setWaitlistForm((s) => ({ ...s, observacoes: e.target.value }))} rows={3} />
+              </div>
+
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  onClick={async () => {
+                    if (waitlistForm.paciente_id === 'none' && !waitlistForm.nome_paciente.trim()) {
+                      toast.error('Informe um paciente ou o nome')
+                      return
+                    }
+
+                    await createWaitlistMutation.mutateAsync({
+                      paciente_id: waitlistForm.paciente_id === 'none' ? null : waitlistForm.paciente_id,
+                      nome_paciente: waitlistForm.nome_paciente || null,
+                      telefone: waitlistForm.telefone || null,
+                      procedimento_id: waitlistForm.procedimento_id === 'none' ? null : waitlistForm.procedimento_id,
+                      preferencia_horario: waitlistForm.preferencia_horario || null,
+                      prioridade: waitlistForm.prioridade,
+                      status: 'aguardando',
+                      observacoes: waitlistForm.observacoes || null,
+                    })
+
+                    setWaitlistForm({
+                      paciente_id: 'none',
+                      nome_paciente: '',
+                      telefone: '',
+                      procedimento_id: 'none',
+                      preferencia_horario: '',
+                      prioridade: 'media',
+                      observacoes: '',
+                    })
+                  }}
+                  disabled={createWaitlistMutation.isPending}
+                >
+                  {createWaitlistMutation.isPending ? 'Adicionando...' : 'Adicionar'}
+                </Button>
+              </div>
             </div>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => {
-                if (!waitlistText.trim()) {
-                  toast.error('Adicione pelo menos um item na lista')
-                  return
-                }
-                toast.success('Lista de espera atualizada (MVP)')
-              }}
-            >
-              Salvar lista
-            </Button>
-            <div className="text-xs text-muted-foreground">
-              Nesta etapa a lista é apenas local (não é persistida no banco). Se você quiser, eu crio tabela + CRUD com prioridade e status.
+
+            <div className="pt-4 border-t">
+              <div className="text-sm font-medium mb-2">Fila ({waitlistQuery?.count ?? 0})</div>
+              {waitlistQuery?.data?.length ? (
+                <div className="space-y-2">
+                  {waitlistQuery.data.map((item) => {
+                    const nome = item.paciente?.nome_completo || item.nome_paciente || 'Sem nome'
+                    const statusLabel: Record<ListaEsperaStatus, string> = {
+                      aguardando: 'Aguardando',
+                      contatado: 'Contatado',
+                      agendado: 'Agendado',
+                      cancelado: 'Cancelado',
+                    }
+
+                    const prioLabel: Record<ListaEsperaPrioridade, string> = {
+                      alta: 'Alta',
+                      media: 'Média',
+                      baixa: 'Baixa',
+                    }
+
+                    return (
+                      <div key={item.id} className="rounded-xl border p-3">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <div className="font-medium truncate">{nome}</div>
+                            <div className="text-xs text-muted-foreground">
+                              {item.preferencia_horario ? item.preferencia_horario : 'Sem preferência'}
+                              {item.telefone ? ` • ${item.telefone}` : ''}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline">{prioLabel[item.prioridade]}</Badge>
+                            <Badge variant="secondary">{statusLabel[item.status]}</Badge>
+                          </div>
+                        </div>
+
+                        {item.observacoes ? (
+                          <div className="text-xs text-muted-foreground mt-2 whitespace-pre-wrap">{item.observacoes}</div>
+                        ) : null}
+
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          <Button
+                            type="button"
+                            size="sm"
+                            onClick={() => handleWaitlistAgendar(item.id, item.paciente_id, nome)}
+                          >
+                            Agendar
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            onClick={() => updateWaitlistMutation.mutate({ id: item.id, data: { status: 'contatado' } })}
+                          >
+                            Marcar contatado
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            onClick={() => updateWaitlistMutation.mutate({ id: item.id, data: { status: 'cancelado' } })}
+                          >
+                            Cancelar
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => deleteWaitlistMutation.mutate(item.id)}
+                          >
+                            Remover
+                          </Button>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              ) : (
+                <div className="text-sm text-muted-foreground">Nenhum item na lista de espera.</div>
+              )}
             </div>
           </CardContent>
         </Card>
-      </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <RefreshCw className="h-5 w-5" />
-            Sugestões automáticas de retorno
-          </CardTitle>
-          <CardDescription>
-            Sugestões geradas a partir de atendimentos concluídos (ex.: retorno em 30 dias).
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {retornoSuggestions.length === 0 ? (
-            <div className="text-sm text-muted-foreground">
-              Nenhuma sugestão no momento. Para gerar sugestões, conclua um atendimento (status: Concluído).
-            </div>
-          ) : (
-            <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
-              {retornoSuggestions.map(({ agendamento, follow }) => (
-                <div key={agendamento.id} className="rounded-xl border p-3">
-                  <div className="font-medium truncate">{agendamento.paciente?.nome_completo || agendamento.titulo}</div>
-                  <div className="text-xs text-muted-foreground mt-1">
-                    Último: {formatDateTime(agendamento.data_fim)}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <RefreshCw className="h-5 w-5" />
+              Sugestões automáticas de retorno
+            </CardTitle>
+            <CardDescription>
+              Sugestões geradas a partir de atendimentos concluídos (ex.: retorno em 30 dias).
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {retornoSuggestions.length === 0 ? (
+              <div className="text-sm text-muted-foreground">
+                Nenhuma sugestão no momento. Para gerar sugestões, conclua um atendimento (status: Concluído).
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {retornoSuggestions.map(({ agendamento, follow }) => (
+                  <div key={agendamento.id} className="rounded-xl border p-3">
+                    <div className="font-medium truncate">
+                      {agendamento.paciente?.nome_completo || agendamento.titulo}
+                    </div>
+                    <div className="text-xs text-muted-foreground mt-1">
+                      Último: {formatDateTime(agendamento.data_fim)}
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      Sugestão: {format(follow, 'dd/MM/yyyy', { locale: ptBR })}
+                    </div>
+                    <div className="mt-3">
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          setFormState({
+                            ...formState,
+                            titulo: `Retorno - ${agendamento.paciente?.nome_completo || agendamento.titulo}`,
+                            paciente_id: agendamento.paciente_id ?? null,
+                            profissional_id: agendamento.profissional_id ?? null,
+                            data_inicio: new Date(follow).toISOString(),
+                            data_fim: new Date(new Date(follow).getTime() + 30 * 60 * 1000).toISOString(),
+                          })
+                          setIsCreateModalOpen(true)
+                        }}
+                      >
+                        Sugerir agendamento
+                      </Button>
+                    </div>
                   </div>
-                  <div className="text-xs text-muted-foreground">Sugestão: {format(follow, 'dd/MM/yyyy', { locale: ptBR })}</div>
-                  <div className="mt-3">
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      onClick={() => {
-                        setFormState({
-                          ...formState,
-                          titulo: `Retorno - ${agendamento.paciente?.nome_completo || agendamento.titulo}`,
-                          paciente_id: agendamento.paciente_id ?? null,
-                          profissional_id: agendamento.profissional_id ?? null,
-                          data_inicio: new Date(follow).toISOString(),
-                          data_fim: new Date(new Date(follow).getTime() + 30 * 60 * 1000).toISOString(),
-                        })
-                        setIsCreateModalOpen(true)
-                      }}
-                    >
-                      Sugerir agendamento
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
 
       <Card>
         <CardHeader>
@@ -876,73 +1121,6 @@ export function AgendamentosClinicaPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Agendamentos ({count})</CardTitle>
-          <CardDescription>Lista de todos os agendamentos clínicos</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <div className="flex items-center justify-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-            </div>
-          ) : agendamentos.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              Nenhum agendamento encontrado
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {agendamentos.map((agendamento) => {
-                const statusConfig = STATUS_CONFIG[agendamento.status]
-                const StatusIcon = statusConfig.icon
-
-                return (
-                  <div
-                    key={agendamento.id}
-                    className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent cursor-pointer transition-colors"
-                    onClick={() => handleOpenDetails(agendamento)}
-                  >
-                    <div className="flex-1 space-y-1">
-                      <div className="flex items-center gap-2">
-                        <h3 className="font-semibold">{agendamento.titulo}</h3>
-                        <Badge variant={statusConfig.variant}>
-                          <StatusIcon className="mr-1 h-3 w-3" />
-                          {statusConfig.label}
-                        </Badge>
-                      </div>
-                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                        <span className="flex items-center gap-1">
-                          <Clock className="h-3 w-3" />
-                          {formatDateTime(agendamento.data_inicio)}
-                        </span>
-                        {agendamento.paciente && (
-                          <span className="flex items-center gap-1">
-                            <User className="h-3 w-3" />
-                            {agendamento.paciente.nome_completo}
-                          </span>
-                        )}
-                        {agendamento.profissional && (
-                          <span className="flex items-center gap-1">
-                            <Stethoscope className="h-3 w-3" />
-                            {agendamento.profissional.nome}
-                          </span>
-                        )}
-                        {agendamento.sala && (
-                          <span className="flex items-center gap-1">
-                            <MapPin className="h-3 w-3" />
-                            {agendamento.sala}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          )}
-        </CardContent>
-      </Card>
 
       <AgendamentoModals
         isCreateModalOpen={isCreateModalOpen}

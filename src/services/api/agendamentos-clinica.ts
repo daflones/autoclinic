@@ -23,6 +23,10 @@ export interface AgendamentoClinica {
   descricao?: string | null
   data_inicio: string
   data_fim: string
+  data_inicio_anterior?: string | null
+  data_fim_anterior?: string | null
+  remarcado_em?: string | null
+  remarcado_motivo?: string | null
   sala?: string | null
   status: StatusAgendamentoClinica
   origem?: string | null
@@ -68,6 +72,10 @@ export interface AgendamentoClinicaCreateData {
   descricao?: string | null
   data_inicio: string
   data_fim: string
+  data_inicio_anterior?: string | null
+  data_fim_anterior?: string | null
+  remarcado_em?: string | null
+  remarcado_motivo?: string | null
   sala?: string | null
   status?: StatusAgendamentoClinica
   origem?: string | null
@@ -236,6 +244,10 @@ export const agendamentosClinicaService = {
       descricao: payload.descricao ?? null,
       data_inicio: payload.data_inicio,
       data_fim: payload.data_fim,
+      data_inicio_anterior: payload.data_inicio_anterior ?? null,
+      data_fim_anterior: payload.data_fim_anterior ?? null,
+      remarcado_em: payload.remarcado_em ?? null,
+      remarcado_motivo: payload.remarcado_motivo ?? null,
       sala: payload.sala ?? null,
       status: payload.status ?? 'agendado',
       origem: payload.origem ?? null,
@@ -309,6 +321,59 @@ export const agendamentosClinicaService = {
       agendamentoAnterior,
       data,
       `Agendamento atualizado: ${data.titulo}`
+    )
+
+    return data as AgendamentoClinica
+  },
+
+  async reschedule(
+    id: string,
+    params: {
+      data_inicio: string
+      data_fim: string
+      motivo?: string | null
+    },
+  ): Promise<AgendamentoClinica> {
+    const { adminProfileId } = await getAdminContext()
+
+    const agendamentoAnterior = await this.getById(id)
+    if (!agendamentoAnterior) {
+      throw new Error('Agendamento não encontrado')
+    }
+
+    const { data, error } = await supabase
+      .from('agendamentos_clinica')
+      .update({
+        status: 'remarcado',
+        data_inicio_anterior: agendamentoAnterior.data_inicio,
+        data_fim_anterior: agendamentoAnterior.data_fim,
+        data_inicio: params.data_inicio,
+        data_fim: params.data_fim,
+        remarcado_em: new Date().toISOString(),
+        remarcado_motivo: params.motivo ?? null,
+        origem: agendamentoAnterior.origem ?? 'reagendamento',
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', id)
+      .eq('admin_profile_id', adminProfileId)
+      .select(
+        `*,
+        paciente:pacientes(id, nome_completo, telefone, whatsapp),
+        profissional:profissionais_clinica(id, nome, conselho)`
+      )
+      .single()
+
+    if (error) {
+      console.error('Erro ao reagendar agendamento clínico:', error)
+      throw new Error(`Erro ao reagendar agendamento clínico: ${error.message}`)
+    }
+
+    await AtividadeService.editar(
+      'agendamento',
+      id,
+      agendamentoAnterior,
+      data,
+      `Agendamento reagendado: ${data.titulo}`
     )
 
     return data as AgendamentoClinica

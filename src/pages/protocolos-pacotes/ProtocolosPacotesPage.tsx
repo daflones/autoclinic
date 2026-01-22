@@ -31,6 +31,12 @@ import {
 } from '@/hooks/useProtocolosPacotes'
 import type { ProtocoloPacote, ProtocoloPacoteCreateData, ProtocoloPacoteStatus } from '@/services/api/protocolos-pacotes'
 import { deleteMidia, getSignedMidiaUrl, uploadMidia } from '@/services/api/storage-midias'
+import {
+  useCreateProtocoloPacoteMidia,
+  useDeleteProtocoloPacoteMidia,
+  useProtocoloPacoteMidias,
+} from '@/hooks/useProtocoloPacoteMidias'
+import { protocoloPacoteMidiasService } from '@/services/api/protocolo-pacote-midias'
 
 const STATUS_BADGE: Record<ProtocoloPacoteStatus | 'all', { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
   all: { label: 'Todos', variant: 'secondary' },
@@ -85,7 +91,8 @@ export function ProtocolosPacotesPage() {
   }
 
   const [uploadingImagem, setUploadingImagem] = useState(false)
-  const [imagemPreviewUrl, setImagemPreviewUrl] = useState<string>('')
+  const [pendingCreateImagens, setPendingCreateImagens] = useState<File[]>([])
+  const [imagemPreviewUrlById, setImagemPreviewUrlById] = useState<Record<string, string>>({})
 
   const filters = useMemo(
     () => ({
@@ -102,6 +109,12 @@ export function ProtocolosPacotesPage() {
   const deleteMutation = useDeleteProtocoloPacote()
   const statusMutation = useUpdateProtocoloPacoteStatus()
 
+  const { data: protocoloMidias = [], isLoading: isLoadingMidias } = useProtocoloPacoteMidias(
+    isEditModalOpen ? selectedItem?.id ?? undefined : undefined,
+  )
+  const createProtocoloMidia = useCreateProtocoloPacoteMidia()
+  const deleteProtocoloMidia = useDeleteProtocoloPacoteMidia()
+
   const stats = useMemo(() => {
     return {
       total: itens.length,
@@ -110,58 +123,81 @@ export function ProtocolosPacotesPage() {
     }
   }, [itens])
 
-  const refreshImagemPreview = async (path: string) => {
-    if (!path) {
-      setImagemPreviewUrl('')
-      return
-    }
-    try {
-      const url = await getSignedMidiaUrl({ bucket: 'pacotes-midias', path })
-      setImagemPreviewUrl(url)
-    } catch {
-      setImagemPreviewUrl('')
-    }
-  }
+  useEffect(() => {
+    let cancelled = false
+    async function hydrateUrls() {
+      if (!protocoloMidias || protocoloMidias.length === 0) return
+      const missing = protocoloMidias.filter((m) => !imagemPreviewUrlById[m.id])
+      if (missing.length === 0) return
 
-  const handleUploadImagem = async (file: File) => {
+      const entries = await Promise.all(
+        missing.map(async (m) => {
+          try {
+            const url = await getSignedMidiaUrl({ bucket: 'pacotes-midias', path: m.storage_path, expiresIn: 60 * 60 })
+            return [m.id, url] as const
+          } catch {
+            return [m.id, ''] as const
+          }
+        }),
+      )
+
+      if (cancelled) return
+      setImagemPreviewUrlById((prev) => {
+        const next = { ...prev }
+        entries.forEach(([id, url]) => {
+          if (url) next[id] = url
+        })
+        return next
+      })
+    }
+    void hydrateUrls()
+    return () => {
+      cancelled = true
+    }
+  }, [protocoloMidias, imagemPreviewUrlById])
+
+  const handleUploadMidiasForProtocolo = async (protocoloId: string, files: File[]) => {
+    if (!files.length) return
     setUploadingImagem(true)
     try {
-      const uploaded = await uploadMidia({ bucket: 'pacotes-midias', file, prefix: 'pacote' })
-
-      const prev = formState.imagem_path
-      if (prev) {
-        try {
-          await deleteMidia({ bucket: 'pacotes-midias', path: prev })
-        } catch {
-          // ignore
-        }
+      for (const file of files) {
+        const uploaded = await uploadMidia({ bucket: 'pacotes-midias', file, prefix: `protocolos/${protocoloId}/imagem` })
+        await createProtocoloMidia.mutateAsync({
+          protocolo_pacote_id: protocoloId,
+          tipo: 'imagem',
+          storage_bucket: 'pacotes-midias',
+          storage_path: uploaded.path,
+          label: file.name,
+        })
       }
-
-      setFormState({ ...formState, imagem_path: uploaded.path })
-      await refreshImagemPreview(uploaded.path)
     } finally {
       setUploadingImagem(false)
     }
   }
 
-  const handleRemoveImagem = async () => {
-    const prev = formState.imagem_path
-    if (!prev) return
+  const handleRemoveMidia = async (midia: any) => {
+    if (!selectedItem) return
     setUploadingImagem(true)
     try {
-      await deleteMidia({ bucket: 'pacotes-midias', path: prev })
-    } catch {
-      // ignore
+      try {
+        await deleteMidia({ bucket: 'pacotes-midias', path: midia.storage_path })
+      } catch {
+        // ignore
+      }
+      await deleteProtocoloMidia.mutateAsync({ id: midia.id, protocoloPacoteId: selectedItem.id })
+      setImagemPreviewUrlById((prev) => {
+        const copy = { ...prev }
+        delete copy[midia.id]
+        return copy
+      })
     } finally {
-      setFormState({ ...formState, imagem_path: '' })
-      setImagemPreviewUrl('')
       setUploadingImagem(false)
     }
   }
 
   const openCreate = () => {
     setSelectedItem(null)
-    setImagemPreviewUrl('')
+    setPendingCreateImagens([])
     setFormState({
       nome: '',
       descricao: '',
@@ -186,7 +222,6 @@ export function ProtocolosPacotesPage() {
       ativo: item.ativo,
     })
     setIsEditModalOpen(true)
-    refreshImagemPreview(item.imagem_path || '')
   }
 
   const requestDelete = (item: ProtocoloPacote) => {
@@ -200,8 +235,12 @@ export function ProtocolosPacotesPage() {
       return
     }
     try {
-      await createMutation.mutateAsync(formState)
+      const created = await createMutation.mutateAsync({ ...formState, imagem_path: null })
+      if (pendingCreateImagens.length > 0) {
+        await handleUploadMidiasForProtocolo(created.id, pendingCreateImagens)
+      }
       setIsCreateModalOpen(false)
+      setPendingCreateImagens([])
     } catch (e) {
       console.error(e)
     }
@@ -225,12 +264,19 @@ export function ProtocolosPacotesPage() {
   const handleConfirmDelete = async () => {
     if (!selectedItem) return
     try {
-      if (selectedItem.imagem_path) {
-        try {
-          await deleteMidia({ bucket: 'pacotes-midias', path: selectedItem.imagem_path })
-        } catch {
-          // ignore
-        }
+      try {
+        const midias = await protocoloPacoteMidiasService.listByProtocoloPacoteId(selectedItem.id)
+        await Promise.all(
+          midias.map(async (m) => {
+            try {
+              await deleteMidia({ bucket: 'pacotes-midias', path: m.storage_path })
+            } catch {
+              // ignore
+            }
+          }),
+        )
+      } catch {
+        // ignore
       }
       await deleteMutation.mutateAsync(selectedItem.id)
       setIsDeleteConfirmOpen(false)
@@ -250,7 +296,7 @@ export function ProtocolosPacotesPage() {
 
   useEffect(() => {
     if (!isCreateModalOpen && !isEditModalOpen) {
-      setImagemPreviewUrl('')
+      setPendingCreateImagens([])
       setUploadingImagem(false)
     }
   }, [isCreateModalOpen, isEditModalOpen])
@@ -731,26 +777,35 @@ export function ProtocolosPacotesPage() {
               <Input
                 type="file"
                 accept="image/*"
+                multiple
                 disabled={uploadingImagem}
                 onChange={(e) => {
-                  const file = e.target.files?.[0]
-                  if (file) handleUploadImagem(file)
+                  const files = Array.from(e.target.files ?? [])
+                  setPendingCreateImagens((prev) => [...prev, ...files])
                   e.currentTarget.value = ''
                 }}
               />
-              {formState.imagem_path ? (
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-3">
-                    {imagemPreviewUrl ? (
-                      <img src={imagemPreviewUrl} alt="Imagem" className="h-16 w-16 object-cover rounded border" />
-                    ) : (
-                      <div className="h-16 w-16 rounded border bg-muted" />
-                    )}
-                    <div className="text-xs text-muted-foreground break-all">{formState.imagem_path}</div>
-                  </div>
-                  <Button variant="outline" disabled={uploadingImagem} onClick={handleRemoveImagem}>
-                    Remover
-                  </Button>
+              {pendingCreateImagens.length > 0 ? (
+                <div className="grid grid-cols-2 gap-3">
+                  {pendingCreateImagens.map((f) => {
+                    const url = URL.createObjectURL(f)
+                    return (
+                      <div key={f.name + f.size} className="overflow-hidden rounded-md border border-border/60">
+                        <img src={url} alt={f.name} className="h-24 w-full object-cover" />
+                        <div className="flex items-center justify-between gap-2 p-2">
+                          <div className="min-w-0 text-xs text-muted-foreground truncate">{f.name}</div>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setPendingCreateImagens((prev) => prev.filter((x) => x !== f))}
+                          >
+                            Remover
+                          </Button>
+                        </div>
+                      </div>
+                    )
+                  })}
                 </div>
               ) : null}
             </div>
@@ -1118,28 +1173,38 @@ export function ProtocolosPacotesPage() {
               <Input
                 type="file"
                 accept="image/*"
-                disabled={uploadingImagem}
+                multiple
+                disabled={uploadingImagem || !selectedItem}
                 onChange={(e) => {
-                  const file = e.target.files?.[0]
-                  if (file) handleUploadImagem(file)
+                  const files = Array.from(e.target.files ?? [])
                   e.currentTarget.value = ''
+                  if (!selectedItem || files.length === 0) return
+                  void handleUploadMidiasForProtocolo(selectedItem.id, files)
                 }}
               />
-              {formState.imagem_path ? (
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-3">
-                    {imagemPreviewUrl ? (
-                      <img src={imagemPreviewUrl} alt="Imagem" className="h-16 w-16 object-cover rounded border" />
-                    ) : (
-                      <div className="h-16 w-16 rounded border bg-muted" />
-                    )}
-                    <div className="text-xs text-muted-foreground break-all">{formState.imagem_path}</div>
-                  </div>
-                  <Button variant="outline" disabled={uploadingImagem} onClick={handleRemoveImagem}>
-                    Remover
-                  </Button>
+              {isLoadingMidias ? (
+                <div className="text-sm text-muted-foreground">Carregando imagens...</div>
+              ) : protocoloMidias.length > 0 ? (
+                <div className="grid grid-cols-2 gap-3">
+                  {protocoloMidias.map((m) => (
+                    <div key={m.id} className="overflow-hidden rounded-md border border-border/60">
+                      {imagemPreviewUrlById[m.id] ? (
+                        <img src={imagemPreviewUrlById[m.id]} alt={m.label || 'Imagem'} className="h-24 w-full object-cover" />
+                      ) : (
+                        <div className="flex h-24 items-center justify-center text-xs text-muted-foreground">Carregando...</div>
+                      )}
+                      <div className="flex items-center justify-between gap-2 p-2">
+                        <div className="min-w-0 text-xs text-muted-foreground truncate">{m.label || m.storage_path}</div>
+                        <Button type="button" variant="outline" size="sm" disabled={uploadingImagem} onClick={() => void handleRemoveMidia(m)}>
+                          Remover
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              ) : null}
+              ) : (
+                <div className="text-sm text-muted-foreground">Nenhuma imagem cadastrada.</div>
+              )}
             </div>
 
             <div className="space-y-2">

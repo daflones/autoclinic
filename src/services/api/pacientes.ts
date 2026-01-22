@@ -5,6 +5,16 @@ import { getAdminContext } from './_tenant'
 export type SexoPaciente = 'feminino' | 'masculino' | 'outro' | 'nao_informado'
 export type StatusPaciente = 'ativo' | 'inativo' | 'arquivado'
 
+export type StatusPacienteDetalhado =
+  | 'novos'
+  | 'avaliacao'
+  | 'em-andamento'
+  | 'retornos'
+  | 'pausados'
+  | 'concluidos'
+  | 'inativos'
+  | 'arquivados'
+
 export interface PacienteEndereco {
   logradouro?: string
   numero?: string
@@ -23,6 +33,8 @@ export interface Paciente {
   nome_completo: string
   nome_social?: string | null
   documento?: string | null
+  cpf?: string | null
+  rg?: string | null
   data_nascimento?: string | null
   sexo: SexoPaciente
   email?: string | null
@@ -33,6 +45,7 @@ export interface Paciente {
   restricoes?: string | null
   observacoes?: string | null
   status: StatusPaciente
+  status_detalhado?: StatusPacienteDetalhado | null
   tags?: string[] | null
   fonte_captacao?: string | null
   data_primeiro_atendimento?: string | null
@@ -58,6 +71,8 @@ export interface PacienteCreateData {
   nome_completo: string
   nome_social?: string | null
   documento?: string | null
+  cpf?: string | null
+  rg?: string | null
   data_nascimento?: string | null
   sexo?: SexoPaciente
   email?: string | null
@@ -68,6 +83,7 @@ export interface PacienteCreateData {
   restricoes?: string | null
   observacoes?: string | null
   status?: StatusPaciente
+  status_detalhado?: StatusPacienteDetalhado | null
   tags?: string[] | null
   fonte_captacao?: string | null
   data_primeiro_atendimento?: string | null
@@ -115,6 +131,8 @@ export const pacientesService = {
           `nome_social.ilike.%${searchTerm}%`,
           `email.ilike.%${searchTerm}%`,
           `documento.ilike.%${numericSearch}%`,
+          `cpf.ilike.%${numericSearch}%`,
+          `rg.ilike.%${numericSearch}%`,
           `telefone.ilike.%${numericSearch}%`,
           `whatsapp.ilike.%${numericSearch}%`
         ].join(',')
@@ -192,6 +210,8 @@ export const pacientesService = {
       nome_completo: pacienteData.nome_completo,
       nome_social: pacienteData.nome_social ?? null,
       documento: pacienteData.documento ?? null,
+      cpf: pacienteData.cpf ?? null,
+      rg: pacienteData.rg ?? null,
       data_nascimento: pacienteData.data_nascimento ?? null,
       sexo: pacienteData.sexo ?? 'nao_informado',
       email: pacienteData.email ?? null,
@@ -202,6 +222,7 @@ export const pacientesService = {
       restricoes: pacienteData.restricoes ?? null,
       observacoes: pacienteData.observacoes ?? null,
       status: pacienteData.status ?? 'ativo',
+      status_detalhado: pacienteData.status_detalhado ?? null,
       tags: pacienteData.tags ?? [],
       fonte_captacao: pacienteData.fonte_captacao ?? null,
       data_primeiro_atendimento: pacienteData.data_primeiro_atendimento ?? null,

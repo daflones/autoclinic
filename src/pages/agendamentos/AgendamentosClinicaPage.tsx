@@ -38,7 +38,7 @@ import FullCalendar from '@fullcalendar/react'
 import timeGridPlugin from '@fullcalendar/timegrid'
 import dayGridPlugin from '@fullcalendar/daygrid'
 import interactionPlugin from '@fullcalendar/interaction'
-import type { EventDropArg, EventResizeDoneArg } from '@fullcalendar/core'
+import type { EventDropArg } from '@fullcalendar/core'
 import { DateTimePicker } from '@/components/ui/datetime-picker'
 import {
   useListaEsperaAgendamentos,
@@ -49,6 +49,7 @@ import {
 import {
   useAgendamentosClinica,
   useCreateAgendamentoClinica,
+  useRescheduleAgendamentoClinica,
   useUpdateAgendamentoClinica,
   useDeleteAgendamentoClinica,
   useUpdateAgendamentoClinicaStatus,
@@ -135,6 +136,7 @@ export function AgendamentosClinicaPage() {
   const { data: profissionais } = useProfissionaisClinica({ limit: 1000 })
 
   const createMutation = useCreateAgendamentoClinica()
+  const rescheduleMutation = useRescheduleAgendamentoClinica()
   const updateMutation = useUpdateAgendamentoClinica()
   const deleteMutation = useDeleteAgendamentoClinica()
   const updateStatusMutation = useUpdateAgendamentoClinicaStatus()
@@ -173,7 +175,7 @@ export function AgendamentosClinicaPage() {
     }
   }, [agendamentos, count])
 
-  const toDateTimeLocal = (date: Date) => {
+  const formatLocalDateTime = (date: Date) => {
     const pad = (n: number) => String(n).padStart(2, '0')
     const yyyy = date.getFullYear()
     const mm = pad(date.getMonth() + 1)
@@ -183,7 +185,9 @@ export function AgendamentosClinicaPage() {
     return `${yyyy}-${mm}-${dd}T${hh}:${mi}`
   }
 
-  const toUtcIso = (date: Date) => date.toISOString()
+  const toUtcIso = (date: Date) => {
+    return date.toISOString()
+  }
 
   const handleWaitlistAgendar = (itemId: string, pacienteId?: string | null, nome?: string | null) => {
     setFormState((prev) => ({
@@ -216,27 +220,24 @@ export function AgendamentosClinicaPage() {
       return
     }
 
+    const start = new Date(rescheduleState.data_inicio)
+    const end = new Date(rescheduleState.data_fim)
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+      toast.error('Data/hora inválida')
+      return
+    }
+
     try {
-      await updateStatusMutation.mutateAsync({ id: selectedAgendamento.id, status: 'remarcado' })
-
-      await createMutation.mutateAsync({
-        titulo: selectedAgendamento.titulo,
-        descricao: [
-          selectedAgendamento.descricao || '',
-          rescheduleState.motivo ? `\n\nReagendado: ${rescheduleState.motivo}` : '\n\nReagendado.',
-        ].join('') || 'Reagendado.',
-        data_inicio: rescheduleState.data_inicio,
-        data_fim: rescheduleState.data_fim,
-        paciente_id: selectedAgendamento.paciente_id ?? null,
-        profissional_id: selectedAgendamento.profissional_id ?? null,
-        procedimento_id: selectedAgendamento.procedimento_id ?? null,
-        sala: selectedAgendamento.sala ?? null,
-        status: 'remarcado',
-        origem: 'reagendamento',
-      })
-
       setIsRescheduleModalOpen(false)
-      toast.success('Agendamento reagendado com sucesso')
+      await rescheduleMutation.mutateAsync({
+        id: selectedAgendamento.id,
+        data: {
+          data_inicio: start.toISOString(),
+          data_fim: end.toISOString(),
+          motivo: rescheduleState.motivo || null,
+        },
+      })
+      setSelectedAgendamento((prev) => (prev ? { ...prev, status: 'remarcado' } : prev))
     } catch (error) {
       console.error('Erro ao reagendar:', error)
     }
@@ -366,6 +367,11 @@ export function AgendamentosClinicaPage() {
   const handleUpdateStatus = async (status: StatusAgendamentoClinica) => {
     if (!selectedAgendamento) return
 
+    if (status === 'remarcado') {
+      handleOpenRescheduleModal()
+      return
+    }
+
     try {
       await updateStatusMutation.mutateAsync({
         id: selectedAgendamento.id,
@@ -464,7 +470,7 @@ export function AgendamentosClinicaPage() {
     }
   }
 
-  const handleEventResize = async (arg: EventResizeDoneArg) => {
+  const handleEventResize = async (arg: any) => {
     const agendamento = (arg.event.extendedProps as any)?.agendamento as AgendamentoClinica | undefined
     if (!agendamento) return
 
@@ -1076,47 +1082,75 @@ export function AgendamentosClinicaPage() {
       </Card>
 
       <Dialog open={isRescheduleModalOpen} onOpenChange={setIsRescheduleModalOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="w-[98vw] max-w-6xl max-h-[calc(100vh-4rem)] overflow-visible flex flex-col">
           <DialogHeader>
             <DialogTitle>Reagendar</DialogTitle>
             <DialogDescription>
-              Escolha a nova data e hora. O agendamento atual será marcado como “Remarcado” e um novo será criado.
+              Escolha a nova data e hora.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-2">
+          <div className="flex-1 overflow-visible">
+            <div className="space-y-4">
+              <div className="grid gap-4 md:grid-cols-2">
               <DateTimePicker
                 value={rescheduleState.data_inicio}
-                onChange={(v) => setRescheduleState((s) => ({ ...s, data_inicio: v }))}
+                onChange={(v) =>
+                  setRescheduleState((s) => {
+                    const start = new Date(v)
+                    if (Number.isNaN(start.getTime())) return { ...s, data_inicio: v }
+
+                    const currentEnd = s.data_fim ? new Date(s.data_fim) : null
+                    const minEnd = new Date(start)
+                    minEnd.setMinutes(minEnd.getMinutes() + 15)
+
+                    const nextEnd = !currentEnd || Number.isNaN(currentEnd.getTime()) || currentEnd < minEnd ? minEnd : currentEnd
+
+                    return {
+                      ...s,
+                      data_inicio: v,
+                      data_fim: formatLocalDateTime(nextEnd),
+                    }
+                  })
+                }
                 label="Novo início"
                 required
               />
               <DateTimePicker
                 value={rescheduleState.data_fim}
-                onChange={(v) => setRescheduleState((s) => ({ ...s, data_fim: v }))}
+                min={rescheduleState.data_inicio}
+                onChange={(v) =>
+                  setRescheduleState((s) => {
+                    const start = s.data_inicio ? new Date(s.data_inicio) : null
+                    const end = new Date(v)
+                    if (!start || Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return { ...s, data_fim: v }
+                    const safeEnd = end < start ? start : end
+                    return { ...s, data_fim: formatLocalDateTime(safeEnd) }
+                  })
+                }
                 label="Novo fim"
                 required
               />
-            </div>
+              </div>
 
-            <div className="space-y-2">
-              <Label>Motivo (opcional)</Label>
-              <Textarea
-                value={rescheduleState.motivo}
-                onChange={(e) => setRescheduleState((s) => ({ ...s, motivo: e.target.value }))}
-                rows={3}
-                placeholder="Ex: paciente solicitou outro horário"
-              />
+              <div className="space-y-2">
+                <Label>Motivo (opcional)</Label>
+                <Textarea
+                  value={rescheduleState.motivo}
+                  onChange={(e) => setRescheduleState((s) => ({ ...s, motivo: e.target.value }))}
+                  rows={3}
+                  placeholder="Ex: paciente solicitou outro horário"
+                />
+              </div>
             </div>
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="mt-4">
             <Button type="button" variant="outline" onClick={() => setIsRescheduleModalOpen(false)}>
               Cancelar
             </Button>
-            <Button type="button" onClick={handleConfirmReschedule} disabled={createMutation.isPending || updateStatusMutation.isPending}>
-              {createMutation.isPending || updateStatusMutation.isPending ? 'Salvando...' : 'Confirmar reagendamento'}
+            <Button type="button" onClick={handleConfirmReschedule} disabled={rescheduleMutation.isPending}>
+              {rescheduleMutation.isPending ? 'Salvando...' : 'Confirmar reagendamento'}
             </Button>
           </DialogFooter>
         </DialogContent>

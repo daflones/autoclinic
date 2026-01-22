@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -23,6 +23,11 @@ import {
 import { Plus, Search, Filter, UserSquare, Edit, Trash2, Mail, Phone, Award } from 'lucide-react'
 import { toast } from 'sonner'
 import { deleteMidia, getSignedMidiaUrl, uploadMidia } from '@/services/api/storage-midias'
+import {
+  useCreateProfissionalMidia,
+  useDeleteProfissionalMidia,
+  useProfissionalMidias,
+} from '@/hooks/useProfissionalMidias'
 import {
   useProfissionaisClinica,
   useCreateProfissionalClinica,
@@ -51,7 +56,8 @@ export function ProfissionaisClinicaPage() {
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false)
   const [selectedProfissional, setSelectedProfissional] = useState<ProfissionalClinica | null>(null)
   const [uploadingFoto, setUploadingFoto] = useState(false)
-  const [fotoPreviewUrl, setFotoPreviewUrl] = useState<string>('')
+  const [pendingCreateFotos, setPendingCreateFotos] = useState<File[]>([])
+  const [fotoPreviewUrlById, setFotoPreviewUrlById] = useState<Record<string, string>>({})
 
   const [formState, setFormState] = useState<ProfissionalCreateData>({
     nome: '',
@@ -87,6 +93,12 @@ export function ProfissionaisClinicaPage() {
   const updateMutation = useUpdateProfissionalClinica()
   const deleteMutation = useDeleteProfissionalClinica()
 
+  const { data: profissionalMidias = [], isLoading: isLoadingMidias } = useProfissionalMidias(
+    isEditModalOpen ? selectedProfissional?.id ?? undefined : undefined,
+  )
+  const createProfissionalMidia = useCreateProfissionalMidia()
+  const deleteProfissionalMidia = useDeleteProfissionalMidia()
+
   const stats = useMemo(() => {
     return {
       total: profissionais.length,
@@ -95,51 +107,81 @@ export function ProfissionaisClinicaPage() {
     }
   }, [profissionais])
 
-  const refreshFotoPreview = async (path: string) => {
-    if (!path) {
-      setFotoPreviewUrl('')
-      return
-    }
-    try {
-      const url = await getSignedMidiaUrl({ bucket: 'profissionais-midias', path })
-      setFotoPreviewUrl(url)
-    } catch {
-      setFotoPreviewUrl('')
-    }
-  }
+  useEffect(() => {
+    let cancelled = false
+    async function hydrateUrls() {
+      if (!profissionalMidias || profissionalMidias.length === 0) return
+      const missing = profissionalMidias.filter((m) => !fotoPreviewUrlById[m.id])
+      if (missing.length === 0) return
 
-  const handleUploadFoto = async (file: File) => {
+      const entries = await Promise.all(
+        missing.map(async (m) => {
+          try {
+            const url = await getSignedMidiaUrl({ bucket: 'profissionais-midias', path: m.storage_path, expiresIn: 60 * 60 })
+            return [m.id, url] as const
+          } catch {
+            return [m.id, ''] as const
+          }
+        }),
+      )
+
+      if (cancelled) return
+      setFotoPreviewUrlById((prev) => {
+        const next = { ...prev }
+        entries.forEach(([id, url]) => {
+          if (url) next[id] = url
+        })
+        return next
+      })
+    }
+
+    void hydrateUrls()
+    return () => {
+      cancelled = true
+    }
+  }, [profissionalMidias, fotoPreviewUrlById])
+
+  const handleUploadMidiasForProfissional = async (profissionalId: string, files: File[]) => {
+    if (!files.length) return
     setUploadingFoto(true)
     try {
-      const uploaded = await uploadMidia({ bucket: 'profissionais-midias', file, prefix: 'foto' })
+      for (const file of files) {
+        const uploaded = await uploadMidia({
+          bucket: 'profissionais-midias',
+          file,
+          prefix: `profissionais/${profissionalId}/foto`,
+        })
 
-      const prev = formState.foto_url
-      if (prev) {
-        try {
-          await deleteMidia({ bucket: 'profissionais-midias', path: prev })
-        } catch {
-          // ignore
-        }
+        await createProfissionalMidia.mutateAsync({
+          profissional_id: profissionalId,
+          tipo: 'foto',
+          storage_bucket: 'profissionais-midias',
+          storage_path: uploaded.path,
+          label: file.name,
+        })
       }
-
-      setFormState({ ...formState, foto_url: uploaded.path })
-      await refreshFotoPreview(uploaded.path)
     } finally {
       setUploadingFoto(false)
     }
   }
 
-  const handleRemoveFoto = async () => {
-    const prev = formState.foto_url
-    if (!prev) return
+  const handleRemoveMidia = async (midia: any) => {
+    if (!selectedProfissional) return
     setUploadingFoto(true)
     try {
-      await deleteMidia({ bucket: 'profissionais-midias', path: prev })
-    } catch {
-      // ignore
+      try {
+        await deleteMidia({ bucket: 'profissionais-midias', path: midia.storage_path })
+      } catch {
+        // ignore
+      }
+
+      await deleteProfissionalMidia.mutateAsync({ id: midia.id, profissionalId: selectedProfissional.id })
+      setFotoPreviewUrlById((prev) => {
+        const copy = { ...prev }
+        delete copy[midia.id]
+        return copy
+      })
     } finally {
-      setFormState({ ...formState, foto_url: '' })
-      setFotoPreviewUrl('')
       setUploadingFoto(false)
     }
   }
@@ -151,7 +193,10 @@ export function ProfissionaisClinicaPage() {
     }
 
     try {
-      await createMutation.mutateAsync(formState)
+      const created = await createMutation.mutateAsync({ ...formState, foto_url: null })
+      if (pendingCreateFotos.length > 0) {
+        await handleUploadMidiasForProfissional(created.id, pendingCreateFotos)
+      }
       setIsCreateModalOpen(false)
       setFormState({
         nome: '',
@@ -172,6 +217,7 @@ export function ProfissionaisClinicaPage() {
         meta_mensal: undefined,
         status: 'ativo',
       })
+      setPendingCreateFotos([])
     } catch (error) {
       console.error('Erro ao criar profissional:', error)
     }
@@ -199,7 +245,6 @@ export function ProfissionaisClinicaPage() {
       status: profissional.status,
     })
     setIsEditModalOpen(true)
-    refreshFotoPreview(profissional.foto_url || '')
   }
 
   const handleSaveEdit = async () => {
@@ -208,7 +253,7 @@ export function ProfissionaisClinicaPage() {
     try {
       await updateMutation.mutateAsync({
         id: selectedProfissional.id,
-        data: formState,
+        data: { ...formState, foto_url: selectedProfissional.foto_url ?? null },
       })
       setIsEditModalOpen(false)
       setSelectedProfissional(null)
@@ -244,7 +289,7 @@ export function ProfissionaisClinicaPage() {
         <Button
           onClick={() => {
             setIsCreateModalOpen(true)
-            setFotoPreviewUrl('')
+            setPendingCreateFotos([])
           }}
         >
           <Plus className="mr-2 h-4 w-4" />
@@ -473,26 +518,35 @@ export function ProfissionaisClinicaPage() {
                 <Input
                   type="file"
                   accept="image/*"
+                  multiple
                   disabled={uploadingFoto}
                   onChange={(e) => {
-                    const file = e.target.files?.[0]
-                    if (file) handleUploadFoto(file)
+                    const files = Array.from(e.target.files ?? [])
+                    setPendingCreateFotos((prev) => [...prev, ...files])
                     e.currentTarget.value = ''
                   }}
                 />
-                {formState.foto_url ? (
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-3">
-                      {fotoPreviewUrl ? (
-                        <img src={fotoPreviewUrl} alt="Foto" className="h-16 w-16 object-cover rounded border" />
-                      ) : (
-                        <div className="h-16 w-16 rounded border bg-muted" />
-                      )}
-                      <div className="text-xs text-muted-foreground break-all">{formState.foto_url}</div>
-                    </div>
-                    <Button variant="outline" disabled={uploadingFoto} onClick={handleRemoveFoto}>
-                      Remover
-                    </Button>
+                {pendingCreateFotos.length > 0 ? (
+                  <div className="grid grid-cols-2 gap-3">
+                    {pendingCreateFotos.map((f) => {
+                      const url = URL.createObjectURL(f)
+                      return (
+                        <div key={f.name + f.size} className="overflow-hidden rounded-md border border-border/60">
+                          <img src={url} alt={f.name} className="h-24 w-full object-cover" />
+                          <div className="flex items-center justify-between gap-2 p-2">
+                            <div className="min-w-0 text-xs text-muted-foreground truncate">{f.name}</div>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setPendingCreateFotos((prev) => prev.filter((x) => x !== f))}
+                            >
+                              Remover
+                            </Button>
+                          </div>
+                        </div>
+                      )
+                    })}
                   </div>
                 ) : null}
               </div>
@@ -717,28 +771,38 @@ export function ProfissionaisClinicaPage() {
                 <Input
                   type="file"
                   accept="image/*"
-                  disabled={uploadingFoto}
+                  multiple
+                  disabled={uploadingFoto || !selectedProfissional}
                   onChange={(e) => {
-                    const file = e.target.files?.[0]
-                    if (file) handleUploadFoto(file)
+                    const files = Array.from(e.target.files ?? [])
                     e.currentTarget.value = ''
+                    if (!selectedProfissional || files.length === 0) return
+                    void handleUploadMidiasForProfissional(selectedProfissional.id, files)
                   }}
                 />
-                {formState.foto_url ? (
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-3">
-                      {fotoPreviewUrl ? (
-                        <img src={fotoPreviewUrl} alt="Foto" className="h-16 w-16 object-cover rounded border" />
-                      ) : (
-                        <div className="h-16 w-16 rounded border bg-muted" />
-                      )}
-                      <div className="text-xs text-muted-foreground break-all">{formState.foto_url}</div>
-                    </div>
-                    <Button variant="outline" disabled={uploadingFoto} onClick={handleRemoveFoto}>
-                      Remover
-                    </Button>
+                {isLoadingMidias ? (
+                  <div className="text-sm text-muted-foreground">Carregando fotos...</div>
+                ) : profissionalMidias.length > 0 ? (
+                  <div className="grid grid-cols-2 gap-3">
+                    {profissionalMidias.map((m) => (
+                      <div key={m.id} className="overflow-hidden rounded-md border border-border/60">
+                        {fotoPreviewUrlById[m.id] ? (
+                          <img src={fotoPreviewUrlById[m.id]} alt={m.label || 'Foto'} className="h-24 w-full object-cover" />
+                        ) : (
+                          <div className="flex h-24 items-center justify-center text-xs text-muted-foreground">Carregando...</div>
+                        )}
+                        <div className="flex items-center justify-between gap-2 p-2">
+                          <div className="min-w-0 text-xs text-muted-foreground truncate">{m.label || m.storage_path}</div>
+                          <Button type="button" variant="outline" size="sm" disabled={uploadingFoto} onClick={() => void handleRemoveMidia(m)}>
+                            Remover
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                ) : null}
+                ) : (
+                  <div className="text-sm text-muted-foreground">Nenhuma foto cadastrada.</div>
+                )}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="edit-whatsapp">WhatsApp</Label>

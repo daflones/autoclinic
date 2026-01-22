@@ -43,6 +43,30 @@ export function useAgendamentoClinica(id?: string) {
   })
 }
 
+export function useRescheduleAgendamentoClinica() {
+  const queryClient = useQueryClient()
+  const { refreshAfterMutation } = useAutoRefresh()
+
+  return useMutation({
+    mutationFn: ({
+      id,
+      data,
+    }: {
+      id: string
+      data: { data_inicio: string; data_fim: string; motivo?: string | null }
+    }) => agendamentosClinicaService.reschedule(id, data),
+    onSuccess: async () => {
+      await refreshAfterMutation('agendamento_clinica', 'update')
+      toast.success('Agendamento reagendado com sucesso!')
+      queryClient.invalidateQueries({ queryKey: ['agendamentos-clinica'] })
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Erro ao reagendar agendamento clínico')
+      queryClient.invalidateQueries({ queryKey: ['agendamentos-clinica'] })
+    },
+  })
+}
+
 export function useCreateAgendamentoClinica() {
   const queryClient = useQueryClient()
   const { refreshAfterMutation } = useAutoRefresh()

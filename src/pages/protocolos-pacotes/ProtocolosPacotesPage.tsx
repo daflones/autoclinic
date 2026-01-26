@@ -778,6 +778,7 @@ export function ProtocolosPacotesPage() {
                 type="file"
                 accept="image/*"
                 multiple
+                className="file:text-foreground file:bg-transparent file:border-0 file:mr-3"
                 disabled={uploadingImagem}
                 onChange={(e) => {
                   const files = Array.from(e.target.files ?? [])
@@ -1174,12 +1175,13 @@ export function ProtocolosPacotesPage() {
                 type="file"
                 accept="image/*"
                 multiple
+                className="file:text-foreground file:bg-transparent file:border-0 file:mr-3"
                 disabled={uploadingImagem || !selectedItem}
                 onChange={(e) => {
-                  const files = Array.from(e.target.files ?? [])
+                  const files = e.target.files
+                  if (!files || !selectedItem) return
+                  void handleUploadMidiasForProtocolo(selectedItem.id, Array.from(files))
                   e.currentTarget.value = ''
-                  if (!selectedItem || files.length === 0) return
-                  void handleUploadMidiasForProtocolo(selectedItem.id, files)
                 }}
               />
               {isLoadingMidias ? (

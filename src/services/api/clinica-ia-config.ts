@@ -39,7 +39,9 @@ export async function getClinicaIAConfig(): Promise<ClinicaIAConfig> {
     .from('clinica_ia_config')
     .select('*')
     .eq('admin_profile_id', adminProfileId)
-    .single()
+    .order('updated_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
 
   if (error) {
     throw new Error(error.message || 'Erro ao buscar configurações de IA da clínica')
@@ -81,13 +83,41 @@ export type ClinicaIAConfigUpdate = Partial<Pick<ClinicaIAConfig,
 export async function updateClinicaIAConfig(patch: ClinicaIAConfigUpdate): Promise<ClinicaIAConfig> {
   const { adminProfileId } = await getAdminContext()
 
+  const { data: existing, error: existingError } = await supabase
+    .from('clinica_ia_config')
+    .select('id')
+    .eq('admin_profile_id', adminProfileId)
+    .order('updated_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  if (existingError) {
+    throw new Error(existingError.message || 'Erro ao localizar configurações de IA da clínica')
+  }
+
+  let targetId = existing?.id as string | undefined
+  if (!targetId) {
+    const fallback = defaultClinicaIAConfig(adminProfileId)
+    const { data: created, error: createError } = await supabase
+      .from('clinica_ia_config')
+      .insert(fallback)
+      .select('id')
+      .single()
+
+    if (createError || !created?.id) {
+      throw new Error(createError?.message || 'Erro ao criar configurações de IA da clínica')
+    }
+
+    targetId = created.id
+  }
+
   const { data, error } = await supabase
     .from('clinica_ia_config')
     .update({
       ...patch,
       updated_at: new Date().toISOString(),
     })
-    .eq('admin_profile_id', adminProfileId)
+    .eq('id', targetId)
     .select('*')
     .single()
 

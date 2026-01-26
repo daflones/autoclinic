@@ -519,10 +519,12 @@ export function ProfissionaisClinicaPage() {
                   type="file"
                   accept="image/*"
                   multiple
+                  className="file:text-foreground file:bg-transparent file:border-0 file:mr-3"
                   disabled={uploadingFoto}
                   onChange={(e) => {
-                    const files = Array.from(e.target.files ?? [])
-                    setPendingCreateFotos((prev) => [...prev, ...files])
+                    const files = e.target.files
+                    if (!files) return
+                    setPendingCreateFotos(Array.from(files))
                     e.currentTarget.value = ''
                   }}
                 />
@@ -772,12 +774,13 @@ export function ProfissionaisClinicaPage() {
                   type="file"
                   accept="image/*"
                   multiple
+                  className="file:text-foreground file:bg-transparent file:border-0 file:mr-3"
                   disabled={uploadingFoto || !selectedProfissional}
                   onChange={(e) => {
-                    const files = Array.from(e.target.files ?? [])
+                    const files = e.target.files
+                    if (!files) return
+                    void handleUploadMidiasForProfissional(selectedProfissional.id, Array.from(files))
                     e.currentTarget.value = ''
-                    if (!selectedProfissional || files.length === 0) return
-                    void handleUploadMidiasForProfissional(selectedProfissional.id, files)
                   }}
                 />
                 {isLoadingMidias ? (

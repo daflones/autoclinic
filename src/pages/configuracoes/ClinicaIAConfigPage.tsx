@@ -42,9 +42,43 @@ export function ClinicaIAConfigPage() {
   const { data: profissionaisExistentes = [] } = useProfissionaisClinica({ status: 'ativo' })
   const { data: protocolosPacotes = [] } = useProtocolosPacotes({ status: 'ativo' })
 
+  const formatDayLabel = (dia: string) => {
+    return dia.charAt(0).toUpperCase() + dia.slice(1)
+  }
+
+  const normalizePeriods = (config: any) => {
+    if (!config) return { ativo: false, periodos: [] }
+    if (Array.isArray(config.periodos)) return config
+    if (config.inicio && config.fim) {
+      return {
+        ...config,
+        periodos: [{ inicio: config.inicio, fim: config.fim }],
+      }
+    }
+    return { ...config, periodos: [] }
+  }
+
+  const normalizeDepoimentos = (arr: any) => {
+    if (!Array.isArray(arr)) return []
+    return arr
+      .map((d) => {
+        if (typeof d === 'string') return { nome: '', idade: null, depoimento: d }
+        if (d && typeof d === 'object') {
+          return {
+            nome: typeof d.nome === 'string' ? d.nome : '',
+            idade: typeof d.idade === 'number' ? d.idade : d.idade === null ? null : null,
+            depoimento: typeof d.depoimento === 'string' ? d.depoimento : typeof d.texto === 'string' ? d.texto : '',
+          }
+        }
+        return null
+      })
+      .filter(Boolean)
+  }
+
   const [identidade, setIdentidade] = useState<Record<string, any>>({
     nome_clinica: '',
     nome_fantasia: '',
+    nome_agente: '',
     cnpj: '',
     endereco_completo: '',
     bairro: '',
@@ -80,10 +114,12 @@ export function ClinicaIAConfigPage() {
       exige_sinal: false,
       valor_sinal: null,
       enviar_pagamento_antes: false,
+      politica_agendamento: '',
     },
     valores: {
       ia_pode_informar: 'nao' as 'exato' | 'faixa' | 'nao',
       texto_padrao: '',
+      texto_padrao_politicas: '',
     },
     cancelamento_no_show: {
       regra_atrasos: '',
@@ -100,8 +136,8 @@ export function ClinicaIAConfigPage() {
     avaliacoes_google_total: null,
     google_nota_media: null,
     depoimentos: [],
-    cases: [],
-    fotos_clinica: [],
+    cases_midias: [],
+    fotos_clinica_midias: [],
   })
 
   const [midias, setMidias] = useState<Record<string, any>>({
@@ -142,7 +178,23 @@ export function ClinicaIAConfigPage() {
       })
       setPosicionamento({ ...posicionamento, ...(clinicaConfig.posicionamento || {}) })
       setPoliticas({ ...politicas, ...(clinicaConfig.politicas || {}) })
-      setProvaSocial({ ...provaSocial, ...(clinicaConfig.prova_social || {}) })
+      setProvaSocial((prev) => {
+        const next = { ...prev, ...(clinicaConfig.prova_social || {}) }
+        next.depoimentos = normalizeDepoimentos(next.depoimentos)
+        if (!Array.isArray(next.cases_midias)) next.cases_midias = []
+        if (!Array.isArray(next.fotos_clinica_midias)) next.fotos_clinica_midias = []
+
+        if (Array.isArray((next as any).cases)) {
+          const legacy = (next as any).cases.filter((x: any) => typeof x === 'string' && x)
+          next.cases_midias = Array.from(new Set([...(next.cases_midias || []), ...legacy]))
+        }
+
+        if (Array.isArray((next as any).fotos_clinica)) {
+          const legacy = (next as any).fotos_clinica.filter((x: any) => typeof x === 'string' && x)
+          next.fotos_clinica_midias = Array.from(new Set([...(next.fotos_clinica_midias || []), ...legacy]))
+        }
+        return next
+      })
       setMidias({ ...midias, ...(clinicaConfig.midias || {}) })
       setRegrasInternas({ ...regrasInternas, ...(clinicaConfig.regras_internas || {}) })
       setGatilhos({ ...gatilhos, ...(clinicaConfig.gatilhos_diferenciais || {}) })
@@ -185,6 +237,22 @@ export function ClinicaIAConfigPage() {
         }
       }
 
+      const provaSocialKeys = ['cases_midias', 'fotos_clinica_midias'] as const
+      for (const key of provaSocialKeys) {
+        const arr = provaSocial?.[key]
+        if (Array.isArray(arr)) {
+          for (const path of arr) {
+            if (typeof path === 'string' && path) {
+              try {
+                next[path] = await getSignedMidiaUrl({ bucket: 'clinica-midias', path })
+              } catch {
+                // ignore
+              }
+            }
+          }
+        }
+      }
+
       setMidiaUrls(next)
     }
 
@@ -195,6 +263,8 @@ export function ClinicaIAConfigPage() {
     midias?.foto_fachada,
     JSON.stringify(midias?.fotos_salas || []),
     JSON.stringify(midias?.antes_depois_genericos || []),
+    JSON.stringify(provaSocial?.cases_midias || []),
+    JSON.stringify(provaSocial?.fotos_clinica_midias || []),
   ])
 
   const uploadSingleMidia = async (key: 'imagem_apresentacao' | 'foto_fachada', file: File) => {
@@ -255,6 +325,39 @@ export function ClinicaIAConfigPage() {
     try {
       await deleteMidia({ bucket: 'clinica-midias', path })
       setMidias((prev) => {
+        const prevArr = Array.isArray(prev?.[key]) ? (prev[key] as any[]) : []
+        return { ...prev, [key]: prevArr.filter((p) => p !== path) }
+      })
+    } finally {
+      setUploadingMidia(null)
+    }
+  }
+
+  const uploadProvaSocialMidia = async (key: 'cases_midias' | 'fotos_clinica_midias', files: FileList) => {
+    setUploadingMidia(key)
+    try {
+      const uploadedPaths: string[] = []
+      for (const file of Array.from(files)) {
+        const uploaded = await uploadMidia({ bucket: 'clinica-midias', file, prefix: key })
+        uploadedPaths.push(uploaded.path)
+      }
+
+      setProvaSocial((prev) => {
+        const prevArr = Array.isArray(prev?.[key]) ? (prev[key] as any[]) : []
+        const nextArr = [...prevArr, ...uploadedPaths]
+        const unique = Array.from(new Set(nextArr.filter(Boolean)))
+        return { ...prev, [key]: unique }
+      })
+    } finally {
+      setUploadingMidia(null)
+    }
+  }
+
+  const removeFromProvaSocialMidia = async (key: 'cases_midias' | 'fotos_clinica_midias', path: string) => {
+    setUploadingMidia(key)
+    try {
+      await deleteMidia({ bucket: 'clinica-midias', path })
+      setProvaSocial((prev) => {
         const prevArr = Array.isArray(prev?.[key]) ? (prev[key] as any[]) : []
         return { ...prev, [key]: prevArr.filter((p) => p !== path) }
       })
@@ -330,6 +433,10 @@ export function ClinicaIAConfigPage() {
                 <Input value={identidade.nome_fantasia || ''} onChange={(e) => setIdentidade({ ...identidade, nome_fantasia: e.target.value })} />
               </div>
               <div className="grid gap-2">
+                <Label>Nome do agente</Label>
+                <Input value={identidade.nome_agente || ''} onChange={(e) => setIdentidade({ ...identidade, nome_agente: e.target.value })} />
+              </div>
+              <div className="grid gap-2">
                 <Label>CNPJ (opcional)</Label>
                 <Input value={identidade.cnpj || ''} onChange={(e) => setIdentidade({ ...identidade, cnpj: e.target.value })} />
               </div>
@@ -386,33 +493,83 @@ export function ClinicaIAConfigPage() {
                     checked={config?.ativo || false}
                     onCheckedChange={(checked) => {
                       const horarios = { ...(identidade.horarios_funcionamento || defaultHorarios) }
-                      horarios[dia] = { ...config, ativo: checked }
+                      const normalized = normalizePeriods(config)
+                      if (checked && (!normalized.periodos || normalized.periodos.length === 0)) {
+                        normalized.periodos = [{ inicio: normalized.inicio || '08:00', fim: normalized.fim || '18:00' }]
+                      }
+                      horarios[dia] = { ...normalized, ativo: checked }
                       setIdentidade({ ...identidade, horarios_funcionamento: horarios })
                     }}
                   />
                   {config?.ativo ? (
-                    <div className="flex items-center gap-2">
-                      <Input
-                        type="time"
-                        value={config?.inicio || '08:00'}
-                        onChange={(e) => {
-                          const horarios = { ...(identidade.horarios_funcionamento || defaultHorarios) }
-                          horarios[dia] = { ...config, inicio: e.target.value }
-                          setIdentidade({ ...identidade, horarios_funcionamento: horarios })
-                        }}
-                        className="w-24"
-                      />
-                      <span className="text-sm text-gray-500">às</span>
-                      <Input
-                        type="time"
-                        value={config?.fim || '18:00'}
-                        onChange={(e) => {
-                          const horarios = { ...(identidade.horarios_funcionamento || defaultHorarios) }
-                          horarios[dia] = { ...config, fim: e.target.value }
-                          setIdentidade({ ...identidade, horarios_funcionamento: horarios })
-                        }}
-                        className="w-24"
-                      />
+                    <div className="flex-1">
+                      <div className="space-y-2">
+                        {(normalizePeriods(config).periodos || []).map((p: any, idx: number) => (
+                          <div key={idx} className="flex items-center gap-2">
+                            <span className="text-xs text-muted-foreground w-14">{formatDayLabel(dia)} {idx + 1}</span>
+                            <Input
+                              type="time"
+                              value={p?.inicio || '08:00'}
+                              onChange={(e) => {
+                                const horarios = { ...(identidade.horarios_funcionamento || defaultHorarios) }
+                                const normalized = normalizePeriods(config)
+                                const nextPeriodos = Array.isArray(normalized.periodos) ? [...normalized.periodos] : []
+                                nextPeriodos[idx] = { ...nextPeriodos[idx], inicio: e.target.value }
+                                horarios[dia] = { ...normalized, periodos: nextPeriodos }
+                                setIdentidade({ ...identidade, horarios_funcionamento: horarios })
+                              }}
+                              className="w-24"
+                            />
+                            <span className="text-sm text-gray-500">às</span>
+                            <Input
+                              type="time"
+                              value={p?.fim || '18:00'}
+                              onChange={(e) => {
+                                const horarios = { ...(identidade.horarios_funcionamento || defaultHorarios) }
+                                const normalized = normalizePeriods(config)
+                                const nextPeriodos = Array.isArray(normalized.periodos) ? [...normalized.periodos] : []
+                                nextPeriodos[idx] = { ...nextPeriodos[idx], fim: e.target.value }
+                                horarios[dia] = { ...normalized, periodos: nextPeriodos }
+                                setIdentidade({ ...identidade, horarios_funcionamento: horarios })
+                              }}
+                              className="w-24"
+                            />
+                            {(normalizePeriods(config).periodos || []).length > 1 ? (
+                              <Button
+                                type="button"
+                                variant="outline"
+                                className="h-9"
+                                onClick={() => {
+                                  const horarios = { ...(identidade.horarios_funcionamento || defaultHorarios) }
+                                  const normalized = normalizePeriods(config)
+                                  const nextPeriodos = (Array.isArray(normalized.periodos) ? [...normalized.periodos] : []).filter((_: any, i: number) => i !== idx)
+                                  horarios[dia] = { ...normalized, periodos: nextPeriodos }
+                                  setIdentidade({ ...identidade, horarios_funcionamento: horarios })
+                                }}
+                              >
+                                Remover
+                              </Button>
+                            ) : null}
+                          </div>
+                        ))}
+
+                        <div>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => {
+                              const horarios = { ...(identidade.horarios_funcionamento || defaultHorarios) }
+                              const normalized = normalizePeriods(config)
+                              const nextPeriodos = Array.isArray(normalized.periodos) ? [...normalized.periodos] : []
+                              nextPeriodos.push({ inicio: '13:00', fim: '18:00' })
+                              horarios[dia] = { ...normalized, periodos: nextPeriodos }
+                              setIdentidade({ ...identidade, horarios_funcionamento: horarios })
+                            }}
+                          >
+                            Adicionar intervalo
+                          </Button>
+                        </div>
+                      </div>
                     </div>
                   ) : (
                     <span className="text-sm text-gray-400">Inativo</span>
@@ -589,6 +746,73 @@ export function ClinicaIAConfigPage() {
             </div>
 
             <div className="space-y-3 pt-4 border-t">
+              <Label className="text-base font-semibold">Agendamento</Label>
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="flex items-center justify-between p-3 border rounded-lg">
+                  <Label>IA pode agendar procedimentos?</Label>
+                  <Switch
+                    checked={!!politicas.agendamento?.ia_pode_agendar_procedimentos}
+                    onCheckedChange={(checked) =>
+                      setPoliticas({
+                        ...politicas,
+                        agendamento: { ...politicas.agendamento, ia_pode_agendar_procedimentos: checked },
+                      })
+                    }
+                  />
+                </div>
+                <div className="flex items-center justify-between p-3 border rounded-lg">
+                  <Label>Exige pagamento antecipado?</Label>
+                  <Switch
+                    checked={!!politicas.agendamento?.exige_pagamento_antecipado}
+                    onCheckedChange={(checked) =>
+                      setPoliticas({
+                        ...politicas,
+                        agendamento: { ...politicas.agendamento, exige_pagamento_antecipado: checked },
+                      })
+                    }
+                  />
+                </div>
+                <div className="flex items-center justify-between p-3 border rounded-lg">
+                  <Label>Exige sinal para reservar horário?</Label>
+                  <Switch
+                    checked={!!politicas.agendamento?.exige_sinal}
+                    onCheckedChange={(checked) =>
+                      setPoliticas({
+                        ...politicas,
+                        agendamento: { ...politicas.agendamento, exige_sinal: checked },
+                      })
+                    }
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label>Valor do sinal (se houver)</Label>
+                  <Input
+                    type="number"
+                    value={politicas.agendamento?.valor_sinal ?? ''}
+                    onChange={(e) =>
+                      setPoliticas({
+                        ...politicas,
+                        agendamento: {
+                          ...politicas.agendamento,
+                          valor_sinal: e.target.value === '' ? null : Number(e.target.value),
+                        },
+                      })
+                    }
+                    disabled={!politicas.agendamento?.exige_sinal}
+                  />
+                </div>
+                <div className="grid gap-2 md:col-span-2">
+                  <Label>Política de agendamento</Label>
+                  <Textarea
+                    value={politicas.agendamento?.politica_agendamento || ''}
+                    onChange={(e) => setPoliticas({ ...politicas, agendamento: { ...politicas.agendamento, politica_agendamento: e.target.value } })}
+                    rows={3}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-3 pt-4 border-t">
               <Label className="text-base font-semibold">Valores</Label>
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="grid gap-2">
@@ -607,6 +831,14 @@ export function ClinicaIAConfigPage() {
                 <div className="grid gap-2">
                   <Label>Texto padrão</Label>
                   <Textarea value={politicas.valores?.texto_padrao || ''} onChange={(e) => setPoliticas({ ...politicas, valores: { ...politicas.valores, texto_padrao: e.target.value } })} rows={3} />
+                </div>
+                <div className="grid gap-2 md:col-span-2">
+                  <Label>Texto padrão para políticas de valores</Label>
+                  <Textarea
+                    value={politicas.valores?.texto_padrao_politicas || ''}
+                    onChange={(e) => setPoliticas({ ...politicas, valores: { ...politicas.valores, texto_padrao_politicas: e.target.value } })}
+                    rows={3}
+                  />
                 </div>
               </div>
             </div>
@@ -665,17 +897,161 @@ export function ClinicaIAConfigPage() {
                 <Label>Prêmios e reconhecimentos (um por linha)</Label>
                 <Textarea value={(provaSocial.premios_reconhecimentos || []).join('\n')} onChange={(e) => setProvaSocial({ ...provaSocial, premios_reconhecimentos: e.target.value.split('\n').map((s: string) => s.trim()).filter(Boolean) })} rows={3} />
               </div>
-              <div className="grid gap-2">
-                <Label>Depoimentos (um por linha)</Label>
-                <Textarea value={(provaSocial.depoimentos || []).join('\n')} onChange={(e) => setProvaSocial({ ...provaSocial, depoimentos: e.target.value.split('\n').map((s: string) => s.trim()).filter(Boolean) })} rows={3} />
+              <div className="grid gap-2 md:col-span-2">
+                <Label>Depoimentos</Label>
+                <div className="space-y-2">
+                  {(Array.isArray(provaSocial.depoimentos) ? provaSocial.depoimentos : []).map((d: any, idx: number) => (
+                    <div key={idx} className="border rounded-lg p-3 space-y-2">
+                      <div className="grid gap-2 md:grid-cols-3">
+                        <div className="grid gap-2">
+                          <Label>Nome</Label>
+                          <Input
+                            value={d?.nome || ''}
+                            onChange={(e) =>
+                              setProvaSocial((prev) => {
+                                const arr = Array.isArray(prev.depoimentos) ? [...prev.depoimentos] : []
+                                arr[idx] = { ...arr[idx], nome: e.target.value }
+                                return { ...prev, depoimentos: arr }
+                              })
+                            }
+                          />
+                        </div>
+                        <div className="grid gap-2">
+                          <Label>Idade</Label>
+                          <Input
+                            type="number"
+                            value={d?.idade ?? ''}
+                            onChange={(e) =>
+                              setProvaSocial((prev) => {
+                                const arr = Array.isArray(prev.depoimentos) ? [...prev.depoimentos] : []
+                                arr[idx] = { ...arr[idx], idade: e.target.value === '' ? null : Number(e.target.value) }
+                                return { ...prev, depoimentos: arr }
+                              })
+                            }
+                          />
+                        </div>
+                        <div className="flex items-end">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="w-full"
+                            onClick={() =>
+                              setProvaSocial((prev) => {
+                                const arr = Array.isArray(prev.depoimentos) ? [...prev.depoimentos] : []
+                                return { ...prev, depoimentos: arr.filter((_: any, i: number) => i !== idx) }
+                              })
+                            }
+                          >
+                            Remover
+                          </Button>
+                        </div>
+                      </div>
+                      <div className="grid gap-2">
+                        <Label>Depoimento</Label>
+                        <Textarea
+                          value={d?.depoimento || ''}
+                          onChange={(e) =>
+                            setProvaSocial((prev) => {
+                              const arr = Array.isArray(prev.depoimentos) ? [...prev.depoimentos] : []
+                              arr[idx] = { ...arr[idx], depoimento: e.target.value }
+                              return { ...prev, depoimentos: arr }
+                            })
+                          }
+                          rows={3}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setProvaSocial((prev) => ({ ...prev, depoimentos: [...(Array.isArray(prev.depoimentos) ? prev.depoimentos : []), { nome: '', idade: null, depoimento: '' }] }))}
+                  >
+                    Adicionar depoimento
+                  </Button>
+                </div>
               </div>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
               <div className="grid gap-2">
-                <Label>Cases (um por linha)</Label>
-                <Textarea value={(provaSocial.cases || []).join('\n')} onChange={(e) => setProvaSocial({ ...provaSocial, cases: e.target.value.split('\n').map((s: string) => s.trim()).filter(Boolean) })} rows={3} />
+                <Label>Cases (foto/vídeo)</Label>
+                <Input
+                  type="file"
+                  accept="image/*,video/*"
+                  multiple
+                  className="file:text-foreground file:bg-transparent file:border-0 file:mr-3"
+                  disabled={!!uploadingMidia}
+                  onChange={(e) => {
+                    const files = e.target.files
+                    if (files && files.length) uploadProvaSocialMidia('cases_midias', files)
+                    e.currentTarget.value = ''
+                  }}
+                />
+
+                <div className="grid grid-cols-3 gap-2">
+                  {(Array.isArray(provaSocial.cases_midias) ? provaSocial.cases_midias : []).map((path: string) => (
+                    <div key={path} className="border rounded p-2 space-y-2">
+                      {midiaUrls[path] ? (
+                        path.toLowerCase().match(/\.(mp4|webm|ogg)$/) ? (
+                          <video src={midiaUrls[path]} className="h-24 w-full object-cover rounded" controls />
+                        ) : (
+                          <img src={midiaUrls[path]} alt="Case" className="h-24 w-full object-cover rounded" />
+                        )
+                      ) : (
+                        <div className="h-24 w-full rounded bg-muted" />
+                      )}
+                      <Button
+                        variant="outline"
+                        className="w-full"
+                        disabled={uploadingMidia === 'cases_midias'}
+                        onClick={() => removeFromProvaSocialMidia('cases_midias', path)}
+                      >
+                        Remover
+                      </Button>
+                    </div>
+                  ))}
+                </div>
               </div>
+
               <div className="grid gap-2">
-                <Label>Fotos da clínica (um por linha)</Label>
-                <Textarea value={(provaSocial.fotos_clinica || []).join('\n')} onChange={(e) => setProvaSocial({ ...provaSocial, fotos_clinica: e.target.value.split('\n').map((s: string) => s.trim()).filter(Boolean) })} rows={3} />
+                <Label>Fotos da clínica (foto/vídeo)</Label>
+                <Input
+                  type="file"
+                  accept="image/*,video/*"
+                  multiple
+                  className="file:text-foreground file:bg-transparent file:border-0 file:mr-3"
+                  disabled={!!uploadingMidia}
+                  onChange={(e) => {
+                    const files = e.target.files
+                    if (files && files.length) uploadProvaSocialMidia('fotos_clinica_midias', files)
+                    e.currentTarget.value = ''
+                  }}
+                />
+
+                <div className="grid grid-cols-3 gap-2">
+                  {(Array.isArray(provaSocial.fotos_clinica_midias) ? provaSocial.fotos_clinica_midias : []).map((path: string) => (
+                    <div key={path} className="border rounded p-2 space-y-2">
+                      {midiaUrls[path] ? (
+                        path.toLowerCase().match(/\.(mp4|webm|ogg)$/) ? (
+                          <video src={midiaUrls[path]} className="h-24 w-full object-cover rounded" controls />
+                        ) : (
+                          <img src={midiaUrls[path]} alt="Clínica" className="h-24 w-full object-cover rounded" />
+                        )
+                      ) : (
+                        <div className="h-24 w-full rounded bg-muted" />
+                      )}
+                      <Button
+                        variant="outline"
+                        className="w-full"
+                        disabled={uploadingMidia === 'fotos_clinica_midias'}
+                        onClick={() => removeFromProvaSocialMidia('fotos_clinica_midias', path)}
+                      >
+                        Remover
+                      </Button>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
           </CardContent>
@@ -690,7 +1066,7 @@ export function ClinicaIAConfigPage() {
             <div className="grid gap-4 md:grid-cols-2">
               <div className="grid gap-2">
                 <Label>Imagem de apresentação</Label>
-                <Input type="file" accept="image/*" disabled={!!uploadingMidia} onChange={(e) => {
+                <Input type="file" accept="image/*" className="file:text-foreground file:bg-transparent file:border-0 file:mr-3" disabled={!!uploadingMidia} onChange={(e) => {
                   const file = e.target.files?.[0]
                   if (file) uploadSingleMidia('imagem_apresentacao', file)
                   e.currentTarget.value = ''
@@ -714,7 +1090,7 @@ export function ClinicaIAConfigPage() {
               </div>
               <div className="grid gap-2">
                 <Label>Foto da fachada</Label>
-                <Input type="file" accept="image/*" disabled={!!uploadingMidia} onChange={(e) => {
+                <Input type="file" accept="image/*" className="file:text-foreground file:bg-transparent file:border-0 file:mr-3" disabled={!!uploadingMidia} onChange={(e) => {
                   const file = e.target.files?.[0]
                   if (file) uploadSingleMidia('foto_fachada', file)
                   e.currentTarget.value = ''
@@ -741,8 +1117,8 @@ export function ClinicaIAConfigPage() {
                 <Input value={midias.video_institucional || ''} onChange={(e) => setMidias({ ...midias, video_institucional: e.target.value })} />
               </div>
               <div className="grid gap-2">
-                <Label>Fotos das salas (uma por linha)</Label>
-                <Input type="file" accept="image/*" multiple disabled={!!uploadingMidia} onChange={(e) => {
+                <Label>Fotos das salas</Label>
+                <Input type="file" accept="image/*" multiple className="file:text-foreground file:bg-transparent file:border-0 file:mr-3" disabled={!!uploadingMidia} onChange={(e) => {
                   const files = e.target.files
                   if (files && files.length) uploadMultiMidia('fotos_salas', files)
                   e.currentTarget.value = ''
@@ -764,8 +1140,8 @@ export function ClinicaIAConfigPage() {
                 </div>
               </div>
               <div className="grid gap-2">
-                <Label>Antes/depois genéricos (uma por linha)</Label>
-                <Input type="file" accept="image/*" multiple disabled={!!uploadingMidia} onChange={(e) => {
+                <Label>Antes/depois de paciente</Label>
+                <Input type="file" accept="image/*" multiple className="file:text-foreground file:bg-transparent file:border-0 file:mr-3" disabled={!!uploadingMidia} onChange={(e) => {
                   const files = e.target.files
                   if (files && files.length) uploadMultiMidia('antes_depois_genericos', files)
                   e.currentTarget.value = ''

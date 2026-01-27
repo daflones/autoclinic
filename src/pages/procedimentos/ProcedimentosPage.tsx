@@ -1471,17 +1471,48 @@ export function ProcedimentosPage() {
                         ) : null}
                       </div>
                       <div className="grid gap-2">
-                        <Label>URL (um por linha)</Label>
-                        <Textarea
-                          value={(((getIA('midias.videos_whatsapp_urls', []) as any[]) || []) as any[]).join('\n')}
-                          onChange={(e) =>
-                            setIA(
-                              'midias.videos_whatsapp_urls',
-                              e.target.value.split('\n').map((s) => s.trim()).filter(Boolean)
-                            )
-                          }
-                          rows={3}
-                        />
+                        <Label>URLs</Label>
+                        <div className="flex gap-2">
+                          <Input
+                            value={String(getIA('midias._ui_video_whatsapp_url', '') || '')}
+                            onChange={(e) => setIA('midias._ui_video_whatsapp_url', e.target.value)}
+                            placeholder="https://..."
+                          />
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => {
+                              const raw = String(getIA('midias._ui_video_whatsapp_url', '') || '').trim()
+                              if (!raw) return
+                              const prev = (((getIA('midias.videos_whatsapp_urls', []) as any[]) || []) as any[]) as any[]
+                              if (prev.includes(raw)) return
+                              setIA('midias.videos_whatsapp_urls', [...prev, raw])
+                              setIA('midias._ui_video_whatsapp_url', '')
+                            }}
+                          >
+                            Adicionar
+                          </Button>
+                        </div>
+                        {(((getIA('midias.videos_whatsapp_urls', []) as any[]) || []) as any[]).length > 0 ? (
+                          <div className="space-y-2">
+                            {(((getIA('midias.videos_whatsapp_urls', []) as any[]) || []) as any[]).map((u: any) => (
+                              <div key={String(u)} className="flex items-center justify-between gap-2 rounded-md border p-2">
+                                <div className="min-w-0 text-xs text-muted-foreground truncate">{String(u)}</div>
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => {
+                                    const prev = (((getIA('midias.videos_whatsapp_urls', []) as any[]) || []) as any[]) as any[]
+                                    setIA('midias.videos_whatsapp_urls', prev.filter((x) => x !== u))
+                                  }}
+                                >
+                                  Remover
+                                </Button>
+                              </div>
+                            ))}
+                          </div>
+                        ) : null}
                       </div>
                     </div>
                   </div>
@@ -1528,17 +1559,48 @@ export function ProcedimentosPage() {
                         ) : null}
                       </div>
                       <div className="grid gap-2">
-                        <Label>URL (um por linha)</Label>
-                        <Textarea
-                          value={(((getIA('midias.videos_explicativos_urls', []) as any[]) || []) as any[]).join('\n')}
-                          onChange={(e) =>
-                            setIA(
-                              'midias.videos_explicativos_urls',
-                              e.target.value.split('\n').map((s) => s.trim()).filter(Boolean)
-                            )
-                          }
-                          rows={3}
-                        />
+                        <Label>URLs</Label>
+                        <div className="flex gap-2">
+                          <Input
+                            value={String(getIA('midias._ui_video_explicativo_url', '') || '')}
+                            onChange={(e) => setIA('midias._ui_video_explicativo_url', e.target.value)}
+                            placeholder="https://..."
+                          />
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => {
+                              const raw = String(getIA('midias._ui_video_explicativo_url', '') || '').trim()
+                              if (!raw) return
+                              const prev = (((getIA('midias.videos_explicativos_urls', []) as any[]) || []) as any[]) as any[]
+                              if (prev.includes(raw)) return
+                              setIA('midias.videos_explicativos_urls', [...prev, raw])
+                              setIA('midias._ui_video_explicativo_url', '')
+                            }}
+                          >
+                            Adicionar
+                          </Button>
+                        </div>
+                        {(((getIA('midias.videos_explicativos_urls', []) as any[]) || []) as any[]).length > 0 ? (
+                          <div className="space-y-2">
+                            {(((getIA('midias.videos_explicativos_urls', []) as any[]) || []) as any[]).map((u: any) => (
+                              <div key={String(u)} className="flex items-center justify-between gap-2 rounded-md border p-2">
+                                <div className="min-w-0 text-xs text-muted-foreground truncate">{String(u)}</div>
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => {
+                                    const prev = (((getIA('midias.videos_explicativos_urls', []) as any[]) || []) as any[]) as any[]
+                                    setIA('midias.videos_explicativos_urls', prev.filter((x) => x !== u))
+                                  }}
+                                >
+                                  Remover
+                                </Button>
+                              </div>
+                            ))}
+                          </div>
+                        ) : null}
                       </div>
                     </div>
                   </div>

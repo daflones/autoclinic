@@ -20,6 +20,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
+import { Switch } from '@/components/ui/switch'
 import { Plus, Search, Package, Edit, Trash2, Image as ImageIcon } from 'lucide-react'
 import { toast } from 'sonner'
 import {
@@ -29,6 +30,7 @@ import {
   useUpdateProtocoloPacote,
   useUpdateProtocoloPacoteStatus,
 } from '@/hooks/useProtocolosPacotes'
+import { useProcedimentos } from '@/hooks/useProcedimentos'
 import type { ProtocoloPacote, ProtocoloPacoteCreateData, ProtocoloPacoteStatus } from '@/services/api/protocolos-pacotes'
 import { deleteMidia, getSignedMidiaUrl, uploadMidia } from '@/services/api/storage-midias'
 import {
@@ -91,7 +93,7 @@ export function ProtocolosPacotesPage() {
   }
 
   const [uploadingImagem, setUploadingImagem] = useState(false)
-  const [pendingCreateImagens, setPendingCreateImagens] = useState<File[]>([])
+  const [pendingCreateMidias, setPendingCreateMidias] = useState<Record<string, File[]>>({})
   const [imagemPreviewUrlById, setImagemPreviewUrlById] = useState<Record<string, string>>({})
 
   const filters = useMemo(
@@ -103,6 +105,7 @@ export function ProtocolosPacotesPage() {
   )
 
   const { data: itens, isLoading } = useProtocolosPacotes(filters)
+  const { data: procedimentos = [] } = useProcedimentos({} as any)
 
   const createMutation = useCreateProtocoloPacote()
   const updateMutation = useUpdateProtocoloPacote()
@@ -122,6 +125,38 @@ export function ProtocolosPacotesPage() {
       inativos: itens.filter((p) => !p.ativo).length,
     }
   }, [itens])
+
+  const getEstruturaItens = () => {
+    const raw = (getC('estrutura.itens', []) as any[]) || []
+    return raw.map((it: any, idx: number) => {
+      if (!it || typeof it !== 'object') {
+        return {
+          tipo: 'manual',
+          ordem: idx + 1,
+          procedimento_id: null,
+          nome_manual: String(it ?? ''),
+          sessoes_qtd: null,
+          intervalo_recomendado: '',
+          duracao_sessao_min: null,
+          valor_individual: null,
+        }
+      }
+
+      const tipo = it.tipo === 'procedimento' || it.procedimento_id ? 'procedimento' : 'manual'
+      return {
+        tipo,
+        ordem: it.ordem ?? idx + 1,
+        procedimento_id: it.procedimento_id ?? null,
+        nome_manual: it.nome_manual ?? it.procedimento ?? '',
+        sessoes_qtd: it.sessoes_qtd ?? it.qtd ?? null,
+        intervalo_recomendado: it.intervalo_recomendado ?? it.intervalo ?? '',
+        duracao_sessao_min: it.duracao_sessao_min ?? it.duracao_estimada ?? null,
+        valor_individual: it.valor_individual ?? it.valor ?? null,
+      }
+    })
+  }
+
+  const setEstruturaItens = (items: any[]) => setC('estrutura.itens', items)
 
   useEffect(() => {
     let cancelled = false
@@ -156,15 +191,15 @@ export function ProtocolosPacotesPage() {
     }
   }, [protocoloMidias, imagemPreviewUrlById])
 
-  const handleUploadMidiasForProtocolo = async (protocoloId: string, files: File[]) => {
+  const handleUploadMidiasForProtocolo = async (protocoloId: string, tipo: string, files: File[]) => {
     if (!files.length) return
     setUploadingImagem(true)
     try {
       for (const file of files) {
-        const uploaded = await uploadMidia({ bucket: 'pacotes-midias', file, prefix: `protocolos/${protocoloId}/imagem` })
+        const uploaded = await uploadMidia({ bucket: 'pacotes-midias', file, prefix: `protocolos/${protocoloId}/${tipo}` })
         await createProtocoloMidia.mutateAsync({
           protocolo_pacote_id: protocoloId,
-          tipo: 'imagem',
+          tipo,
           storage_bucket: 'pacotes-midias',
           storage_path: uploaded.path,
           label: file.name,
@@ -197,7 +232,7 @@ export function ProtocolosPacotesPage() {
 
   const openCreate = () => {
     setSelectedItem(null)
-    setPendingCreateImagens([])
+    setPendingCreateMidias({})
     setFormState({
       nome: '',
       descricao: '',
@@ -236,11 +271,14 @@ export function ProtocolosPacotesPage() {
     }
     try {
       const created = await createMutation.mutateAsync({ ...formState, imagem_path: null })
-      if (pendingCreateImagens.length > 0) {
-        await handleUploadMidiasForProtocolo(created.id, pendingCreateImagens)
+      const entries = Object.entries(pendingCreateMidias)
+      for (const [tipo, files] of entries) {
+        if (files && files.length > 0) {
+          await handleUploadMidiasForProtocolo(created.id, tipo, files)
+        }
       }
       setIsCreateModalOpen(false)
-      setPendingCreateImagens([])
+      setPendingCreateMidias({})
     } catch (e) {
       console.error(e)
     }
@@ -296,10 +334,109 @@ export function ProtocolosPacotesPage() {
 
   useEffect(() => {
     if (!isCreateModalOpen && !isEditModalOpen) {
-      setPendingCreateImagens([])
+      setPendingCreateMidias({})
       setUploadingImagem(false)
     }
   }, [isCreateModalOpen, isEditModalOpen])
+
+  const renderMidiaUploader = (params: { tipo: string; label: string; accept: string; allowWhenCreating: boolean }) => {
+    const { tipo, label, accept, allowWhenCreating } = params
+    const existing = protocoloMidias.filter((m: any) => (m?.tipo || 'imagem') === tipo)
+    const pending = pendingCreateMidias[tipo] || []
+    const canUpload = Boolean(selectedItem) || allowWhenCreating
+
+    return (
+      <div className="space-y-2">
+        <Label>{label}</Label>
+
+        {canUpload ? (
+          <Input
+            type="file"
+            accept={accept}
+            multiple
+            className="file:text-foreground file:bg-transparent file:border-0 file:mr-3"
+            disabled={uploadingImagem}
+            onChange={(e) => {
+              const files = Array.from(e.target.files ?? [])
+              if (!files.length) return
+
+              if (selectedItem) {
+                void handleUploadMidiasForProtocolo(selectedItem.id, tipo, files)
+              } else {
+                setPendingCreateMidias((prev) => ({
+                  ...prev,
+                  [tipo]: [ ...(prev[tipo] || []), ...files ],
+                }))
+              }
+              e.currentTarget.value = ''
+            }}
+          />
+        ) : null}
+
+        {pending.length > 0 ? (
+          <div className="grid grid-cols-2 gap-3">
+            {pending.map((f) => {
+              const url = URL.createObjectURL(f)
+              const isImg = (f.type || '').startsWith('image/')
+              const isVideo = (f.type || '').startsWith('video/')
+
+              return (
+                <div key={f.name + f.size} className="overflow-hidden rounded-md border border-border/60">
+                  {isImg ? (
+                    <img src={url} alt={f.name} className="h-24 w-full object-cover" />
+                  ) : isVideo ? (
+                    <video src={url} className="h-24 w-full object-cover" controls />
+                  ) : (
+                    <div className="flex h-24 items-center justify-center text-xs text-muted-foreground">{f.name}</div>
+                  )}
+                  <div className="flex items-center justify-between gap-2 p-2">
+                    <div className="min-w-0 text-xs text-muted-foreground truncate">{f.name}</div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() =>
+                        setPendingCreateMidias((prev) => ({
+                          ...prev,
+                          [tipo]: (prev[tipo] || []).filter((x) => x !== f),
+                        }))
+                      }
+                    >
+                      Remover
+                    </Button>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        ) : null}
+
+        {selectedItem ? (
+          isLoadingMidias ? (
+            <div className="text-sm text-muted-foreground">Carregando...</div>
+          ) : existing.length > 0 ? (
+            <div className="grid grid-cols-2 gap-3">
+              {existing.map((m: any) => (
+                <div key={m.id} className="overflow-hidden rounded-md border border-border/60">
+                  {imagemPreviewUrlById[m.id] ? (
+                    <img src={imagemPreviewUrlById[m.id]} alt={m.label || 'Mídia'} className="h-24 w-full object-cover" />
+                  ) : (
+                    <div className="flex h-24 items-center justify-center text-xs text-muted-foreground">Carregando...</div>
+                  )}
+                  <div className="flex items-center justify-between gap-2 p-2">
+                    <div className="min-w-0 text-xs text-muted-foreground truncate">{m.label || m.storage_path}</div>
+                    <Button type="button" variant="outline" size="sm" disabled={uploadingImagem} onClick={() => void handleRemoveMidia(m)}>
+                      Remover
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : null
+        ) : null}
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">
@@ -414,7 +551,7 @@ export function ProtocolosPacotesPage() {
                         <div className="text-sm text-muted-foreground line-clamp-2">{item.descricao}</div>
                       ) : null}
                       {typeof item.preco === 'number' ? (
-                        <div className="text-xs text-muted-foreground">Preço: R$ {item.preco.toFixed(2)}</div>
+                        <div className="text-xs text-muted-foreground">Valor total do pacote: R$ {item.preco.toFixed(2)}</div>
                       ) : null}
                     </div>
                   </div>
@@ -454,7 +591,7 @@ export function ProtocolosPacotesPage() {
                 <Input value={formState.nome} onChange={(e) => setFormState({ ...formState, nome: e.target.value })} />
               </div>
               <div className="space-y-2">
-                <Label>Preço (opcional)</Label>
+                <Label>Valor total do pacote (opcional)</Label>
                 <Input
                   type="number"
                   value={formState.preco ?? ''}
@@ -468,14 +605,7 @@ export function ProtocolosPacotesPage() {
               <Textarea value={formState.descricao || ''} onChange={(e) => setFormState({ ...formState, descricao: e.target.value })} rows={3} />
             </div>
 
-            <div className="space-y-2">
-              <Label>Itens (um por linha)</Label>
-              <Textarea value={formState.itens || ''} onChange={(e) => setFormState({ ...formState, itens: e.target.value })} rows={4} />
-            </div>
-
             <div className="pt-4 border-t space-y-4">
-              <div className="text-sm font-semibold">Estrutura completa do Pacote (IA/CRM)</div>
-
               <div className="space-y-3">
                 <Label className="text-base font-semibold">Dados básicos</Label>
                 <div className="grid gap-4 md:grid-cols-2">
@@ -524,19 +654,172 @@ export function ProtocolosPacotesPage() {
                 <Label className="text-base font-semibold">Estrutura / Cronograma</Label>
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="grid gap-2">
-                    <Label>Itens do pacote (JSON)</Label>
-                    <Textarea
-                      value={JSON.stringify(getC('estrutura.itens', []), null, 2)}
-                      onChange={(e) => {
-                        try {
-                          setC('estrutura.itens', JSON.parse(e.target.value || '[]'))
-                        } catch {
-                          // ignore
-                        }
-                      }}
-                      rows={8}
-                      placeholder='Ex: [{"procedimento":"Limpeza de pele","qtd":1,"intervalo":"7 dias","ordem":1}]'
-                    />
+                    <Label>Itens do pacote</Label>
+                    <div className="space-y-3">
+                      {getEstruturaItens().map((it: any, idx: number) => (
+                        <div key={idx} className="rounded-lg border p-3 space-y-3">
+                          <div className="grid gap-3 md:grid-cols-2">
+                            <div className="grid gap-2">
+                              <Label>Tipo</Label>
+                              <Select
+                                value={it.tipo || 'manual'}
+                                onValueChange={(v) => {
+                                  const items = getEstruturaItens()
+                                  items[idx] = { ...items[idx], tipo: v }
+                                  if (v === 'manual') items[idx] = { ...items[idx], procedimento_id: null }
+                                  setEstruturaItens(items)
+                                }}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="procedimento">Procedimento incluído</SelectItem>
+                                  <SelectItem value="manual">Item manual</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="grid gap-2">
+                              <Label>Ordem recomendada</Label>
+                              <Input
+                                type="number"
+                                value={it.ordem ?? ''}
+                                onChange={(e) => {
+                                  const items = getEstruturaItens()
+                                  items[idx] = { ...items[idx], ordem: e.target.value === '' ? null : Number(e.target.value) }
+                                  setEstruturaItens(items)
+                                }}
+                              />
+                            </div>
+                          </div>
+
+                          {it.tipo === 'procedimento' ? (
+                            <div className="grid gap-2">
+                              <Label>Procedimento incluído</Label>
+                              <Select
+                                value={it.procedimento_id || 'none'}
+                                onValueChange={(v) => {
+                                  const items = getEstruturaItens()
+                                  items[idx] = { ...items[idx], procedimento_id: v === 'none' ? null : v }
+                                  setEstruturaItens(items)
+                                }}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Selecione" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="none">Nenhum</SelectItem>
+                                  {procedimentos.map((p: any) => (
+                                    <SelectItem key={p.id} value={p.id}>
+                                      {p.nome}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          ) : (
+                            <div className="grid gap-2">
+                              <Label>Item (texto)</Label>
+                              <Input
+                                value={it.nome_manual || ''}
+                                onChange={(e) => {
+                                  const items = getEstruturaItens()
+                                  items[idx] = { ...items[idx], nome_manual: e.target.value }
+                                  setEstruturaItens(items)
+                                }}
+                                placeholder="Ex: Máscara de ouro"
+                              />
+                            </div>
+                          )}
+
+                          <div className="grid gap-3 md:grid-cols-2">
+                            <div className="grid gap-2">
+                              <Label>Quantidade de sessões</Label>
+                              <Input
+                                type="number"
+                                value={it.sessoes_qtd ?? ''}
+                                onChange={(e) => {
+                                  const items = getEstruturaItens()
+                                  items[idx] = { ...items[idx], sessoes_qtd: e.target.value === '' ? null : Number(e.target.value) }
+                                  setEstruturaItens(items)
+                                }}
+                              />
+                            </div>
+                            <div className="grid gap-2">
+                              <Label>Intervalo recomendado</Label>
+                              <Input
+                                value={it.intervalo_recomendado || ''}
+                                onChange={(e) => {
+                                  const items = getEstruturaItens()
+                                  items[idx] = { ...items[idx], intervalo_recomendado: e.target.value }
+                                  setEstruturaItens(items)
+                                }}
+                                placeholder="Ex: 7 dias / 2x por semana"
+                              />
+                            </div>
+                            <div className="grid gap-2">
+                              <Label>Duração de cada sessão (min)</Label>
+                              <Input
+                                type="number"
+                                value={it.duracao_sessao_min ?? ''}
+                                onChange={(e) => {
+                                  const items = getEstruturaItens()
+                                  items[idx] = { ...items[idx], duracao_sessao_min: e.target.value === '' ? null : Number(e.target.value) }
+                                  setEstruturaItens(items)
+                                }}
+                              />
+                            </div>
+                            <div className="grid gap-2">
+                              <Label>Valor individual (R$)</Label>
+                              <Input
+                                type="number"
+                                step="0.01"
+                                value={it.valor_individual ?? ''}
+                                onChange={(e) => {
+                                  const items = getEstruturaItens()
+                                  items[idx] = { ...items[idx], valor_individual: e.target.value === '' ? null : Number(e.target.value) }
+                                  setEstruturaItens(items)
+                                }}
+                              />
+                            </div>
+                          </div>
+
+                          <div className="flex justify-end">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              onClick={() => {
+                                const items = getEstruturaItens()
+                                items.splice(idx, 1)
+                                setEstruturaItens(items)
+                              }}
+                            >
+                              Remover item
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => {
+                          const items = getEstruturaItens()
+                          items.push({
+                            tipo: 'procedimento',
+                            procedimento_id: null,
+                            nome_manual: '',
+                            sessoes_qtd: null,
+                            intervalo_recomendado: '',
+                            duracao_sessao_min: null,
+                            valor_individual: null,
+                            ordem: items.length + 1,
+                          })
+                          setEstruturaItens(items)
+                        }}
+                      >
+                        Adicionar item
+                      </Button>
+                    </div>
                   </div>
                   <div className="grid gap-2">
                     <Label>Cronograma recomendado (texto)</Label>
@@ -548,6 +831,10 @@ export function ProtocolosPacotesPage() {
               <div className="space-y-3 pt-4 border-t">
                 <Label className="text-base font-semibold">Valores e condições</Label>
                 <div className="grid gap-4 md:grid-cols-2">
+                  <div className="flex items-center justify-between p-3 border rounded-lg md:col-span-2">
+                    <Label>IA pode informar valores?</Label>
+                    <Switch checked={Boolean(getC('ia.pode_informar_valores', false))} onCheckedChange={(v) => setC('ia.pode_informar_valores', v)} />
+                  </div>
                   <div className="grid gap-2">
                     <Label>Pode parcelar?</Label>
                     <Select value={getC('valores.pode_parcelar', 'nao')} onValueChange={(v) => setC('valores.pode_parcelar', v)}>
@@ -630,6 +917,22 @@ export function ProtocolosPacotesPage() {
                     <Label>Prazo máximo para concluir</Label>
                     <Input value={getC('agendamento.prazo_maximo', '')} onChange={(e) => setC('agendamento.prazo_maximo', e.target.value)} placeholder="Ex: 60 dias" />
                   </div>
+                  <div className="grid gap-2">
+                    <Label>Intervalo mínimo entre sessões (dias)</Label>
+                    <Input
+                      type="number"
+                      value={getC('agendamento.intervalo_min_dias', '')}
+                      onChange={(e) => setC('agendamento.intervalo_min_dias', e.target.value === '' ? null : Number(e.target.value))}
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label>Intervalo máximo entre sessões (dias)</Label>
+                    <Input
+                      type="number"
+                      value={getC('agendamento.intervalo_max_dias', '')}
+                      onChange={(e) => setC('agendamento.intervalo_max_dias', e.target.value === '' ? null : Number(e.target.value))}
+                    />
+                  </div>
                   <div className="grid gap-2 md:col-span-2">
                     <Label>Regras adicionais (texto)</Label>
                     <Textarea value={getC('agendamento.regras_texto', '')} onChange={(e) => setC('agendamento.regras_texto', e.target.value)} rows={3} />
@@ -661,52 +964,279 @@ export function ProtocolosPacotesPage() {
 
               <div className="space-y-3 pt-4 border-t">
                 <Label className="text-base font-semibold">Objeções específicas do pacote</Label>
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div className="grid gap-2">
-                    <Label>Objeções (um por linha)</Label>
-                    <Textarea value={(getC('objecoes.lista', []) as any[]).join('\n')} onChange={(e) => setC('objecoes.lista', e.target.value.split('\n').map((s) => s.trim()).filter(Boolean))} rows={4} />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label>Respostas ideais (um por linha)</Label>
-                    <Textarea value={(getC('objecoes.respostas', []) as any[]).join('\n')} onChange={(e) => setC('objecoes.respostas', e.target.value.split('\n').map((s) => s.trim()).filter(Boolean))} rows={4} />
-                  </div>
+                <div className="space-y-3">
+                  {(((getC('objecoes.itens', []) as any[]) || []) as any[]).map((o: any, idx: number) => (
+                    <div key={idx} className="grid gap-3 md:grid-cols-2 border rounded-lg p-3">
+                      <div className="grid gap-2">
+                        <Label>Objeção</Label>
+                        <Textarea
+                          value={o?.objecao || ''}
+                          onChange={(e) => {
+                            const items = [ ...(((getC('objecoes.itens', []) as any[]) || []) as any[]) ]
+                            items[idx] = { ...(items[idx] || {}), objecao: e.target.value }
+                            setC('objecoes.itens', items)
+                          }}
+                          rows={3}
+                        />
+                      </div>
+                      <div className="grid gap-2">
+                        <Label>Resposta</Label>
+                        <Textarea
+                          value={o?.resposta || ''}
+                          onChange={(e) => {
+                            const items = [ ...(((getC('objecoes.itens', []) as any[]) || []) as any[]) ]
+                            items[idx] = { ...(items[idx] || {}), resposta: e.target.value }
+                            setC('objecoes.itens', items)
+                          }}
+                          rows={3}
+                        />
+                      </div>
+                      <div className="md:col-span-2 flex justify-end">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => {
+                            const items = [ ...(((getC('objecoes.itens', []) as any[]) || []) as any[]) ]
+                            items.splice(idx, 1)
+                            setC('objecoes.itens', items)
+                          }}
+                        >
+                          Remover
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      const items = [ ...(((getC('objecoes.itens', []) as any[]) || []) as any[]) ]
+                      items.push({ objecao: '', resposta: '' })
+                      setC('objecoes.itens', items)
+                    }}
+                  >
+                    Adicionar objeção
+                  </Button>
                 </div>
               </div>
 
               <div className="space-y-3 pt-4 border-t">
                 <Label className="text-base font-semibold">Upsell dentro do pacote</Label>
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div className="grid gap-2">
-                    <Label>Complementos sugeridos (um por linha)</Label>
-                    <Textarea value={(getC('upsell.complementos', []) as any[]).join('\n')} onChange={(e) => setC('upsell.complementos', e.target.value.split('\n').map((s) => s.trim()).filter(Boolean))} rows={4} />
+                <div className="space-y-4">
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="grid gap-2">
+                      <Label>Quando sugerir</Label>
+                      <Select value={getC('upsell.quando', 'no_fechamento')} onValueChange={(v) => setC('upsell.quando', v)}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="no_fechamento">No fechamento</SelectItem>
+                          <SelectItem value="primeira_sessao">Na 1ª sessão</SelectItem>
+                          <SelectItem value="metade">Metade do pacote</SelectItem>
+                          <SelectItem value="ultima">Última sessão</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="grid gap-2">
+                      <Label>Motivo / argumento principal</Label>
+                      <Textarea value={getC('upsell.argumento', '')} onChange={(e) => setC('upsell.argumento', e.target.value)} rows={3} />
+                    </div>
                   </div>
-                  <div className="grid gap-2">
-                    <Label>Quando sugerir</Label>
-                    <Select value={getC('upsell.quando', 'no_fechamento')} onValueChange={(v) => setC('upsell.quando', v)}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="no_fechamento">No fechamento</SelectItem>
-                        <SelectItem value="primeira_sessao">Na 1ª sessão</SelectItem>
-                        <SelectItem value="metade">Metade do pacote</SelectItem>
-                        <SelectItem value="ultima">Última sessão</SelectItem>
-                      </SelectContent>
-                    </Select>
+
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="grid gap-2">
+                      <Label>Procedimentos complementares</Label>
+                      <div className="flex gap-2">
+                        <Select
+                          value={getC('upsell._ui_add_procedimento', 'none')}
+                          onValueChange={(v) => setC('upsell._ui_add_procedimento', v)}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">Selecione</SelectItem>
+                            {procedimentos.map((p: any) => (
+                              <SelectItem key={p.id} value={p.id}>
+                                {p.nome}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => {
+                            const selectedId = String(getC('upsell._ui_add_procedimento', 'none') || 'none')
+                            if (selectedId === 'none') return
+                            const prev = ((getC('upsell.procedimentos', []) as any[]) || []) as any[]
+                            if (prev.includes(selectedId)) return
+                            setC('upsell.procedimentos', [...prev, selectedId])
+                            setC('upsell._ui_add_procedimento', 'none')
+                          }}
+                        >
+                          Adicionar
+                        </Button>
+                      </div>
+                      {(((getC('upsell.procedimentos', []) as any[]) || []) as any[]).length > 0 ? (
+                        <div className="space-y-2">
+                          {(((getC('upsell.procedimentos', []) as any[]) || []) as any[]).map((id: any) => {
+                            const proc = procedimentos.find((p: any) => p.id === id)
+                            return (
+                              <div key={String(id)} className="flex items-center justify-between gap-2 rounded-md border p-2">
+                                <div className="text-sm text-foreground">{proc?.nome || String(id)}</div>
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => {
+                                    const prev = ((getC('upsell.procedimentos', []) as any[]) || []) as any[]
+                                    setC('upsell.procedimentos', prev.filter((x) => x !== id))
+                                  }}
+                                >
+                                  Remover
+                                </Button>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      ) : null}
+                    </div>
+
+                    <div className="grid gap-2">
+                      <Label>Upgrade via pacotes</Label>
+                      <div className="flex gap-2">
+                        <Select
+                          value={getC('upsell._ui_add_pacote', 'none')}
+                          onValueChange={(v) => setC('upsell._ui_add_pacote', v)}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">Selecione</SelectItem>
+                            {itens
+                              .filter((p: any) => Boolean(p?.ativo))
+                              .map((p: any) => (
+                                <SelectItem key={p.id} value={p.id}>
+                                  {p.nome}
+                                </SelectItem>
+                              ))}
+                          </SelectContent>
+                        </Select>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => {
+                            const selectedId = String(getC('upsell._ui_add_pacote', 'none') || 'none')
+                            if (selectedId === 'none') return
+                            const prev = ((getC('upsell.upgrades_pacotes', []) as any[]) || []) as any[]
+                            if (prev.includes(selectedId)) return
+                            setC('upsell.upgrades_pacotes', [...prev, selectedId])
+                            setC('upsell._ui_add_pacote', 'none')
+                          }}
+                        >
+                          Adicionar
+                        </Button>
+                      </div>
+                      {(((getC('upsell.upgrades_pacotes', []) as any[]) || []) as any[]).length > 0 ? (
+                        <div className="space-y-2">
+                          {(((getC('upsell.upgrades_pacotes', []) as any[]) || []) as any[]).map((id: any) => {
+                            const pack = itens.find((p: any) => p.id === id)
+                            return (
+                              <div key={String(id)} className="flex items-center justify-between gap-2 rounded-md border p-2">
+                                <div className="text-sm text-foreground">{pack?.nome || String(id)}</div>
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => {
+                                    const prev = ((getC('upsell.upgrades_pacotes', []) as any[]) || []) as any[]
+                                    setC('upsell.upgrades_pacotes', prev.filter((x) => x !== id))
+                                  }}
+                                >
+                                  Remover
+                                </Button>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      ) : null}
+                    </div>
                   </div>
+
                   <div className="grid gap-2">
-                    <Label>Argumento comercial</Label>
-                    <Textarea value={getC('upsell.argumento', '')} onChange={(e) => setC('upsell.argumento', e.target.value)} rows={3} />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label>Mídias de reforço (JSON)</Label>
-                    <Textarea value={JSON.stringify(getC('upsell.midias', {}), null, 2)} onChange={(e) => {
-                      try {
-                        setC('upsell.midias', JSON.parse(e.target.value || '{}'))
-                      } catch {
-                        // ignore
-                      }
-                    }} rows={6} />
+                    <Label>Adicionais por sessão</Label>
+                    <div className="space-y-3">
+                      {(((getC('upsell.adicionais_por_sessao', []) as any[]) || []) as any[]).map((a: any, idx: number) => (
+                        <div key={idx} className="rounded-lg border p-3 space-y-3">
+                          <div className="grid gap-3 md:grid-cols-3">
+                            <div className="grid gap-2">
+                              <Label>Nome</Label>
+                              <Input
+                                value={a?.nome || ''}
+                                onChange={(e) => {
+                                  const items = [ ...(((getC('upsell.adicionais_por_sessao', []) as any[]) || []) as any[]) ]
+                                  items[idx] = { ...(items[idx] || {}), nome: e.target.value }
+                                  setC('upsell.adicionais_por_sessao', items)
+                                }}
+                              />
+                            </div>
+                            <div className="grid gap-2">
+                              <Label>Valor (R$)</Label>
+                              <Input
+                                type="number"
+                                step="0.01"
+                                value={a?.valor ?? ''}
+                                onChange={(e) => {
+                                  const items = [ ...(((getC('upsell.adicionais_por_sessao', []) as any[]) || []) as any[]) ]
+                                  items[idx] = { ...(items[idx] || {}), valor: e.target.value === '' ? null : Number(e.target.value) }
+                                  setC('upsell.adicionais_por_sessao', items)
+                                }}
+                              />
+                            </div>
+                            <div className="flex items-end">
+                              <Button
+                                type="button"
+                                variant="outline"
+                                className="w-full"
+                                onClick={() => {
+                                  const items = [ ...(((getC('upsell.adicionais_por_sessao', []) as any[]) || []) as any[]) ]
+                                  items.splice(idx, 1)
+                                  setC('upsell.adicionais_por_sessao', items)
+                                }}
+                              >
+                                Remover
+                              </Button>
+                            </div>
+                          </div>
+                          <div className="grid gap-2">
+                            <Label>Motivo</Label>
+                            <Textarea
+                              value={a?.motivo || ''}
+                              onChange={(e) => {
+                                const items = [ ...(((getC('upsell.adicionais_por_sessao', []) as any[]) || []) as any[]) ]
+                                items[idx] = { ...(items[idx] || {}), motivo: e.target.value }
+                                setC('upsell.adicionais_por_sessao', items)
+                              }}
+                              rows={2}
+                            />
+                          </div>
+                        </div>
+                      ))}
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => {
+                          const items = [ ...(((getC('upsell.adicionais_por_sessao', []) as any[]) || []) as any[]) ]
+                          items.push({ nome: '', valor: null, motivo: '' })
+                          setC('upsell.adicionais_por_sessao', items)
+                        }}
+                      >
+                        Adicionar adicional
+                      </Button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -717,6 +1247,22 @@ export function ProtocolosPacotesPage() {
                   <div className="grid gap-2">
                     <Label>Retorno em quantos dias?</Label>
                     <Input type="number" value={getC('pos.retorno_dias', '')} onChange={(e) => setC('pos.retorno_dias', e.target.value === '' ? null : Number(e.target.value))} />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label>Sessões de manutenção (qtd)</Label>
+                    <Input
+                      type="number"
+                      value={getC('pos.manutencao_sessoes_qtd', '')}
+                      onChange={(e) => setC('pos.manutencao_sessoes_qtd', e.target.value === '' ? null : Number(e.target.value))}
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label>Período para reativação (dias)</Label>
+                    <Input
+                      type="number"
+                      value={getC('pos.reativacao_dias', '')}
+                      onChange={(e) => setC('pos.reativacao_dias', e.target.value === '' ? null : Number(e.target.value))}
+                    />
                   </div>
                   <div className="grid gap-2">
                     <Label>Mensagens pós-pacote (texto)</Label>
@@ -752,63 +1298,13 @@ export function ProtocolosPacotesPage() {
               <div className="space-y-3 pt-4 border-t">
                 <Label className="text-base font-semibold">Mídias do pacote</Label>
                 <div className="grid gap-4 md:grid-cols-2">
-                  <div className="grid gap-2">
-                    <Label>Antes/depois (paths) — um por linha</Label>
-                    <Textarea value={(getC('midias.antes_depois', []) as any[]).join('\n')} onChange={(e) => setC('midias.antes_depois', e.target.value.split('\n').map((s) => s.trim()).filter(Boolean))} rows={4} />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label>Carrossel comercial (paths/urls) — um por linha</Label>
-                    <Textarea value={(getC('midias.carrossel', []) as any[]).join('\n')} onChange={(e) => setC('midias.carrossel', e.target.value.split('\n').map((s) => s.trim()).filter(Boolean))} rows={4} />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label>Vídeos (urls) — um por linha</Label>
-                    <Textarea value={(getC('midias.videos', []) as any[]).join('\n')} onChange={(e) => setC('midias.videos', e.target.value.split('\n').map((s) => s.trim()).filter(Boolean))} rows={3} />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label>Depoimentos específicos (urls/paths) — um por linha</Label>
-                    <Textarea value={(getC('midias.depoimentos', []) as any[]).join('\n')} onChange={(e) => setC('midias.depoimentos', e.target.value.split('\n').map((s) => s.trim()).filter(Boolean))} rows={3} />
-                  </div>
+                  {renderMidiaUploader({ tipo: 'antes_depois', label: 'Antes/depois', accept: 'image/*', allowWhenCreating: true })}
+                  {renderMidiaUploader({ tipo: 'carrossel', label: 'Carrossel comercial', accept: 'image/*', allowWhenCreating: true })}
+                  {renderMidiaUploader({ tipo: 'cronograma', label: 'Fotos do cronograma', accept: 'image/*', allowWhenCreating: true })}
+                  {renderMidiaUploader({ tipo: 'depoimentos', label: 'Depoimentos (mídia)', accept: 'image/*', allowWhenCreating: true })}
+                  {renderMidiaUploader({ tipo: 'videos', label: 'Vídeos do pacote', accept: 'video/*', allowWhenCreating: true })}
                 </div>
               </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Imagem</Label>
-              <Input
-                type="file"
-                accept="image/*"
-                multiple
-                className="file:text-foreground file:bg-transparent file:border-0 file:mr-3"
-                disabled={uploadingImagem}
-                onChange={(e) => {
-                  const files = Array.from(e.target.files ?? [])
-                  setPendingCreateImagens((prev) => [...prev, ...files])
-                  e.currentTarget.value = ''
-                }}
-              />
-              {pendingCreateImagens.length > 0 ? (
-                <div className="grid grid-cols-2 gap-3">
-                  {pendingCreateImagens.map((f) => {
-                    const url = URL.createObjectURL(f)
-                    return (
-                      <div key={f.name + f.size} className="overflow-hidden rounded-md border border-border/60">
-                        <img src={url} alt={f.name} className="h-24 w-full object-cover" />
-                        <div className="flex items-center justify-between gap-2 p-2">
-                          <div className="min-w-0 text-xs text-muted-foreground truncate">{f.name}</div>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setPendingCreateImagens((prev) => prev.filter((x) => x !== f))}
-                          >
-                            Remover
-                          </Button>
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-              ) : null}
             </div>
 
             <div className="space-y-2">
@@ -851,7 +1347,7 @@ export function ProtocolosPacotesPage() {
                 <Input value={formState.nome} onChange={(e) => setFormState({ ...formState, nome: e.target.value })} />
               </div>
               <div className="space-y-2">
-                <Label>Preço (opcional)</Label>
+                <Label>Valor total do pacote (opcional)</Label>
                 <Input
                   type="number"
                   value={formState.preco ?? ''}
@@ -865,14 +1361,7 @@ export function ProtocolosPacotesPage() {
               <Textarea value={formState.descricao || ''} onChange={(e) => setFormState({ ...formState, descricao: e.target.value })} rows={3} />
             </div>
 
-            <div className="space-y-2">
-              <Label>Itens (um por linha)</Label>
-              <Textarea value={formState.itens || ''} onChange={(e) => setFormState({ ...formState, itens: e.target.value })} rows={4} />
-            </div>
-
             <div className="pt-4 border-t space-y-4">
-              <div className="text-sm font-semibold">Estrutura completa do Pacote (IA/CRM)</div>
-
               <div className="space-y-3">
                 <Label className="text-base font-semibold">Dados básicos</Label>
                 <div className="grid gap-4 md:grid-cols-2">
@@ -921,19 +1410,172 @@ export function ProtocolosPacotesPage() {
                 <Label className="text-base font-semibold">Estrutura / Cronograma</Label>
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="grid gap-2">
-                    <Label>Itens do pacote (JSON)</Label>
-                    <Textarea
-                      value={JSON.stringify(getC('estrutura.itens', []), null, 2)}
-                      onChange={(e) => {
-                        try {
-                          setC('estrutura.itens', JSON.parse(e.target.value || '[]'))
-                        } catch {
-                          // ignore
-                        }
-                      }}
-                      rows={8}
-                      placeholder='Ex: [{"procedimento":"Limpeza de pele","qtd":1,"intervalo":"7 dias","ordem":1}]'
-                    />
+                    <Label>Itens do pacote</Label>
+                    <div className="space-y-3">
+                      {getEstruturaItens().map((it: any, idx: number) => (
+                        <div key={idx} className="rounded-lg border p-3 space-y-3">
+                          <div className="grid gap-3 md:grid-cols-2">
+                            <div className="grid gap-2">
+                              <Label>Tipo</Label>
+                              <Select
+                                value={it.tipo || 'manual'}
+                                onValueChange={(v) => {
+                                  const items = getEstruturaItens()
+                                  items[idx] = { ...items[idx], tipo: v }
+                                  if (v === 'manual') items[idx] = { ...items[idx], procedimento_id: null }
+                                  setEstruturaItens(items)
+                                }}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="procedimento">Procedimento incluído</SelectItem>
+                                  <SelectItem value="manual">Item manual</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="grid gap-2">
+                              <Label>Ordem recomendada</Label>
+                              <Input
+                                type="number"
+                                value={it.ordem ?? ''}
+                                onChange={(e) => {
+                                  const items = getEstruturaItens()
+                                  items[idx] = { ...items[idx], ordem: e.target.value === '' ? null : Number(e.target.value) }
+                                  setEstruturaItens(items)
+                                }}
+                              />
+                            </div>
+                          </div>
+
+                          {it.tipo === 'procedimento' ? (
+                            <div className="grid gap-2">
+                              <Label>Procedimento incluído</Label>
+                              <Select
+                                value={it.procedimento_id || 'none'}
+                                onValueChange={(v) => {
+                                  const items = getEstruturaItens()
+                                  items[idx] = { ...items[idx], procedimento_id: v === 'none' ? null : v }
+                                  setEstruturaItens(items)
+                                }}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Selecione" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="none">Nenhum</SelectItem>
+                                  {procedimentos.map((p: any) => (
+                                    <SelectItem key={p.id} value={p.id}>
+                                      {p.nome}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          ) : (
+                            <div className="grid gap-2">
+                              <Label>Item (texto)</Label>
+                              <Input
+                                value={it.nome_manual || ''}
+                                onChange={(e) => {
+                                  const items = getEstruturaItens()
+                                  items[idx] = { ...items[idx], nome_manual: e.target.value }
+                                  setEstruturaItens(items)
+                                }}
+                                placeholder="Ex: Máscara de ouro"
+                              />
+                            </div>
+                          )}
+
+                          <div className="grid gap-3 md:grid-cols-2">
+                            <div className="grid gap-2">
+                              <Label>Quantidade de sessões</Label>
+                              <Input
+                                type="number"
+                                value={it.sessoes_qtd ?? ''}
+                                onChange={(e) => {
+                                  const items = getEstruturaItens()
+                                  items[idx] = { ...items[idx], sessoes_qtd: e.target.value === '' ? null : Number(e.target.value) }
+                                  setEstruturaItens(items)
+                                }}
+                              />
+                            </div>
+                            <div className="grid gap-2">
+                              <Label>Intervalo recomendado</Label>
+                              <Input
+                                value={it.intervalo_recomendado || ''}
+                                onChange={(e) => {
+                                  const items = getEstruturaItens()
+                                  items[idx] = { ...items[idx], intervalo_recomendado: e.target.value }
+                                  setEstruturaItens(items)
+                                }}
+                                placeholder="Ex: 7 dias / 2x por semana"
+                              />
+                            </div>
+                            <div className="grid gap-2">
+                              <Label>Duração de cada sessão (min)</Label>
+                              <Input
+                                type="number"
+                                value={it.duracao_sessao_min ?? ''}
+                                onChange={(e) => {
+                                  const items = getEstruturaItens()
+                                  items[idx] = { ...items[idx], duracao_sessao_min: e.target.value === '' ? null : Number(e.target.value) }
+                                  setEstruturaItens(items)
+                                }}
+                              />
+                            </div>
+                            <div className="grid gap-2">
+                              <Label>Valor individual (R$)</Label>
+                              <Input
+                                type="number"
+                                step="0.01"
+                                value={it.valor_individual ?? ''}
+                                onChange={(e) => {
+                                  const items = getEstruturaItens()
+                                  items[idx] = { ...items[idx], valor_individual: e.target.value === '' ? null : Number(e.target.value) }
+                                  setEstruturaItens(items)
+                                }}
+                              />
+                            </div>
+                          </div>
+
+                          <div className="flex justify-end">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              onClick={() => {
+                                const items = getEstruturaItens()
+                                items.splice(idx, 1)
+                                setEstruturaItens(items)
+                              }}
+                            >
+                              Remover item
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => {
+                          const items = getEstruturaItens()
+                          items.push({
+                            tipo: 'procedimento',
+                            procedimento_id: null,
+                            nome_manual: '',
+                            sessoes_qtd: null,
+                            intervalo_recomendado: '',
+                            duracao_sessao_min: null,
+                            valor_individual: null,
+                            ordem: items.length + 1,
+                          })
+                          setEstruturaItens(items)
+                        }}
+                      >
+                        Adicionar item
+                      </Button>
+                    </div>
                   </div>
                   <div className="grid gap-2">
                     <Label>Cronograma recomendado (texto)</Label>
@@ -945,6 +1587,10 @@ export function ProtocolosPacotesPage() {
               <div className="space-y-3 pt-4 border-t">
                 <Label className="text-base font-semibold">Valores e condições</Label>
                 <div className="grid gap-4 md:grid-cols-2">
+                  <div className="flex items-center justify-between p-3 border rounded-lg md:col-span-2">
+                    <Label>IA pode informar valores?</Label>
+                    <Switch checked={Boolean(getC('ia.pode_informar_valores', false))} onCheckedChange={(v) => setC('ia.pode_informar_valores', v)} />
+                  </div>
                   <div className="grid gap-2">
                     <Label>Pode parcelar?</Label>
                     <Select value={getC('valores.pode_parcelar', 'nao')} onValueChange={(v) => setC('valores.pode_parcelar', v)}>
@@ -1149,64 +1795,13 @@ export function ProtocolosPacotesPage() {
               <div className="space-y-3 pt-4 border-t">
                 <Label className="text-base font-semibold">Mídias do pacote</Label>
                 <div className="grid gap-4 md:grid-cols-2">
-                  <div className="grid gap-2">
-                    <Label>Antes/depois (paths) — um por linha</Label>
-                    <Textarea value={(getC('midias.antes_depois', []) as any[]).join('\n')} onChange={(e) => setC('midias.antes_depois', e.target.value.split('\n').map((s) => s.trim()).filter(Boolean))} rows={4} />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label>Carrossel comercial (paths/urls) — um por linha</Label>
-                    <Textarea value={(getC('midias.carrossel', []) as any[]).join('\n')} onChange={(e) => setC('midias.carrossel', e.target.value.split('\n').map((s) => s.trim()).filter(Boolean))} rows={4} />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label>Vídeos (urls) — um por linha</Label>
-                    <Textarea value={(getC('midias.videos', []) as any[]).join('\n')} onChange={(e) => setC('midias.videos', e.target.value.split('\n').map((s) => s.trim()).filter(Boolean))} rows={3} />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label>Depoimentos específicos (urls/paths) — um por linha</Label>
-                    <Textarea value={(getC('midias.depoimentos', []) as any[]).join('\n')} onChange={(e) => setC('midias.depoimentos', e.target.value.split('\n').map((s) => s.trim()).filter(Boolean))} rows={3} />
-                  </div>
+                  {renderMidiaUploader({ tipo: 'antes_depois', label: 'Antes/depois', accept: 'image/*', allowWhenCreating: false })}
+                  {renderMidiaUploader({ tipo: 'carrossel', label: 'Carrossel comercial', accept: 'image/*', allowWhenCreating: false })}
+                  {renderMidiaUploader({ tipo: 'cronograma', label: 'Fotos do cronograma', accept: 'image/*', allowWhenCreating: false })}
+                  {renderMidiaUploader({ tipo: 'depoimentos', label: 'Depoimentos (mídia)', accept: 'image/*', allowWhenCreating: false })}
+                  {renderMidiaUploader({ tipo: 'videos', label: 'Vídeos do pacote', accept: 'video/*', allowWhenCreating: false })}
                 </div>
               </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Imagem</Label>
-              <Input
-                type="file"
-                accept="image/*"
-                multiple
-                className="file:text-foreground file:bg-transparent file:border-0 file:mr-3"
-                disabled={uploadingImagem || !selectedItem}
-                onChange={(e) => {
-                  const files = e.target.files
-                  if (!files || !selectedItem) return
-                  void handleUploadMidiasForProtocolo(selectedItem.id, Array.from(files))
-                  e.currentTarget.value = ''
-                }}
-              />
-              {isLoadingMidias ? (
-                <div className="text-sm text-muted-foreground">Carregando imagens...</div>
-              ) : protocoloMidias.length > 0 ? (
-                <div className="grid grid-cols-2 gap-3">
-                  {protocoloMidias.map((m) => (
-                    <div key={m.id} className="overflow-hidden rounded-md border border-border/60">
-                      {imagemPreviewUrlById[m.id] ? (
-                        <img src={imagemPreviewUrlById[m.id]} alt={m.label || 'Imagem'} className="h-24 w-full object-cover" />
-                      ) : (
-                        <div className="flex h-24 items-center justify-center text-xs text-muted-foreground">Carregando...</div>
-                      )}
-                      <div className="flex items-center justify-between gap-2 p-2">
-                        <div className="min-w-0 text-xs text-muted-foreground truncate">{m.label || m.storage_path}</div>
-                        <Button type="button" variant="outline" size="sm" disabled={uploadingImagem} onClick={() => void handleRemoveMidia(m)}>
-                          Remover
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-sm text-muted-foreground">Nenhuma imagem cadastrada.</div>
-              )}
             </div>
 
             <div className="space-y-2">

@@ -62,6 +62,8 @@ export default function WhatsAppPage() {
   const [selectedPacienteIds, setSelectedPacienteIds] = useState<Record<string, boolean>>({})
   const [disparosBatchId, setDisparosBatchId] = useState<string | null>(null)
   const [disparosBatchData, setDisparosBatchData] = useState<any>(null)
+  const [disparosBatches, setDisparosBatches] = useState<any[]>([])
+  const [activeDisparoNumbers, setActiveDisparoNumbers] = useState<Set<string>>(new Set())
   const [isEnqueueing, setIsEnqueueing] = useState(false)
   const [nowTick, setNowTick] = useState(Date.now())
 
@@ -148,25 +150,79 @@ export default function WhatsAppPage() {
 
   const isConnected = Boolean(instance?.instanceName && status?.status === 'open')
 
+  const localStorageBatchKey = instance?.instanceName ? `disparos:lastBatch:${instance.instanceName}` : null
+
   const pacientesComRemoteJid = (pacientes || []).filter((p: any) => {
     const remotejid = String((p as any)?.remotejid ?? (p as any)?.remoteJid ?? '').trim()
     return Boolean(remotejid)
   })
 
+  const pacientesDisponiveisParaDisparo = pacientesComRemoteJid.filter((p: any) => {
+    const remotejid = String((p as any)?.remotejid ?? (p as any)?.remoteJid ?? '').trim()
+    return remotejid && !activeDisparoNumbers.has(remotejid)
+  })
+
+  const blockedCount = pacientesComRemoteJid.length - pacientesDisponiveisParaDisparo.length
+
   const selectedCount = Object.values(selectedPacienteIds).filter(Boolean).length
 
   const toggleSelectAllPacientes = () => {
-    const allSelected = pacientesComRemoteJid.length > 0 && pacientesComRemoteJid.every((p: any) => selectedPacienteIds[p.id])
+    const allSelected =
+      pacientesDisponiveisParaDisparo.length > 0 &&
+      pacientesDisponiveisParaDisparo.every((p: any) => selectedPacienteIds[p.id])
     if (allSelected) {
       setSelectedPacienteIds({})
       return
     }
     const next: Record<string, boolean> = {}
-    pacientesComRemoteJid.forEach((p: any) => {
+    pacientesDisponiveisParaDisparo.forEach((p: any) => {
       next[p.id] = true
     })
     setSelectedPacienteIds(next)
   }
+
+  const refreshDisparosMeta = async () => {
+    if (!instance?.instanceName) return
+
+    try {
+      const [batchesRes, activeRes] = await Promise.all([
+        fetch(`http://localhost:3001/api/disparos?instanceName=${encodeURIComponent(instance.instanceName)}`),
+        fetch(`http://localhost:3001/api/disparos/activeNumbers?instanceName=${encodeURIComponent(instance.instanceName)}`),
+      ])
+
+      const batchesRaw = await batchesRes.text()
+      const activeRaw = await activeRes.text()
+
+      const batchesJson = batchesRaw ? JSON.parse(batchesRaw) : null
+      const activeJson = activeRaw ? JSON.parse(activeRaw) : null
+
+      setDisparosBatches(Array.isArray(batchesJson?.batches) ? batchesJson.batches : [])
+      setActiveDisparoNumbers(new Set(Array.isArray(activeJson?.activeNumbers) ? activeJson.activeNumbers : []))
+    } catch {
+      // ignore
+    }
+  }
+
+  useEffect(() => {
+    if (!isConnected || activeSection !== 'disparos') return
+    void refreshDisparosMeta()
+    const t = setInterval(() => {
+      void refreshDisparosMeta()
+    }, 5000)
+    return () => clearInterval(t)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isConnected, activeSection, instance?.instanceName])
+
+  useEffect(() => {
+    if (!isConnected || activeSection !== 'disparos') return
+    if (!localStorageBatchKey) return
+    if (disparosBatchId) return
+
+    const saved = window.localStorage.getItem(localStorageBatchKey)
+    if (saved) {
+      setDisparosBatchId(saved)
+    }
+  }, [isConnected, activeSection, localStorageBatchKey, disparosBatchId])
 
   useEffect(() => {
     if (!mediaPreviewUrl) return
@@ -243,7 +299,7 @@ export default function WhatsAppPage() {
       return
     }
 
-    const selectedPacientes = pacientesComRemoteJid.filter((p: any) => selectedPacienteIds[p.id])
+    const selectedPacientes = pacientesDisponiveisParaDisparo.filter((p: any) => selectedPacienteIds[p.id])
     if (selectedPacientes.length === 0) return
 
     setIsEnqueueing(true)
@@ -294,9 +350,19 @@ export default function WhatsAppPage() {
         throw new Error(json?.error || raw || 'Erro ao iniciar disparos')
       }
 
-      setDisparosBatchId(json?.batch?.id || null)
+      const newBatchId = json?.batch?.id || null
+      setDisparosBatchId(newBatchId)
       setDisparosBatchData({ batch: json?.batch, jobs: [] })
+      if (newBatchId && localStorageBatchKey) {
+        window.localStorage.setItem(localStorageBatchKey, newBatchId)
+      }
+      if (Array.isArray(json?.skipped) && json.skipped.length > 0) {
+        toast.message(`Alguns números foram ignorados: ${json.skipped.length}`)
+      }
       toast.success('Fila de disparos iniciada!')
+
+      // Atualizar metadados (batches/números pendentes) para refletir imediatamente
+      void refreshDisparosMeta()
     } finally {
       setIsEnqueueing(false)
     }
@@ -319,6 +385,9 @@ export default function WhatsAppPage() {
       throw new Error(json?.error || raw || 'Erro ao cancelar disparos')
     }
     toast.success('Fila cancelada!')
+
+    // Atualizar metadados para liberar números
+    void refreshDisparosMeta()
   }
 
   useEffect(() => {
@@ -493,6 +562,43 @@ export default function WhatsAppPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-center gap-2">
+                <div className="text-sm font-medium">Sessão</div>
+                <select
+                  className="rounded-md border border-border bg-background px-3 py-2 text-sm"
+                  value={disparosBatchId || ''}
+                  onChange={(e) => {
+                    const v = e.target.value
+                    const nextId = v || null
+                    setDisparosBatchId(nextId)
+                    if (nextId && localStorageBatchKey) {
+                      window.localStorage.setItem(localStorageBatchKey, nextId)
+                    }
+                  }}
+                >
+                  <option value="">Nova sessão</option>
+                  {disparosBatches.map((b: any) => (
+                    <option key={b.id} value={b.id}>
+                      {new Date(b.createdAt).toLocaleString('pt-BR')} ({b.total || 0})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setDisparosBatchId(null)
+                  setDisparosBatchData(null)
+                  setSelectedPacienteIds({})
+                  if (localStorageBatchKey) window.localStorage.removeItem(localStorageBatchKey)
+                }}
+              >
+                Nova sessão
+              </Button>
+            </div>
             <div className="flex items-center gap-2">
               <Button
                 type="button"
@@ -560,11 +666,17 @@ export default function WhatsAppPage() {
                 <div>
                   <div className="text-sm font-medium">Destinatários</div>
                   <div className="text-xs text-muted-foreground">
-                    Selecionados: <span className="font-medium">{selectedCount}</span> / {pacientesComRemoteJid.length}
+                    Selecionados: <span className="font-medium">{selectedCount}</span> / {pacientesDisponiveisParaDisparo.length}
                   </div>
+                  {blockedCount > 0 && (
+                    <div className="text-xs text-muted-foreground">
+                      Ocultos por já estarem com disparo pendente: <span className="font-medium">{blockedCount}</span>
+                    </div>
+                  )}
                 </div>
                 <Button type="button" variant="outline" size="sm" onClick={toggleSelectAllPacientes}>
-                  {pacientesComRemoteJid.length > 0 && pacientesComRemoteJid.every((p: any) => selectedPacienteIds[p.id])
+                  {pacientesDisponiveisParaDisparo.length > 0 &&
+                  pacientesDisponiveisParaDisparo.every((p: any) => selectedPacienteIds[p.id])
                     ? 'Desmarcar todos'
                     : 'Selecionar todos'}
                 </Button>
@@ -580,7 +692,7 @@ export default function WhatsAppPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border/60">
-                    {pacientesComRemoteJid.map((p: any) => {
+                    {pacientesDisponiveisParaDisparo.map((p: any) => {
                       const remotejid = String((p as any)?.remotejid ?? (p as any)?.remoteJid ?? '').trim()
                       const display = remotejid
                       const checked = Boolean(selectedPacienteIds[p.id])

@@ -16,7 +16,8 @@ const PORT = 3001;
 dotenv.config()
 
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // Criar servidor HTTP
 const server = createServer(app);
@@ -34,6 +35,36 @@ let connectedClients = new Set();
 
 const disparosBatches = new Map();
 const disparosJobs = new Map();
+
+function isPendingStatus(status) {
+  return status === 'scheduled' || status === 'running'
+}
+
+function getActiveNumbersByInstance(instanceName) {
+  const active = new Set()
+  for (const job of disparosJobs.values()) {
+    if (job.instanceName !== instanceName) continue
+    if (!isPendingStatus(job.status)) continue
+    if (job.number) active.add(job.number)
+  }
+  return active
+}
+
+function summarizeBatch(batch) {
+  const jobs = (batch.jobIds || []).map((id) => disparosJobs.get(id)).filter(Boolean)
+  const counts = jobs.reduce(
+    (acc, j) => {
+      acc[j.status] = (acc[j.status] || 0) + 1
+      return acc
+    },
+    { scheduled: 0, running: 0, sent: 0, failed: 0, canceled: 0 }
+  )
+  return {
+    ...batch,
+    counts,
+    total: jobs.length,
+  }
+}
 
 function randomIntInclusive(min, max) {
   const a = Math.ceil(min)
@@ -857,11 +888,26 @@ app.post('/api/disparos/enqueue', async (req, res) => {
     const batchId = createBatchId()
     const createdAt = new Date().toISOString()
 
+    const existingActiveNumbers = getActiveNumbersByInstance(instanceName)
+    const skipped = []
+    const seenInRequest = new Set()
+
     const jobIds = []
     for (const it of items) {
       const number = typeof it?.number === 'string' ? it.number : String(it?.number ?? '')
       const baseText = String(it?.text ?? '').trim()
       if (!number || !baseText) continue
+
+      if (seenInRequest.has(number)) {
+        skipped.push({ number, reason: 'duplicate_in_request' })
+        continue
+      }
+      seenInRequest.add(number)
+
+      if (existingActiveNumbers.has(number)) {
+        skipped.push({ number, reason: 'already_pending' })
+        continue
+      }
 
       const delayMinutes = randomIntInclusive(minMinutes, maxMinutes)
       const scheduledAt = Date.now() + delayMinutes * 60_000
@@ -910,11 +956,30 @@ app.post('/api/disparos/enqueue', async (req, res) => {
     }
     disparosBatches.set(batchId, batch)
 
-    return res.json({ batch })
+    return res.json({ batch, skipped })
   } catch (e) {
     const status = e?.statusCode || 500
     return res.status(status).json({ error: e?.message || String(e) })
   }
+})
+
+app.get('/api/disparos', (req, res) => {
+  const instanceName = String(req.query.instanceName || '').trim()
+  if (!instanceName) return res.status(400).json({ error: 'instanceName é obrigatório' })
+
+  const batches = Array.from(disparosBatches.values())
+    .filter((b) => b.instanceName === instanceName)
+    .sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')))
+    .map(summarizeBatch)
+
+  return res.json({ batches })
+})
+
+app.get('/api/disparos/activeNumbers', (req, res) => {
+  const instanceName = String(req.query.instanceName || '').trim()
+  if (!instanceName) return res.status(400).json({ error: 'instanceName é obrigatório' })
+  const activeNumbers = Array.from(getActiveNumbersByInstance(instanceName))
+  return res.json({ activeNumbers })
 })
 
 app.get('/api/disparos/:batchId', (req, res) => {

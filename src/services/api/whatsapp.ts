@@ -33,6 +33,28 @@ export interface ConnectionStatus {
   state: 'open' | 'close' | 'connecting'
 }
 
+type EvolutionFetchInstanceItem =
+  | {
+      instance: {
+        instanceName?: string
+        instanceId?: string
+        owner?: string | null
+        profileName?: string | null
+        profilePictureUrl?: string | null
+        profileStatus?: string | null
+        status?: string
+      }
+    }
+  | {
+      name?: string
+      id?: string
+      ownerJid?: string | null
+      profileName?: string | null
+      profilePictureUrl?: string | null
+      profileStatus?: string | null
+      connectionStatus?: string
+    }
+
 class WhatsAppService {
   private baseUrl: string
   private apiKey: string
@@ -83,11 +105,36 @@ class WhatsAppService {
     })
 
     if (!response.ok) {
-      const error = await response.text()
-      throw new Error(`Evolution API Error: ${response.status} - ${error}`)
+      const raw = await response.text()
+      let message = raw
+      try {
+        const parsed = raw ? JSON.parse(raw) : null
+        const extracted =
+          parsed?.response?.message ??
+          parsed?.message ??
+          parsed?.error ??
+          parsed?.details
+        if (typeof extracted === 'string') {
+          message = extracted
+        } else if (extracted != null) {
+          message = JSON.stringify(extracted)
+        } else if (parsed) {
+          message = JSON.stringify(parsed)
+        }
+      } catch {
+        // manter raw
+      }
+
+      throw new Error(`Evolution API Error: ${response.status} - ${message}`)
     }
 
-    return response.json()
+    const text = await response.text()
+    if (!text) return null
+    try {
+      return JSON.parse(text)
+    } catch {
+      return text
+    }
   }
 
   async createInstance(instanceName: string, number: string): Promise<CreateInstanceResponse> {
@@ -125,27 +172,44 @@ class WhatsAppService {
 
   async fetchInstances(): Promise<any[]> {
     const result = await this.makeRequest('/instance/fetchInstances')
-    return result || []
+    if (!Array.isArray(result)) return []
+    return result
   }
 
   async getInstanceByName(instanceName: string): Promise<any | null> {
-    const instances = await this.fetchInstances()
-    const instance = instances.find((inst: any) => inst.name === instanceName)
-    
-    // Normalizar a estrutura da resposta para compatibilidade
-    if (instance) {
+    const instances = (await this.fetchInstances()) as EvolutionFetchInstanceItem[]
+
+    const found = instances.find((inst: any) => {
+      const docName = inst?.instance?.instanceName
+      const legacyName = inst?.name
+      return docName === instanceName || legacyName === instanceName
+    })
+
+    if (!found) return null
+
+    const doc = (found as any)?.instance
+    if (doc && typeof doc === 'object') {
       return {
-        instanceName: instance.name,
-        instanceId: instance.id,
-        status: instance.connectionStatus,
-        owner: instance.ownerJid,
-        profileName: instance.profileName,
-        profilePictureUrl: instance.profilePictureUrl,
-        profileStatus: instance.profileStatus
+        instanceName: doc.instanceName,
+        instanceId: doc.instanceId,
+        status: doc.status,
+        owner: doc.owner,
+        profileName: doc.profileName,
+        profilePictureUrl: doc.profilePictureUrl,
+        profileStatus: doc.profileStatus,
       }
     }
-    
-    return null
+
+    const legacy = found as any
+    return {
+      instanceName: legacy.name,
+      instanceId: legacy.id,
+      status: legacy.connectionStatus,
+      owner: legacy.ownerJid,
+      profileName: legacy.profileName,
+      profilePictureUrl: legacy.profilePictureUrl,
+      profileStatus: legacy.profileStatus,
+    }
   }
 
   async getQRCode(instanceName: string): Promise<{ code: string; pairingCode: string; count: number; base64: string }> {
@@ -153,9 +217,10 @@ class WhatsAppService {
     return result
   }
 
-  async deleteInstance(instanceName: string): Promise<void> {
-    await this.makeRequest(`/instance/delete/${instanceName}`, {
-      method: 'DELETE'
+  async deleteInstance(instanceName: string): Promise<any> {
+    const safeName = encodeURIComponent(instanceName)
+    return await this.makeRequest(`/instance/delete/${safeName}`, {
+      method: 'DELETE',
     })
   }
 

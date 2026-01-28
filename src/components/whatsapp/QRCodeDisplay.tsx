@@ -6,10 +6,11 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 interface QRCodeDisplayProps {
   instanceName: string
   qrCode?: string
+  pairingCode?: string
   isLoading?: boolean
 }
 
-export function QRCodeDisplay({ qrCode, isLoading }: QRCodeDisplayProps) {
+export function QRCodeDisplay({ qrCode, pairingCode, isLoading }: QRCodeDisplayProps) {
   const [qrExpired, setQrExpired] = useState(false)
   const [countdown, setCountdown] = useState(60)
 
@@ -40,6 +41,15 @@ export function QRCodeDisplay({ qrCode, isLoading }: QRCodeDisplayProps) {
 
   const handleRefresh = () => {
     window.location.reload()
+  }
+
+  const handleCopyPairingCode = async () => {
+    if (!pairingCode) return
+    try {
+      await navigator.clipboard.writeText(pairingCode)
+    } catch {
+      // ignore
+    }
   }
 
   if (isLoading) {
@@ -101,6 +111,23 @@ export function QRCodeDisplay({ qrCode, isLoading }: QRCodeDisplayProps) {
                 Expira em: <span className="font-mono font-semibold">{countdown}s</span>
               </p>
             </div>
+
+            {pairingCode && (
+              <div className="w-full max-w-md rounded-lg border border-border/60 bg-background p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <div className="text-sm font-medium text-foreground">Código de pareamento</div>
+                    <div className="mt-1 font-mono text-lg tracking-widest text-foreground">{pairingCode}</div>
+                  </div>
+                  <Button type="button" variant="outline" onClick={handleCopyPairingCode}>
+                    Copiar
+                  </Button>
+                </div>
+                <p className="mt-2 text-xs text-muted-foreground">
+                  Se preferir, conecte pelo código no WhatsApp (em vez de escanear o QR Code).
+                </p>
+              </div>
+            )}
           </>
         )}
       </div>

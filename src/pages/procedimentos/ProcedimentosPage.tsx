@@ -27,6 +27,7 @@ import {
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Plus, Search, Filter, Stethoscope, Edit, Trash2, DollarSign, Clock } from 'lucide-react'
 import { toast } from 'sonner'
 import {
@@ -91,7 +92,7 @@ export function ProcedimentosPage() {
   const getMidias = () => (getIA('midias', {}) || {}) as Record<string, any>
   const setMidias = (path: string, value: any) => setIA(`midias.${path}`, value)
 
-  const ensureMidiaSignedUrl = async (bucket: 'clinica-midias', path: string) => {
+  const ensureMidiaSignedUrl = async (bucket: any, path: string) => {
     const key = `${bucket}:${path}`
     if (midiaUrlByKey[key]) return
     try {
@@ -174,7 +175,8 @@ export function ProcedimentosPage() {
   }
 
   useEffect(() => {
-    const midias = getMidias()
+    const proc = selectedProcedimento || detailsProcedimento
+    const midias = (((proc as any)?.ia_config || {}) as any)?.midias || {}
     const buckets = [
       'antes_depois',
       'imagens_ilustrativas',
@@ -186,14 +188,14 @@ export function ProcedimentosPage() {
     ]
     for (const cat of buckets) {
       const arr = (midias?.[cat] as any[]) || []
-      for (const it of arr) {
-        if (it?.bucket === 'clinica-midias' && it?.path) {
-          void ensureMidiaSignedUrl('clinica-midias', it.path)
+      for (const item of arr) {
+        if (item?.bucket && item?.path) {
+          void ensureMidiaSignedUrl(item.bucket, item.path)
         }
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedProcedimento])
+  }, [selectedProcedimento, detailsProcedimento])
 
   const toggleMulti = (current: string[], value: string) =>
     current.includes(value) ? current.filter((x) => x !== value) : [...current, value]
@@ -570,7 +572,7 @@ export function ProcedimentosPage() {
           </DialogHeader>
 
           {detailsProcedimento && (
-            <div className="space-y-6">
+            <div className="space-y-4">
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
                   <h2 className="text-xl font-semibold">{detailsProcedimento.nome}</h2>
@@ -595,62 +597,259 @@ export function ProcedimentosPage() {
                 </div>
               </div>
 
-              {detailsProcedimento.descricao && (
-                <div className="space-y-2">
-                  <Label>Descrição</Label>
-                  <div className="text-sm text-muted-foreground whitespace-pre-wrap">{detailsProcedimento.descricao}</div>
-                </div>
-              )}
+              <Tabs defaultValue="geral">
+                <TabsList className="w-full justify-start flex-wrap h-auto">
+                  <TabsTrigger value="geral">Geral</TabsTrigger>
+                  <TabsTrigger value="sessoes">Sessões</TabsTrigger>
+                  <TabsTrigger value="execucao">Execução</TabsTrigger>
+                  <TabsTrigger value="tecnica">Técnica</TabsTrigger>
+                  <TabsTrigger value="agendamento">Agendamento</TabsTrigger>
+                  <TabsTrigger value="midias">Mídias</TabsTrigger>
+                </TabsList>
 
-              {(detailsProcedimento as any).detalhes && (
-                <div className="space-y-2">
-                  <Label>Detalhes</Label>
-                  <div className="text-sm text-muted-foreground whitespace-pre-wrap">{(detailsProcedimento as any).detalhes}</div>
-                </div>
-              )}
+                <TabsContent value="geral">
+                  <div className="space-y-4">
+                    {detailsProcedimento.descricao ? (
+                      <div className="space-y-2">
+                        <Label>Descrição</Label>
+                        <div className="text-sm text-muted-foreground whitespace-pre-wrap">{detailsProcedimento.descricao}</div>
+                      </div>
+                    ) : null}
 
-              {((detailsProcedimento as any).cuidados_durante || (detailsProcedimento as any).cuidados_apos) && (
-                <div className="grid gap-4 md:grid-cols-2">
-                  {(detailsProcedimento as any).cuidados_durante && (
-                    <div className="space-y-2">
-                      <Label>Cuidados durante</Label>
-                      <div className="text-sm text-muted-foreground whitespace-pre-wrap">{(detailsProcedimento as any).cuidados_durante}</div>
+                    {(detailsProcedimento as any).detalhes ? (
+                      <div className="space-y-2">
+                        <Label>Detalhes</Label>
+                        <div className="text-sm text-muted-foreground whitespace-pre-wrap">{(detailsProcedimento as any).detalhes}</div>
+                      </div>
+                    ) : null}
+
+                    {((detailsProcedimento as any).cuidados_durante || (detailsProcedimento as any).cuidados_apos) ? (
+                      <div className="grid gap-4 md:grid-cols-2">
+                        {(detailsProcedimento as any).cuidados_durante ? (
+                          <div className="space-y-2">
+                            <Label>Cuidados durante</Label>
+                            <div className="text-sm text-muted-foreground whitespace-pre-wrap">{(detailsProcedimento as any).cuidados_durante}</div>
+                          </div>
+                        ) : null}
+
+                        {(detailsProcedimento as any).cuidados_apos ? (
+                          <div className="space-y-2">
+                            <Label>Cuidados após</Label>
+                            <div className="text-sm text-muted-foreground whitespace-pre-wrap">{(detailsProcedimento as any).cuidados_apos}</div>
+                          </div>
+                        ) : null}
+                      </div>
+                    ) : null}
+
+                    {(detailsProcedimento as any).quebra_objecoes ? (
+                      <div className="space-y-2">
+                        <Label>Quebra de objeções</Label>
+                        <div className="text-sm text-muted-foreground whitespace-pre-wrap">{(detailsProcedimento as any).quebra_objecoes}</div>
+                      </div>
+                    ) : null}
+
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div className="space-y-1">
+                        <Label>IA informa preço?</Label>
+                        <div className="text-sm text-muted-foreground">{(detailsProcedimento as any).ia_informa_preco ? 'Sim' : 'Não'}</div>
+                      </div>
+                      <div className="space-y-1">
+                        <Label>IA envia imagens?</Label>
+                        <div className="text-sm text-muted-foreground">{(detailsProcedimento as any).ia_envia_imagens ? 'Sim' : 'Não'}</div>
+                      </div>
                     </div>
-                  )}
 
-                  {(detailsProcedimento as any).cuidados_apos && (
-                    <div className="space-y-2">
-                      <Label>Cuidados após</Label>
-                      <div className="text-sm text-muted-foreground whitespace-pre-wrap">{(detailsProcedimento as any).cuidados_apos}</div>
-                    </div>
-                  )}
-                </div>
-              )}
+                    {detailsProcedimento.observacoes ? (
+                      <div className="space-y-2">
+                        <Label>Observações</Label>
+                        <div className="text-sm text-muted-foreground whitespace-pre-wrap">{detailsProcedimento.observacoes}</div>
+                      </div>
+                    ) : null}
+                  </div>
+                </TabsContent>
 
-              {(detailsProcedimento as any).quebra_objecoes && (
-                <div className="space-y-2">
-                  <Label>Quebra de objeções</Label>
-                  <div className="text-sm text-muted-foreground whitespace-pre-wrap">{(detailsProcedimento as any).quebra_objecoes}</div>
-                </div>
-              )}
+                <TabsContent value="sessoes">
+                  {(() => {
+                    const ia = ((detailsProcedimento as any).ia_config || {}) as any
+                    const s = (ia?.sessoes || {}) as any
+                    const intervalo = s?.intervalo
+                    const qtd = s?.quantidade_recomendada
+                    const duracaoSessao = s?.duracao_estimada_min
+                    return (
+                      <div className="space-y-3">
+                        <div className="grid gap-4 md:grid-cols-3">
+                          <div className="space-y-1">
+                            <Label>Intervalo recomendado</Label>
+                            <div className="text-sm text-muted-foreground whitespace-pre-wrap">{intervalo || '—'}</div>
+                          </div>
+                          <div className="space-y-1">
+                            <Label>Quantidade recomendada</Label>
+                            <div className="text-sm text-muted-foreground">{qtd ?? '—'}</div>
+                          </div>
+                          <div className="space-y-1">
+                            <Label>Duração por sessão (min)</Label>
+                            <div className="text-sm text-muted-foreground">{duracaoSessao ?? '—'}</div>
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })()}
+                </TabsContent>
 
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-1">
-                  <Label>IA informa preço?</Label>
-                  <div className="text-sm text-muted-foreground">{(detailsProcedimento as any).ia_informa_preco ? 'Sim' : 'Não'}</div>
-                </div>
-                <div className="space-y-1">
-                  <Label>IA envia imagens?</Label>
-                  <div className="text-sm text-muted-foreground">{(detailsProcedimento as any).ia_envia_imagens ? 'Sim' : 'Não'}</div>
-                </div>
-              </div>
+                <TabsContent value="execucao">
+                  {(() => {
+                    const ia = ((detailsProcedimento as any).ia_config || {}) as any
+                    const exec = (ia?.execucao || {}) as any
+                    const ids = (exec?.profissionais_ids || []) as string[]
+                    const nomes = profissionaisClinica
+                      .filter((p: any) => ids.includes(p.id))
+                      .map((p: any) => p.nome)
+                    return (
+                      <div className="space-y-3">
+                        <div className="space-y-1">
+                          <Label>Profissionais habilitados</Label>
+                          <div className="text-sm text-muted-foreground whitespace-pre-wrap">
+                            {nomes.length > 0 ? nomes.join(', ') : '—'}
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })()}
+                </TabsContent>
 
-              {detailsProcedimento.observacoes && (
-                <div className="space-y-2">
-                  <Label>Observações</Label>
-                  <div className="text-sm text-muted-foreground whitespace-pre-wrap">{detailsProcedimento.observacoes}</div>
-                </div>
-              )}
+                <TabsContent value="tecnica">
+                  {(() => {
+                    const ia = ((detailsProcedimento as any).ia_config || {}) as any
+                    const t = (ia?.tecnica || {}) as any
+                    const descProf = t?.descricao_profissional
+                    const comoFunciona = t?.como_funciona
+                    const equipamentos = t?.equipamentos
+                    return (
+                      <div className="space-y-4">
+                        <div className="grid gap-4 md:grid-cols-2">
+                          <div className="space-y-2">
+                            <Label>Descrição técnica (profissional)</Label>
+                            <div className="text-sm text-muted-foreground whitespace-pre-wrap">{descProf || '—'}</div>
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Como funciona (leigo)</Label>
+                            <div className="text-sm text-muted-foreground whitespace-pre-wrap">{comoFunciona || '—'}</div>
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Equipamentos usados</Label>
+                          <div className="text-sm text-muted-foreground whitespace-pre-wrap">{equipamentos || '—'}</div>
+                        </div>
+                      </div>
+                    )
+                  })()}
+                </TabsContent>
+
+                <TabsContent value="agendamento">
+                  {(() => {
+                    const ia = ((detailsProcedimento as any).ia_config || {}) as any
+                    const a = (ia?.agendamento || {}) as any
+                    return (
+                      <div className="space-y-4">
+                        <div className="grid gap-4 md:grid-cols-2">
+                          <div className="space-y-1">
+                            <Label>Requer avaliação prévia?</Label>
+                            <div className="text-sm text-muted-foreground">{a?.requer_avaliacao_previa ? 'Sim' : 'Não'}</div>
+                          </div>
+                          <div className="space-y-1">
+                            <Label>IA pode agendar direto?</Label>
+                            <div className="text-sm text-muted-foreground">{a?.ia_pode_agendar_direto ? 'Sim' : 'Não'}</div>
+                          </div>
+                          <div className="space-y-1">
+                            <Label>Pré-pagamento obrigatório?</Label>
+                            <div className="text-sm text-muted-foreground">{a?.pre_pagamento_obrigatorio ? 'Sim' : 'Não'}</div>
+                          </div>
+                          <div className="space-y-1">
+                            <Label>Tempo de espera recomendado (dias)</Label>
+                            <div className="text-sm text-muted-foreground">{a?.tempo_espera_recomendado_dias ?? '—'}</div>
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Política específica (texto)</Label>
+                          <div className="text-sm text-muted-foreground whitespace-pre-wrap">{a?.politica_especifica || '—'}</div>
+                        </div>
+                      </div>
+                    )
+                  })()}
+                </TabsContent>
+
+                <TabsContent value="midias">
+                  {(() => {
+                    const ia = ((detailsProcedimento as any).ia_config || {}) as any
+                    const midias = (ia?.midias || {}) as any
+                    const sections = [
+                      { key: 'antes_depois', label: 'Antes e depois' },
+                      { key: 'imagens_ilustrativas', label: 'Imagens ilustrativas' },
+                      { key: 'carrossel_comercial', label: 'Carrossel comercial' },
+                      { key: 'prova_social_especifica', label: 'Prova social específica' },
+                      { key: 'material_apoio', label: 'Material de apoio' },
+                      { key: 'videos_whatsapp', label: 'Vídeos para WhatsApp' },
+                      { key: 'videos_explicativos', label: 'Vídeos explicativos' },
+                    ]
+
+                    return (
+                      <div className="space-y-6">
+                        {sections.map((s) => {
+                          const arr = (midias?.[s.key] as any[]) || []
+                          if (!arr || arr.length === 0) return null
+                          return (
+                            <div key={s.key} className="space-y-2">
+                              <Label>{s.label}</Label>
+                              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                                {arr.map((m: any) => {
+                                  const urlKey = `${m.bucket}:${m.path}`
+                                  const url = midiaUrlByKey[urlKey]
+                                  const isVideo = String(s.key).startsWith('videos')
+                                  return (
+                                    <div key={m.path} className="overflow-hidden rounded-md border border-border/60">
+                                      {url ? (
+                                        isVideo ? (
+                                          <video src={url} controls className="h-40 w-full object-cover" />
+                                        ) : (
+                                          <img src={url} className="h-40 w-full object-cover" />
+                                        )
+                                      ) : url === '' ? (
+                                        <div className="flex h-40 items-center justify-center text-xs text-muted-foreground">Falha ao carregar</div>
+                                      ) : (
+                                        <div className="flex h-40 items-center justify-center text-xs text-muted-foreground">Carregando...</div>
+                                      )}
+                                      <div className="p-2 text-xs text-muted-foreground truncate">{m.path}</div>
+                                    </div>
+                                  )
+                                })}
+                              </div>
+                            </div>
+                          )
+                        })}
+
+                        <div className="grid gap-4 md:grid-cols-2">
+                          <div className="space-y-2">
+                            <Label>URLs vídeos WhatsApp</Label>
+                            <div className="text-sm text-muted-foreground whitespace-pre-wrap">
+                              {(((ia?.midias || {}) as any)?.videos_whatsapp_urls || []).length
+                                ? (((ia?.midias || {}) as any)?.videos_whatsapp_urls || []).join('\n')
+                                : '—'}
+                            </div>
+                          </div>
+                          <div className="space-y-2">
+                            <Label>URLs vídeos explicativos</Label>
+                            <div className="text-sm text-muted-foreground whitespace-pre-wrap">
+                              {(((ia?.midias || {}) as any)?.videos_explicativos_urls || []).length
+                                ? (((ia?.midias || {}) as any)?.videos_explicativos_urls || []).join('\n')
+                                : '—'}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })()}
+                </TabsContent>
+              </Tabs>
             </div>
           )}
 

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { Loader2, Plus, Search, Users, UserPlus, Activity, Ban } from 'lucide-react'
+import { Loader2, Plus, Search, Users, UserPlus, Activity, Ban, Trash2 } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -17,12 +17,24 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog'
 
 import {
   usePacientes,
   usePacientesStatusStats,
   useCreatePaciente,
   useUpdatePaciente,
+  useDeletePaciente,
 } from '@/hooks/usePacientes'
 import { useAgendamentosClinica } from '@/hooks/useAgendamentosClinica'
 import { usePlanosTratamento } from '@/hooks/usePlanosTratamento'
@@ -138,6 +150,7 @@ export function PacientesPage() {
   const [viewMode, setViewMode] = useState<ViewMode>('lista')
   const [isDetailsOpen, setIsDetailsOpen] = useState(false)
   const [selectedPacienteId, setSelectedPacienteId] = useState<string | null>(null)
+  const [deletePacienteId, setDeletePacienteId] = useState<string | null>(null)
   const [draggingPacienteId, setDraggingPacienteId] = useState<string | null>(null)
   const [optimisticStatusByPacienteId, setOptimisticStatusByPacienteId] = useState<Record<string, string>>({})
   const [tabPacientePerfil, setTabPacientePerfil] = useState<'geral' | 'agendamentos' | 'pacotes' | 'fotos'>('geral')
@@ -171,10 +184,7 @@ export function PacientesPage() {
   const kanbanColumns = useMemo(
     () => [
       { key: 'novos', title: 'Novos' },
-      { key: 'avaliacao', title: 'Em avaliação' },
       { key: 'agendado', title: 'Agendado' },
-      { key: 'retorno', title: 'Retorno' },
-      { key: 'pausados', title: 'Pausados' },
       { key: 'concluido', title: 'Concluído' },
       { key: 'arquivado', title: 'Arquivado' },
     ],
@@ -190,10 +200,7 @@ export function PacientesPage() {
   const getKanbanStatusLabel = (key?: string | null) => {
     const normalized = (key || '').trim().toLowerCase()
     if (normalized === 'novos') return 'Novos'
-    if (normalized === 'avaliacao') return 'Em avaliação'
     if (normalized === 'agendado') return 'Agendado'
-    if (normalized === 'retorno') return 'Retorno'
-    if (normalized === 'pausados') return 'Pausados'
     if (normalized === 'concluido') return 'Concluído'
     if (normalized === 'arquivado') return 'Arquivado'
     return 'Novos'
@@ -204,7 +211,8 @@ export function PacientesPage() {
     const raw = optimistic ?? (paciente.status_detalhado as string | null | undefined)
     let key = (raw || '').trim().toLowerCase()
     if (!key) key = 'novos'
-    if (paciente.status === 'inativo') key = 'pausados'
+    if (key === 'avaliacao' || key === 'retorno' || key === 'pausados') key = 'novos'
+    if (paciente.status === 'inativo') key = 'novos'
     if (paciente.status === 'arquivado') key = 'arquivado'
     return key
   }
@@ -274,7 +282,7 @@ export function PacientesPage() {
     if (!paciente) return
 
     const nextDetailed = targetKey
-    const nextStatus = nextDetailed === 'arquivado' ? 'arquivado' : nextDetailed === 'pausados' ? 'inativo' : 'ativo'
+    const nextStatus = nextDetailed === 'arquivado' ? 'arquivado' : 'ativo'
 
     const previousDetailed = (paciente as any).status_detalhado as string | null | undefined
 
@@ -313,7 +321,8 @@ export function PacientesPage() {
 
       let key = normalized
       if (!key) key = 'novos'
-      if (p.status === 'inativo') key = 'pausados'
+      if (key === 'avaliacao' || key === 'retorno' || key === 'pausados') key = 'novos'
+      if (p.status === 'inativo') key = 'novos'
       if (p.status === 'arquivado') key = 'arquivado'
 
       if (!grouped[key]) {
@@ -329,6 +338,7 @@ export function PacientesPage() {
   const { data: statusStats } = usePacientesStatusStats()
   const createPaciente = useCreatePaciente()
   const updatePaciente = useUpdatePaciente()
+  const deletePaciente = useDeletePaciente()
 
   const pacienteSelecionado = useMemo(
     () => pacientes.find((p) => p.id === selectedPacienteId) ?? null,
@@ -556,12 +566,13 @@ export function PacientesPage() {
                     <th scope="col" className="px-5 py-3 text-left font-medium">Último atendimento</th>
                     <th scope="col" className="px-5 py-3 text-left font-medium">Status</th>
                     <th scope="col" className="px-5 py-3 text-left font-medium">Tags</th>
+                    <th scope="col" className="px-5 py-3 text-right font-medium">Ações</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border/60 bg-background/40">
                   {isLoading ? (
                     <tr>
-                      <td colSpan={5} className="px-5 py-12 text-center text-muted-foreground">
+                      <td colSpan={6} className="px-5 py-12 text-center text-muted-foreground">
                         <div className="flex items-center justify-center gap-2 text-sm">
                           <Loader2 className="h-4 w-4 animate-spin" />
                           Carregando pacientes...
@@ -570,7 +581,7 @@ export function PacientesPage() {
                     </tr>
                   ) : pacientes.length === 0 ? (
                     <tr>
-                      <td colSpan={5} className="px-5 py-12 text-center text-muted-foreground">
+                      <td colSpan={6} className="px-5 py-12 text-center text-muted-foreground">
                         Nenhum paciente encontrado com os filtros atuais.
                       </td>
                     </tr>
@@ -633,6 +644,65 @@ export function PacientesPage() {
                             <span className="text-xs text-muted-foreground/60">Sem tags</span>
                           )}
                         </td>
+                        <td className="px-5 py-4 align-top text-right">
+                          <AlertDialog
+                            open={deletePacienteId === paciente.id}
+                            onOpenChange={(open) => setDeletePacienteId(open ? paciente.id : null)}
+                          >
+                            <AlertDialogTrigger asChild>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="text-rose-600 hover:text-rose-700 hover:bg-rose-500/10"
+                                disabled={deletePaciente.isPending}
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  setDeletePacienteId(paciente.id)
+                                }}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Remover paciente?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Tem certeza que deseja remover este paciente? Esta ação não pode ser desfeita.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel
+                                  disabled={deletePaciente.isPending}
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    setDeletePacienteId(null)
+                                  }}
+                                >
+                                  Cancelar
+                                </AlertDialogCancel>
+                                <AlertDialogAction
+                                  disabled={deletePaciente.isPending}
+                                  onClick={async () => {
+                                    try {
+                                      await deletePaciente.mutateAsync(paciente.id)
+                                      setDeletePacienteId(null)
+                                      if (selectedPacienteId === paciente.id) {
+                                        setIsDetailsOpen(false)
+                                        setSelectedPacienteId(null)
+                                        setTabPacientePerfil('geral')
+                                      }
+                                    } catch {
+                                      // erro tratado no hook
+                                    }
+                                  }}
+                                >
+                                  Remover
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </td>
                       </tr>
                     ))
                   )}
@@ -641,15 +711,15 @@ export function PacientesPage() {
             </div>
           </div>
         ) : (
-          <div className="mt-4 overflow-x-auto">
-            <div className="min-w-[1600px] grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
+          <div className="mt-4 overflow-x-hidden">
+            <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-4">
               {kanbanColumns.map((col) => (
                 <div
                   key={col.key}
-                  className="rounded-2xl border border-border/60 bg-background/50 min-w-[240px]"
+                  className="rounded-2xl border border-border/60 bg-background/50 w-full min-w-0"
                 >
-                  <div className="flex items-center justify-between px-4 py-3 border-b border-border/60">
-                    <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                  <div className="flex items-center justify-between border-b border-border/60 px-4 py-3">
+                    <div className="text-sm font-semibold text-foreground">
                       {col.title}
                     </div>
                     <div className="text-xs text-muted-foreground">

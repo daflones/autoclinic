@@ -83,37 +83,40 @@ export function useWhatsAppStatus(instanceName?: string, shouldPoll: boolean = f
 
         if (profile) {
           const adminId = profile.admin_profile_id || profile.id
-          
-          const { data: adminProfile } = await supabase
+
+          await supabase
             .from('profiles')
             .select('whatsapp_status')
             .eq('id', adminId)
             .single()
-          
-          // Se já está conectado no Supabase, não precisa fazer fetch da Evolution
-          if (adminProfile?.whatsapp_status === 'open') {
-            return {
-              instanceName,
-              status: 'open',
-              owner: null, // Será obtido da Evolution API se necessário
-              profileName: null // Será obtido da Evolution API se necessário
-            }
-          }
-        }
-      }
-      
-      // Só fazer fetch da Evolution se shouldPoll for true (quando criando instância)
-      if (!shouldPoll) {
-        return {
-          instanceName,
-          status: 'connecting',
-          owner: null,
-          profileName: null
+
+          // Mesmo se estiver "open" no Supabase, ainda vamos checar na Evolution ao abrir a guia
+          // (refetchOnMount/refetchOnWindowFocus já garantem isso). O polling contínuo fica só quando shouldPoll=true.
         }
       }
       
       try {
         const instance = await whatsappService.getInstanceByName(instanceName)
+
+        // Se a instância não existir mais na Evolution, limpar status no Supabase (sem derrubar a UI)
+        if (!instance && user) {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('id, admin_profile_id')
+            .eq('id', user.id)
+            .single()
+
+          if (profile) {
+            const adminId = profile.admin_profile_id || profile.id
+            await supabase
+              .from('profiles')
+              .update({
+                whatsapp_status: 'disconnected',
+                whatsapp_connected_at: null,
+              })
+              .eq('id', adminId)
+          }
+        }
         
         // Se detectou que conectou (status = 'open'), atualizar Supabase
         if (instance && instance.status === 'open' && instance.owner) {
@@ -137,13 +140,30 @@ export function useWhatsAppStatus(instanceName?: string, shouldPoll: boolean = f
                 .update(updateData)
                 .eq('id', adminId)
               
-              if (!error) {
-                // Recarregar página após conectar
-                setTimeout(() => {
-                  window.location.reload()
-                }, 1000)
+              if (error) {
+                throw error
               }
             }
+          }
+        }
+
+        // Se detectou que desconectou, refletir no Supabase
+        if (instance && instance.status !== 'open' && user) {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('id, admin_profile_id')
+            .eq('id', user.id)
+            .single()
+
+          if (profile) {
+            const adminId = profile.admin_profile_id || profile.id
+            await supabase
+              .from('profiles')
+              .update({
+                whatsapp_status: instance.status,
+                whatsapp_connected_at: null,
+              })
+              .eq('id', adminId)
           }
         }
         
@@ -209,14 +229,27 @@ export function useDisconnectWhatsApp() {
 export function useDeleteWhatsAppInstance() {
   return useMutation({
     mutationFn: async (instanceName: string) => {
-      // 1. Deletar registro do Supabase primeiro
+      // 1. Deletar instância da Evolution API
+      await whatsappService.deleteInstance(instanceName)
+      
+      // 2. Verificar se foi realmente deletada
+      const instance = await whatsappService.getInstanceByName(instanceName)
+      if (instance) {
+        throw new Error('Instância não foi deletada corretamente')
+      }
+
+      // 3. Limpar dados no Supabase (só depois de confirmar deleção)
       const { data: { user } } = await supabase.auth.getUser()
       if (user) {
-        const { data: profile } = await supabase
+        const { data: profile, error: profileError } = await supabase
           .from('profiles')
           .select('id, admin_profile_id')
           .eq('id', user.id)
           .single()
+
+        if (profileError) {
+          throw new Error(profileError.message)
+        }
 
         if (profile) {
           const adminId = profile.admin_profile_id || profile.id
@@ -231,17 +264,8 @@ export function useDeleteWhatsAppInstance() {
             })
             .eq('id', adminId)
             
-          if (error) throw new Error('Erro ao limpar dados do Supabase')
+          if (error) throw new Error(error.message)
         }
-      }
-      
-      // 2. Deletar instância da Evolution API
-      await whatsappService.deleteInstance(instanceName)
-      
-      // 3. Verificar se foi realmente deletada
-      const instance = await whatsappService.getInstanceByName(instanceName)
-      if (instance) {
-        throw new Error('Instância não foi deletada corretamente')
       }
       
       return true

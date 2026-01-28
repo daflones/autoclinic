@@ -1,7 +1,7 @@
 import { supabase } from '@/lib/supabase'
 import { getAdminContext } from './_tenant'
 
-type MidiaBucket = 'clinica-midias' | 'pacientes-midias' | 'profissionais-midias' | 'pacotes-midias'
+type MidiaBucket = 'clinica-midias' | 'pacientes-midias' | 'profissionais-midias' | 'pacotes-midias' | 'procedimento-imagens'
 
 export interface UploadedMidia {
   bucket: MidiaBucket

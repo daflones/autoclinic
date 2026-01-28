@@ -2,10 +2,12 @@ import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Progress } from '@/components/ui/progress'
 import { 
   MessageCircle, 
   QrCode, 
@@ -15,7 +17,8 @@ import {
   Clock, 
   Trash2,
   RefreshCw,
-  AlertTriangle
+  AlertTriangle,
+  Send
 } from 'lucide-react'
 import { 
   useWhatsAppInstance, 
@@ -26,14 +29,46 @@ import {
 } from '@/hooks/useWhatsApp'
 import { useProfile } from '@/hooks/useConfiguracoes'
 import { QRCodeDisplay } from '@/components/whatsapp/QRCodeDisplay'
+import { usePacientes } from '@/hooks/usePacientes'
+import { toast } from 'sonner'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog'
 
 export default function WhatsAppPage() {
   const [instanceName, setInstanceName] = useState('')
   const [phoneNumber, setPhoneNumber] = useState('')
   const [showCreateForm, setShowCreateForm] = useState(false)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [activeSection, setActiveSection] = useState<'status' | 'disparos'>('status')
+
+  const [disparosType, setDisparosType] = useState<'text' | 'media'>('text')
+  const [disparosMessage, setDisparosMessage] = useState('')
+  const [disparosCaption, setDisparosCaption] = useState('')
+  const [mediaFile, setMediaFile] = useState<File | null>(null)
+  const [mediaPreviewUrl, setMediaPreviewUrl] = useState<string | null>(null)
+  const [mediaBase64, setMediaBase64] = useState<string | null>(null)
+  const [mediaMimeType, setMediaMimeType] = useState<string | null>(null)
+  const [mediaType, setMediaType] = useState<'image' | 'video' | null>(null)
+  const [mediaFileName, setMediaFileName] = useState<string | null>(null)
+  const [selectedPacienteIds, setSelectedPacienteIds] = useState<Record<string, boolean>>({})
+  const [disparosBatchId, setDisparosBatchId] = useState<string | null>(null)
+  const [disparosBatchData, setDisparosBatchData] = useState<any>(null)
+  const [isEnqueueing, setIsEnqueueing] = useState(false)
+  const [nowTick, setNowTick] = useState(Date.now())
 
   const { data: instance, isLoading: instanceLoading } = useWhatsAppInstance()
   const { data: profile } = useProfile()
+
+  const { data: pacientes, isLoading: pacientesLoading } = usePacientes({ limit: 1000 })
   
   // Determinar se deve fazer polling baseado no status da instância
   const shouldPoll = Boolean(instance?.instanceName && (!instance.status || instance.status !== 'open'))
@@ -83,7 +118,6 @@ export default function WhatsAppPage() {
 
   const handleDelete = async () => {
     if (!instance?.instanceName) return
-    if (!confirm('Tem certeza que deseja remover completamente esta instância? Esta ação não pode ser desfeita.')) return
     
     try {
       await deleteInstance.mutateAsync(instance.instanceName)
@@ -91,6 +125,7 @@ export default function WhatsAppPage() {
       setShowCreateForm(false)
       setInstanceName('')
       setPhoneNumber('')
+      setDeleteDialogOpen(false)
     } catch (error) {
       // Error handled by hook
     }
@@ -110,6 +145,203 @@ export default function WhatsAppPage() {
   }
 
   const shouldShowQRCode = instance?.instanceName && (status?.status === 'connecting' || status?.status === 'close' || !status?.status)
+
+  const isConnected = Boolean(instance?.instanceName && status?.status === 'open')
+
+  const pacientesComRemoteJid = (pacientes || []).filter((p: any) => {
+    const remotejid = String((p as any)?.remotejid ?? (p as any)?.remoteJid ?? '').trim()
+    return Boolean(remotejid)
+  })
+
+  const selectedCount = Object.values(selectedPacienteIds).filter(Boolean).length
+
+  const toggleSelectAllPacientes = () => {
+    const allSelected = pacientesComRemoteJid.length > 0 && pacientesComRemoteJid.every((p: any) => selectedPacienteIds[p.id])
+    if (allSelected) {
+      setSelectedPacienteIds({})
+      return
+    }
+    const next: Record<string, boolean> = {}
+    pacientesComRemoteJid.forEach((p: any) => {
+      next[p.id] = true
+    })
+    setSelectedPacienteIds(next)
+  }
+
+  useEffect(() => {
+    if (!mediaPreviewUrl) return
+    return () => {
+      try {
+        URL.revokeObjectURL(mediaPreviewUrl)
+      } catch {
+        // ignore
+      }
+    }
+  }, [mediaPreviewUrl])
+
+  const handleMediaFileChange = async (file: File | null) => {
+    setMediaFile(file)
+    setMediaBase64(null)
+    setMediaMimeType(null)
+    setMediaType(null)
+    setMediaFileName(null)
+
+    if (!file) {
+      setMediaPreviewUrl(null)
+      return
+    }
+
+    const nextPreview = URL.createObjectURL(file)
+    setMediaPreviewUrl(nextPreview)
+    setMediaMimeType(file.type)
+    setMediaFileName(file.name)
+
+    if (file.type.startsWith('image/')) setMediaType('image')
+    else if (file.type.startsWith('video/')) setMediaType('video')
+
+    const base64 = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onerror = () => reject(new Error('Falha ao ler arquivo'))
+      reader.onload = () => resolve(String(reader.result || ''))
+      reader.readAsDataURL(file)
+    })
+
+    const stripped = base64.includes('base64,') ? base64.split('base64,')[1] : base64
+    setMediaBase64(stripped)
+  }
+
+  useEffect(() => {
+    if (!disparosBatchId) return
+    const t = setInterval(() => setNowTick(Date.now()), 1000)
+    return () => clearInterval(t)
+  }, [disparosBatchId])
+
+  const formatRemaining = (ms: number) => {
+    if (ms <= 0) return '0s'
+    const totalSeconds = Math.floor(ms / 1000)
+    const m = Math.floor(totalSeconds / 60)
+    const s = totalSeconds % 60
+    if (m <= 0) return `${s}s`
+    return `${m}m ${s}s`
+  }
+
+  const calcProgress = (job: any) => {
+    const createdAt = job?.createdAt ? new Date(job.createdAt).getTime() : null
+    const scheduledAt = typeof job?.scheduledAt === 'number' ? job.scheduledAt : null
+    if (!createdAt || !scheduledAt || scheduledAt <= createdAt) return 0
+    const pct = ((nowTick - createdAt) / (scheduledAt - createdAt)) * 100
+    return Math.max(0, Math.min(100, pct))
+  }
+
+  const enqueueDisparos = async () => {
+    if (!instance?.instanceName) return
+    if (!isConnected) return
+    if (disparosType === 'text' && !disparosMessage.trim()) return
+    if (disparosType === 'media' && !disparosCaption.trim()) return
+    if (disparosType === 'media' && (!mediaBase64 || !mediaType || !mediaMimeType || !mediaFileName)) {
+      toast.error('Selecione uma mídia (imagem ou vídeo) para enviar')
+      return
+    }
+
+    const selectedPacientes = pacientesComRemoteJid.filter((p: any) => selectedPacienteIds[p.id])
+    if (selectedPacientes.length === 0) return
+
+    setIsEnqueueing(true)
+    try {
+      const items = selectedPacientes
+        .map((p: any) => {
+          const remotejid = String((p as any)?.remotejid ?? (p as any)?.remoteJid ?? '').trim()
+          const number = remotejid
+          return {
+            number,
+            text: (disparosType === 'media' ? disparosCaption.trim() : disparosMessage.trim()),
+            media:
+              disparosType === 'media'
+                ? {
+                    mediatype: mediaType,
+                    mimetype: mediaMimeType,
+                    media: mediaBase64,
+                    fileName: mediaFileName,
+                  }
+                : undefined,
+          }
+        })
+        .filter((it: any) => Boolean(it.number && it.text))
+
+      const res = await fetch('http://localhost:3001/api/disparos/enqueue', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          instanceName: instance.instanceName,
+          minMinutes: 5,
+          maxMinutes: 30,
+          items,
+        }),
+      })
+
+      const raw = await res.text()
+      let json: any = null
+      try {
+        json = raw ? JSON.parse(raw) : null
+      } catch {
+        json = null
+      }
+
+      if (!res.ok) {
+        if (res.status === 404) {
+          throw new Error('Endpoint de disparos não encontrado (404). Reinicie o servidor WhatsApp (node whatsapp-server.js).')
+        }
+        throw new Error(json?.error || raw || 'Erro ao iniciar disparos')
+      }
+
+      setDisparosBatchId(json?.batch?.id || null)
+      setDisparosBatchData({ batch: json?.batch, jobs: [] })
+      toast.success('Fila de disparos iniciada!')
+    } finally {
+      setIsEnqueueing(false)
+    }
+  }
+
+  const cancelDisparos = async () => {
+    if (!disparosBatchId) return
+    const res = await fetch(`http://localhost:3001/api/disparos/${disparosBatchId}/cancel`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+    })
+    const raw = await res.text()
+    let json: any = null
+    try {
+      json = raw ? JSON.parse(raw) : null
+    } catch {
+      json = null
+    }
+    if (!res.ok) {
+      throw new Error(json?.error || raw || 'Erro ao cancelar disparos')
+    }
+    toast.success('Fila cancelada!')
+  }
+
+  useEffect(() => {
+    if (!disparosBatchId) return
+    let cancelled = false
+
+    async function poll() {
+      try {
+        const res = await fetch(`http://localhost:3001/api/disparos/${disparosBatchId}`)
+        const json = await res.json()
+        if (!cancelled) setDisparosBatchData(json)
+      } catch {
+        // ignore
+      }
+    }
+
+    poll()
+    const t = setInterval(poll, 3000)
+    return () => {
+      cancelled = true
+      clearInterval(t)
+    }
+  }, [disparosBatchId])
   
   // Debug logs (removido para reduzir spam no console)
   // console.log('Debug WhatsApp Page:', {
@@ -143,6 +375,27 @@ export default function WhatsAppPage() {
           </p>
         </div>
       </div>
+
+      {isConnected && (
+        <div className="flex items-center gap-2">
+          <Button
+            type="button"
+            size="sm"
+            variant={activeSection === 'status' ? 'default' : 'outline'}
+            onClick={() => setActiveSection('status')}
+          >
+            Status
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant={activeSection === 'disparos' ? 'default' : 'outline'}
+            onClick={() => setActiveSection('disparos')}
+          >
+            Disparos
+          </Button>
+        </div>
+      )}
 
       {!instance?.instanceName ? (
         // Nenhuma instância configurada
@@ -228,6 +481,268 @@ export default function WhatsAppPage() {
             )}
           </CardContent>
         </Card>
+      ) : activeSection === 'disparos' && isConnected ? (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Send className="w-5 h-5" />
+              Disparos
+            </CardTitle>
+            <CardDescription>
+              A mensagem será sempre variada automaticamente pela IA antes do envio. Os envios são agendados em intervalos aleatórios entre 5 e 30 minutos.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                size="sm"
+                variant={disparosType === 'text' ? 'default' : 'outline'}
+                onClick={() => setDisparosType('text')}
+              >
+                Apenas texto
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant={disparosType === 'media' ? 'default' : 'outline'}
+                onClick={() => setDisparosType('media')}
+              >
+                Com mídia
+              </Button>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="disparos-message">{disparosType === 'media' ? 'Legenda base' : 'Mensagem base'}</Label>
+              <Textarea
+                id="disparos-message"
+                value={disparosType === 'media' ? disparosCaption : disparosMessage}
+                onChange={(e) => (disparosType === 'media' ? setDisparosCaption(e.target.value) : setDisparosMessage(e.target.value))}
+                placeholder={disparosType === 'media' ? 'Digite a legenda base...' : 'Digite a mensagem base...'}
+                rows={5}
+              />
+              <p className="text-xs text-muted-foreground">
+                Você escreve o texto base. O sistema vai gerar uma variação obrigatória antes de cada envio.
+              </p>
+            </div>
+
+            {disparosType === 'media' && (
+              <div className="rounded-lg border border-border/60 bg-background p-4 space-y-3">
+                <div>
+                  <Label htmlFor="disparos-media">Mídia (imagem ou vídeo)</Label>
+                  <Input
+                    id="disparos-media"
+                    type="file"
+                    accept="image/*,video/*"
+                    className="mt-1"
+                    onChange={(e) => {
+                      const f = e.target.files?.[0] || null
+                      void handleMediaFileChange(f)
+                    }}
+                  />
+                </div>
+
+                {mediaPreviewUrl && mediaType === 'image' && (
+                  <div className="rounded-md border border-border/60 p-3 bg-muted/10">
+                    <img src={mediaPreviewUrl} alt="Pré-visualização" className="max-h-[260px] w-auto rounded" />
+                  </div>
+                )}
+                {mediaPreviewUrl && mediaType === 'video' && (
+                  <div className="rounded-md border border-border/60 p-3 bg-muted/10">
+                    <video src={mediaPreviewUrl} controls className="max-h-[260px] w-full rounded" />
+                  </div>
+                )}
+              </div>
+            )}
+
+            <div className="rounded-lg border border-border/60 bg-background p-4 space-y-3">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <div className="text-sm font-medium">Destinatários</div>
+                  <div className="text-xs text-muted-foreground">
+                    Selecionados: <span className="font-medium">{selectedCount}</span> / {pacientesComRemoteJid.length}
+                  </div>
+                </div>
+                <Button type="button" variant="outline" size="sm" onClick={toggleSelectAllPacientes}>
+                  {pacientesComRemoteJid.length > 0 && pacientesComRemoteJid.every((p: any) => selectedPacienteIds[p.id])
+                    ? 'Desmarcar todos'
+                    : 'Selecionar todos'}
+                </Button>
+              </div>
+
+              <div className="max-h-[320px] overflow-auto rounded-md border border-border/60">
+                <table className="min-w-full text-sm">
+                  <thead className="bg-muted/40 text-muted-foreground">
+                    <tr>
+                      <th className="px-3 py-2 text-left font-medium w-10"> </th>
+                      <th className="px-3 py-2 text-left font-medium">Paciente</th>
+                      <th className="px-3 py-2 text-left font-medium">WhatsApp</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border/60">
+                    {pacientesComRemoteJid.map((p: any) => {
+                      const remotejid = String((p as any)?.remotejid ?? (p as any)?.remoteJid ?? '').trim()
+                      const display = remotejid
+                      const checked = Boolean(selectedPacienteIds[p.id])
+                      return (
+                        <tr key={p.id} className="hover:bg-muted/20">
+                          <td className="px-3 py-2 align-top">
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={(e) =>
+                                setSelectedPacienteIds((prev) => ({ ...prev, [p.id]: e.target.checked }))
+                              }
+                            />
+                          </td>
+                          <td className="px-3 py-2 align-top">
+                            <div className="font-medium text-foreground">{p.nome_completo}</div>
+                          </td>
+                          <td className="px-3 py-2 align-top text-muted-foreground">{display}</td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              {!pacientesLoading && (pacientes || []).length > 0 && pacientesComRemoteJid.length === 0 && (
+                <div className="text-xs text-muted-foreground">
+                  Nenhum paciente com <code>remotejid</code> encontrado. Total de pacientes carregados: {(pacientes || []).length}.
+                </div>
+              )}
+
+              {pacientesLoading && (
+                <div className="text-xs text-muted-foreground">Carregando pacientes...</div>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                onClick={enqueueDisparos}
+                disabled={
+                  isEnqueueing ||
+                  selectedCount === 0 ||
+                  (disparosType === 'text' ? !disparosMessage.trim() : !disparosCaption.trim()) ||
+                  (disparosType === 'media' && (!mediaBase64 || !mediaType || !mediaMimeType || !mediaFileName))
+                }
+                className="gap-2"
+              >
+                {isEnqueueing ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                Iniciar disparos
+              </Button>
+              {disparosBatchId && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={async () => {
+                    await cancelDisparos()
+                  }}
+                >
+                  Cancelar fila
+                </Button>
+              )}
+            </div>
+
+            {disparosBatchData?.batch && (
+              <div className="rounded-lg border border-border/60 bg-background p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-sm font-medium">Fila atual</div>
+                    <div className="text-xs text-muted-foreground">Batch: {disparosBatchData.batch.id}</div>
+                  </div>
+                </div>
+
+                {(() => {
+                  const jobs = disparosBatchData?.jobs || []
+                  const counts = jobs.reduce(
+                    (acc: any, j: any) => {
+                      acc[j.status] = (acc[j.status] || 0) + 1
+                      return acc
+                    },
+                    { scheduled: 0, running: 0, sent: 0, failed: 0, canceled: 0 }
+                  )
+                  return (
+                    <div className="grid gap-2 sm:grid-cols-5">
+                      <div className="rounded-md border border-border/60 p-2">
+                        <div className="text-xs text-muted-foreground">Agendados</div>
+                        <div className="text-lg font-semibold">{counts.scheduled || 0}</div>
+                      </div>
+                      <div className="rounded-md border border-border/60 p-2">
+                        <div className="text-xs text-muted-foreground">Enviando</div>
+                        <div className="text-lg font-semibold">{counts.running || 0}</div>
+                      </div>
+                      <div className="rounded-md border border-border/60 p-2">
+                        <div className="text-xs text-muted-foreground">Enviados</div>
+                        <div className="text-lg font-semibold">{counts.sent || 0}</div>
+                      </div>
+                      <div className="rounded-md border border-border/60 p-2">
+                        <div className="text-xs text-muted-foreground">Falhas</div>
+                        <div className="text-lg font-semibold">{counts.failed || 0}</div>
+                      </div>
+                      <div className="rounded-md border border-border/60 p-2">
+                        <div className="text-xs text-muted-foreground">Cancelados</div>
+                        <div className="text-lg font-semibold">{counts.canceled || 0}</div>
+                      </div>
+                    </div>
+                  )
+                })()}
+
+                <div className="max-h-[320px] overflow-auto rounded-md border border-border/60">
+                  <table className="min-w-full text-xs">
+                    <thead className="bg-muted/40 text-muted-foreground">
+                      <tr>
+                        <th className="px-3 py-2 text-left font-medium">Número</th>
+                        <th className="px-3 py-2 text-left font-medium">Status</th>
+                        <th className="px-3 py-2 text-left font-medium">Tempo</th>
+                        <th className="px-3 py-2 text-left font-medium">Progresso</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border/60">
+                      {(disparosBatchData?.jobs || []).map((j: any) => {
+                        const scheduledAt = typeof j.scheduledAt === 'number' ? j.scheduledAt : null
+                        const remaining = scheduledAt ? Math.max(0, scheduledAt - nowTick) : null
+                        const pct = j.status === 'scheduled' ? calcProgress(j) : j.status === 'running' ? 95 : 100
+                        const timeLabel =
+                          j.status === 'scheduled' && remaining != null
+                            ? `Falta ${formatRemaining(remaining)}`
+                            : j.status === 'running'
+                              ? 'Enviando agora'
+                              : j.status === 'sent'
+                                ? 'Enviado'
+                                : j.status === 'failed'
+                                  ? 'Falhou'
+                                  : j.status === 'canceled'
+                                    ? 'Cancelado'
+                                    : '-'
+
+                        return (
+                          <tr key={j.id} className="hover:bg-muted/20">
+                            <td className="px-3 py-2">{String(j.number || '')}</td>
+                            <td className="px-3 py-2">{j.status}</td>
+                            <td className="px-3 py-2">{timeLabel}</td>
+                            <td className="px-3 py-2">
+                              <div className="space-y-1">
+                                <Progress value={pct} />
+                                {j.status === 'scheduled' && scheduledAt && (
+                                  <div className="text-[10px] text-muted-foreground">
+                                    Previsto: {new Date(scheduledAt).toLocaleTimeString('pt-BR')}
+                                  </div>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+          </CardContent>
+        </Card>
       ) : (
         // Instância configurada
         <div className={`grid gap-6 ${status?.status === 'open' ? 'md:grid-cols-1' : 'md:grid-cols-2'}`}>
@@ -307,19 +822,36 @@ export default function WhatsAppPage() {
               <Separator />
 
               <div className="flex gap-2">
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  onClick={handleDelete}
-                  disabled={deleteInstance.isPending}
-                >
-                  {deleteInstance.isPending ? (
-                    <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                  ) : (
-                    <Trash2 className="w-4 h-4 mr-2" />
-                  )}
-                  Remover Instância
-                </Button>
+                <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      disabled={deleteInstance.isPending}
+                    >
+                      {deleteInstance.isPending ? (
+                        <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                      ) : (
+                        <Trash2 className="w-4 h-4 mr-2" />
+                      )}
+                      Remover Instância
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Remover instância do WhatsApp?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Tem certeza que deseja remover completamente esta instância? Esta ação não pode ser desfeita.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel disabled={deleteInstance.isPending}>Cancelar</AlertDialogCancel>
+                      <AlertDialogAction disabled={deleteInstance.isPending} onClick={handleDelete}>
+                        Remover
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
               </div>
             </CardContent>
           </Card>
@@ -341,6 +873,7 @@ export default function WhatsAppPage() {
                   <QRCodeDisplay 
                     instanceName={instance.instanceName}
                     qrCode={qrCode?.base64}
+                    pairingCode={qrCode?.pairingCode}
                     isLoading={qrLoading}
                   />
                 ) : (

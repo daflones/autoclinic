@@ -6,10 +6,14 @@ import { WebSocketServer } from 'ws'
 import http from 'http'
 import cors from 'cors';
 import { createServer } from 'http';
+import dotenv from 'dotenv'
+import axios from 'axios'
 
 // Configuração do servidor
 const app = express();
 const PORT = 3001;
+
+dotenv.config()
 
 app.use(cors());
 app.use(express.json());
@@ -27,6 +31,154 @@ const wss = new WebSocketServer({
 let whatsappClient = null;
 let isClientReady = false;
 let connectedClients = new Set();
+
+const disparosBatches = new Map();
+const disparosJobs = new Map();
+
+function randomIntInclusive(min, max) {
+  const a = Math.ceil(min)
+  const b = Math.floor(max)
+  return Math.floor(Math.random() * (b - a + 1)) + a
+}
+
+function requireEnv(name) {
+  const v = process.env[name]
+  if (!v) {
+    const err = new Error(`Missing environment variable: ${name}`)
+    err.statusCode = 500
+    throw err
+  }
+  return v
+}
+
+async function openaiVaryText({ text, kind }) {
+  const apiKey = requireEnv('OPENAI_API_KEY')
+  const model = process.env.OPENAI_MODEL || 'gpt-4o-mini'
+
+  const system =
+    kind === 'caption'
+      ? 'Você é um assistente que reescreve legendas para WhatsApp mantendo o mesmo sentido e intenção, mas com variação de palavras e estrutura. Não adicione informações novas. Preserve nomes, datas, preços e números.'
+      : 'Você é um assistente que reescreve mensagens para WhatsApp mantendo o mesmo sentido e intenção, mas com variação de palavras e estrutura. Não adicione informações novas. Preserve nomes, datas, preços e números.'
+
+  const payload = {
+    model,
+    temperature: 0.9,
+    messages: [
+      { role: 'system', content: system },
+      {
+        role: 'user',
+        content: `Reescreva com variação (sem mudar o sentido). Texto:\n\n${text}`,
+      },
+    ],
+  }
+
+  const res = await axios.post('https://api.openai.com/v1/chat/completions', payload, {
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    timeout: 60_000,
+  })
+
+  const out = res?.data?.choices?.[0]?.message?.content
+  return (out || '').trim() || text
+}
+
+async function evolutionSendText({ instanceName, number, text }) {
+  const baseUrl = (process.env.VITE_EVOLUTION_API_URL || '').replace(/\/+$/, '')
+  const apiKey = process.env.VITE_EVOLUTION_API_KEY || ''
+  if (!baseUrl || !apiKey) {
+    const err = new Error('Evolution API não configurada (VITE_EVOLUTION_API_URL / VITE_EVOLUTION_API_KEY)')
+    err.statusCode = 500
+    throw err
+  }
+
+  const url = `${baseUrl}/message/sendText/${encodeURIComponent(instanceName)}`
+  const payload = { number, text }
+  const res = await axios.post(url, payload, {
+    headers: { apikey: apiKey, 'Content-Type': 'application/json', Accept: 'application/json' },
+    timeout: 60_000,
+  })
+  return res.data
+}
+
+async function evolutionSendMedia({ instanceName, number, mediatype, mimetype, caption, media, fileName }) {
+  const baseUrl = (process.env.VITE_EVOLUTION_API_URL || '').replace(/\/+$/, '')
+  const apiKey = process.env.VITE_EVOLUTION_API_KEY || ''
+  if (!baseUrl || !apiKey) {
+    const err = new Error('Evolution API não configurada (VITE_EVOLUTION_API_URL / VITE_EVOLUTION_API_KEY)')
+    err.statusCode = 500
+    throw err
+  }
+
+  const url = `${baseUrl}/message/sendMedia/${encodeURIComponent(instanceName)}`
+  const payload = {
+    number,
+    mediatype,
+    mimetype,
+    caption,
+    media,
+    fileName,
+  }
+  const res = await axios.post(url, payload, {
+    headers: { apikey: apiKey, 'Content-Type': 'application/json', Accept: 'application/json' },
+    timeout: 120_000,
+  })
+  return res.data
+}
+
+function createBatchId() {
+  return `batch_${Date.now()}_${Math.random().toString(16).slice(2)}`
+}
+
+function createJobId() {
+  return `job_${Date.now()}_${Math.random().toString(16).slice(2)}`
+}
+
+function scheduleDisparoJob(job) {
+  const delayMs = Math.max(0, job.scheduledAt - Date.now())
+  const timeoutId = setTimeout(async () => {
+    const current = disparosJobs.get(job.id)
+    if (!current) return
+    if (current.status !== 'scheduled') return
+
+    disparosJobs.set(job.id, { ...current, status: 'running', startedAt: new Date().toISOString() })
+
+    try {
+      const variedText = await openaiVaryText({ text: current.baseText, kind: current.media ? 'caption' : 'text' })
+
+      if (current.media) {
+        await evolutionSendMedia({
+          instanceName: current.instanceName,
+          number: current.number,
+          mediatype: current.media.mediatype,
+          mimetype: current.media.mimetype,
+          caption: variedText,
+          media: current.media.media,
+          fileName: current.media.fileName,
+        })
+      } else {
+        await evolutionSendText({ instanceName: current.instanceName, number: current.number, text: variedText })
+      }
+
+      disparosJobs.set(job.id, {
+        ...current,
+        status: 'sent',
+        finishedAt: new Date().toISOString(),
+        variedText,
+      })
+    } catch (e) {
+      disparosJobs.set(job.id, {
+        ...current,
+        status: 'failed',
+        finishedAt: new Date().toISOString(),
+        error: e?.message || String(e),
+      })
+    }
+  }, delayMs)
+
+  return timeoutId
+}
 
 // Configurar cliente WhatsApp
 function initializeWhatsAppClient() {
@@ -683,6 +835,123 @@ app.get('/status', (req, res) => {
     timestamp: new Date().toISOString()
   });
 });
+
+app.post('/api/disparos/enqueue', async (req, res) => {
+  try {
+    const body = req.body || {}
+    const instanceName = String(body.instanceName || '').trim()
+    const items = Array.isArray(body.items) ? body.items : []
+    const minMinutes = Number(body.minMinutes ?? 5)
+    const maxMinutes = Number(body.maxMinutes ?? 30)
+
+    if (!instanceName) {
+      return res.status(400).json({ error: 'instanceName é obrigatório' })
+    }
+    if (!items.length) {
+      return res.status(400).json({ error: 'items é obrigatório' })
+    }
+    if (!Number.isFinite(minMinutes) || !Number.isFinite(maxMinutes) || minMinutes < 1 || maxMinutes < minMinutes) {
+      return res.status(400).json({ error: 'minMinutes/maxMinutes inválidos' })
+    }
+
+    const batchId = createBatchId()
+    const createdAt = new Date().toISOString()
+
+    const jobIds = []
+    for (const it of items) {
+      const number = typeof it?.number === 'string' ? it.number : String(it?.number ?? '')
+      const baseText = String(it?.text ?? '').trim()
+      if (!number || !baseText) continue
+
+      const delayMinutes = randomIntInclusive(minMinutes, maxMinutes)
+      const scheduledAt = Date.now() + delayMinutes * 60_000
+      const jobId = createJobId()
+
+      const media = it.media
+        ? {
+            mediatype: String(it.media.mediatype || '').trim(),
+            mimetype: String(it.media.mimetype || '').trim(),
+            media: String(it.media.media || '').trim(),
+            fileName: String(it.media.fileName || '').trim() || 'file',
+          }
+        : null
+
+      const job = {
+        id: jobId,
+        batchId,
+        instanceName,
+        number,
+        baseText,
+        media,
+        status: 'scheduled',
+        createdAt,
+        scheduledAt,
+        delayMinutes,
+        startedAt: null,
+        finishedAt: null,
+        variedText: null,
+        error: null,
+        timeoutId: null,
+      }
+
+      const timeoutId = scheduleDisparoJob(job)
+      disparosJobs.set(jobId, { ...job, timeoutId })
+      jobIds.push(jobId)
+    }
+
+    const batch = {
+      id: batchId,
+      instanceName,
+      createdAt,
+      minMinutes,
+      maxMinutes,
+      jobIds,
+      status: 'scheduled',
+    }
+    disparosBatches.set(batchId, batch)
+
+    return res.json({ batch })
+  } catch (e) {
+    const status = e?.statusCode || 500
+    return res.status(status).json({ error: e?.message || String(e) })
+  }
+})
+
+app.get('/api/disparos/:batchId', (req, res) => {
+  const batchId = req.params.batchId
+  const batch = disparosBatches.get(batchId)
+  if (!batch) return res.status(404).json({ error: 'Batch não encontrado' })
+
+  const jobs = batch.jobIds
+    .map((id) => {
+      const j = disparosJobs.get(id)
+      if (!j) return null
+      const { timeoutId, ...safe } = j
+      return safe
+    })
+    .filter(Boolean)
+
+  return res.json({ batch, jobs })
+})
+
+app.post('/api/disparos/:batchId/cancel', (req, res) => {
+  const batchId = req.params.batchId
+  const batch = disparosBatches.get(batchId)
+  if (!batch) return res.status(404).json({ error: 'Batch não encontrado' })
+
+  for (const id of batch.jobIds) {
+    const job = disparosJobs.get(id)
+    if (!job) continue
+    if (job.status !== 'scheduled') continue
+    if (job.timeoutId) {
+      clearTimeout(job.timeoutId)
+    }
+    disparosJobs.set(id, { ...job, status: 'canceled', finishedAt: new Date().toISOString(), timeoutId: null })
+  }
+
+  disparosBatches.set(batchId, { ...batch, status: 'canceled' })
+  return res.json({ ok: true })
+})
 
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });

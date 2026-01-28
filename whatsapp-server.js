@@ -36,6 +36,32 @@ let connectedClients = new Set();
 const disparosBatches = new Map();
 const disparosJobs = new Map();
 
+const DISPAROS_MAX_PER_BATCH = 30
+const dailySentBySendNumber = new Map() // sendNumberDigits -> YYYY-MM-DD (America/Sao_Paulo)
+
+function getDateKeySaoPaulo(ts) {
+  const d = new Date(typeof ts === 'number' ? ts : Date.now())
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Sao_Paulo',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(d)
+  const y = parts.find((p) => p.type === 'year')?.value
+  const m = parts.find((p) => p.type === 'month')?.value
+  const da = parts.find((p) => p.type === 'day')?.value
+  if (!y || !m || !da) return d.toISOString().slice(0, 10)
+  return `${y}-${m}-${da}`
+}
+
+function normalizeSendNumberDigits(sendNumber) {
+  const raw = String(sendNumber || '').trim()
+  if (!raw) return ''
+  const clean = raw.replace(/\D/g, '')
+  if (!clean) return ''
+  return clean.startsWith('55') ? clean : `55${clean}`
+}
+
 function isPendingStatus(status) {
   return status === 'scheduled' || status === 'running'
 }
@@ -73,10 +99,25 @@ function createJobsForInstance({ instanceName, items, minMinutes, maxMinutes }) 
   const seenInRequest = new Set()
   const jobIds = []
 
+  if (items.length > DISPAROS_MAX_PER_BATCH) {
+    throw new Error(`Máximo de ${DISPAROS_MAX_PER_BATCH} pacientes por sessão/batch`)
+  }
+
   for (const it of items) {
     const number = typeof it?.number === 'string' ? it.number : String(it?.number ?? '')
+    const sendNumber =
+      typeof it?.sendNumber === 'string'
+        ? it.sendNumber
+        : typeof it?.send_number === 'string'
+          ? it.send_number
+          : ''
     const baseText = String(it?.text ?? '').trim()
+    const patientName = String(it?.patientName ?? it?.patient_name ?? '').trim()
     if (!number || !baseText) continue
+    if (!String(sendNumber).trim()) {
+      skipped.push({ number, reason: 'missing_send_number' })
+      continue
+    }
 
     if (seenInRequest.has(number)) {
       skipped.push({ number, reason: 'duplicate_in_request' })
@@ -86,6 +127,13 @@ function createJobsForInstance({ instanceName, items, minMinutes, maxMinutes }) 
 
     if (existingActiveNumbers.has(number)) {
       skipped.push({ number, reason: 'already_pending' })
+      continue
+    }
+
+    const sendNumberDigits = normalizeSendNumberDigits(sendNumber)
+    const todayKey = getDateKeySaoPaulo(Date.now())
+    if (sendNumberDigits && dailySentBySendNumber.get(sendNumberDigits) === todayKey) {
+      skipped.push({ number, reason: 'already_sent_today', date: todayKey })
       continue
     }
 
@@ -99,6 +147,7 @@ function createJobsForInstance({ instanceName, items, minMinutes, maxMinutes }) 
           mimetype: String(it.media.mimetype || '').trim(),
           media: String(it.media.media || '').trim(),
           fileName: String(it.media.fileName || '').trim() || 'file',
+          url: typeof it.media.url === 'string' ? String(it.media.url).trim() : '',
         }
       : null
 
@@ -107,15 +156,22 @@ function createJobsForInstance({ instanceName, items, minMinutes, maxMinutes }) 
       batchId: null,
       instanceName,
       number,
+      sendNumber,
+      sendNumberDigits,
+      patientName,
       baseText,
       media,
       status: 'scheduled',
+      aiStatus: 'pending',
+      aiStage: null,
       createdAt,
       scheduledAt,
       delayMinutes,
       startedAt: null,
       finishedAt: null,
       variedText: null,
+      imageDescription: null,
+      aiGeneratedAt: null,
       error: null,
       timeoutId: null,
     }
@@ -144,37 +200,176 @@ function requireEnv(name) {
   return v
 }
 
-async function openaiVaryText({ text, kind }) {
+function parseMaxChars(value) {
+  const n = Number(value)
+  if (!Number.isFinite(n)) return null
+  if (n <= 0) return null
+  return Math.min(500, Math.floor(n))
+}
+
+function getVariationBasePrompt() {
+  return (
+    'Você é um redator especializado em WhatsApp para clínicas. Sua tarefa é gerar uma VARIAÇÃO humana e única da mensagem base, mantendo o mesmo significado e todas as informações essenciais.\n\n' +
+    'Saída:\n' +
+    '- Retorne APENAS o texto final pronto para enviar no WhatsApp (sem aspas, sem títulos, sem explicações).\n\n' +
+    'Regras obrigatórias (não viole):\n' +
+    '- Preserve exatamente fatos, valores, datas, horários, locais, links, telefones, nomes próprios, percentuais, condições e chamadas para ação.\n' +
+    '- Não invente detalhes, descontos, prazos, garantias, procedimentos ou resultados que não estejam na mensagem base.\n' +
+    '- Não adicione informações médicas não citadas.\n' +
+    '- Evite linguagem genérica de massa. Esta mensagem é 1:1 (para uma pessoa).\n\n' +
+    'Personalização por paciente:\n' +
+    '- Se o nome do paciente for fornecido nas configurações, a mensagem DEVE cumprimentar e mencionar o nome (ex: "Olá, Maria," / "Oi, João,").\n' +
+    '- Não use saudações genéricas/plurais como "oi pessoal", "olá galera", "fala meu povo", "gente", "turma".\n\n' +
+    'Configurações (fornecidas pelo sistema e devem ser obedecidas):\n' +
+    '- Tom de fala: siga exatamente o tom informado.\n' +
+    '- Emojis: se for informado que NÃO é permitido, não use nenhum emoji.\n' +
+    '- Tamanho máximo: se houver limite de caracteres, obedeça estritamente.\n\n' +
+    'Estilo:\n' +
+    '- Seja natural, educado e direto.\n' +
+    '- Varie a forma sem mudar o conteúdo (troque abertura, conectivos, ordem de frases quando seguro).\n' +
+    '- Escreva de forma CONVERTEDORA: deixe claro o benefício, destaque o principal, reduza atrito e finalize com uma chamada para ação (CTA) coerente com a mensagem base.\n' +
+    '- Se a mensagem base sugerir urgência, vagas, datas ou condição, dê ênfase (sem inventar nada novo).\n' +
+    '- Se houver limite de caracteres, obedeça estritamente.\n' +
+    '- Respeite as preferências de emojis (se NÃO permitido, não use nenhum).\n' +
+    '- Respeite o tom de fala especificado.\n\n' +
+    'Quando houver descrição de imagem:\n' +
+    '- Use a descrição APENAS para adaptar a legenda e dar ênfase ao que aparece na imagem (ex: procedimento/oferta/antes-depois/texto visível), de forma coerente com o conteúdo visual.\n' +
+    '- Não descreva algo que não esteja explicitamente na descrição.\n'
+  )
+}
+
+function formatEvolutionNumber(numberOrRemoteJid) {
+  const raw = String(numberOrRemoteJid || '').trim()
+  if (!raw) return ''
+  const beforeAt = raw.includes('@') ? raw.split('@')[0] : raw
+  const clean = beforeAt.replace(/\D/g, '')
+  if (!clean) return ''
+  return clean.startsWith('55') ? clean : `55${clean}`
+}
+
+async function openaiVaryText({ text, kind, aiOptions }) {
   const apiKey = requireEnv('OPENAI_API_KEY')
   const model = process.env.OPENAI_MODEL || 'gpt-4o-mini'
 
-  const system =
-    kind === 'caption'
-      ? 'Você é um assistente que reescreve legendas para WhatsApp mantendo o mesmo sentido e intenção, mas com variação de palavras e estrutura. Não adicione informações novas. Preserve nomes, datas, preços e números.'
-      : 'Você é um assistente que reescreve mensagens para WhatsApp mantendo o mesmo sentido e intenção, mas com variação de palavras e estrutura. Não adicione informações novas. Preserve nomes, datas, preços e números.'
+  const basePrompt = getVariationBasePrompt()
+  const allowEmojis = aiOptions?.allowEmojis
+  const tone = typeof aiOptions?.tone === 'string' ? aiOptions.tone.trim() : ''
+  const maxChars = parseMaxChars(aiOptions?.maxChars)
+  const imageDescription = typeof aiOptions?.imageDescription === 'string' ? aiOptions.imageDescription.trim() : ''
+  const patientName = typeof aiOptions?.patientName === 'string' ? aiOptions.patientName.trim() : ''
+
+  const directives = [
+    `Tipo: ${kind === 'caption' ? 'legenda' : 'mensagem'}.`,
+    patientName ? `Paciente: ${patientName}.` : null,
+    typeof allowEmojis === 'boolean'
+      ? allowEmojis
+        ? 'Emojis: permitido.'
+        : 'Emojis: NÃO permitido (não use emojis).'
+      : null,
+    tone ? `Tom de fala: ${tone}.` : null,
+    maxChars ? `Limite: no máximo ${maxChars} caracteres.` : null,
+    imageDescription ? `Descrição da imagem (para orientar a legenda): ${imageDescription}` : null,
+  ].filter(Boolean)
+
+  const instructions =
+    `${basePrompt}` +
+    `\n\nConfigurações (Supabase):\n- ${directives.join('\n- ')}` +
+    (patientName
+      ? `\n\nRegras obrigatórias adicionais:\n- A mensagem DEVE mencionar o nome "${patientName}" no cumprimento (ex: "Olá, ${patientName}, ...").\n- NÃO use saudações genéricas/plurais ("oi pessoal", "olá galera", "fala meu povo", etc).`
+      : '')
+  const input = String(text || '').trim()
 
   const payload = {
     model,
-    temperature: 0.9,
-    messages: [
-      { role: 'system', content: system },
-      {
-        role: 'user',
-        content: `Reescreva com variação (sem mudar o sentido). Texto:\n\n${text}`,
-      },
-    ],
+    instructions,
+    input,
   }
 
-  const res = await axios.post('https://api.openai.com/v1/chat/completions', payload, {
+  if (String(model).startsWith('gpt-5') || String(model).startsWith('o')) {
+    payload.reasoning = { effort: 'low' }
+  }
+
+  const res = await axios.post('https://api.openai.com/v1/responses', payload, {
     headers: {
       Authorization: `Bearer ${apiKey}`,
       'Content-Type': 'application/json',
     },
-    timeout: 60_000,
+    timeout: 90_000,
   })
 
-  const out = res?.data?.choices?.[0]?.message?.content
-  return (out || '').trim() || text
+  const out = (extractOpenAIOutputText(res?.data) || '').trim()
+  let finalText = out || input
+
+  if (patientName) {
+    const normalizedFinal = String(finalText).toLowerCase()
+    const normalizedName = patientName.toLowerCase()
+
+    // Se a IA vier com cumprimento genérico/plural, substitui pelo nome.
+    const genericGreetingRe = /^(\s*)(oi|ol[áa])\s*[,!\-—]*\s*(pessoal|galera|meu\s+povo|gente|turma)\b\s*[,!\-—]*/i
+    if (genericGreetingRe.test(finalText)) {
+      finalText = finalText.replace(genericGreetingRe, `$1Olá, ${patientName}, `)
+    }
+
+    // Garantia: se não mencionar o nome em nenhum lugar, prefixar.
+    if (!normalizedFinal.includes(normalizedName)) {
+      finalText = `Olá, ${patientName}, ${String(finalText).replace(/^\s*/, '')}`
+    }
+  }
+
+  return String(finalText).trim() || input
+}
+
+function extractOpenAIOutputText(response) {
+  if (!response) return ''
+  if (typeof response.output_text === 'string') return response.output_text
+  const out = Array.isArray(response.output) ? response.output : []
+  const texts = []
+  for (const item of out) {
+    if (item?.type !== 'message') continue
+    const content = Array.isArray(item?.content) ? item.content : []
+    for (const c of content) {
+      if (c?.type === 'output_text' && typeof c?.text === 'string') {
+        texts.push(c.text)
+      }
+    }
+  }
+  return texts.join('\n').trim()
+}
+
+function normalizeImageMimeType(mimetype) {
+  const raw = String(mimetype || '').trim().toLowerCase()
+  if (!raw) return 'image/jpeg'
+  if (raw === 'image/jfif') return 'image/jpeg'
+  return raw
+}
+
+async function openaiDescribeImage({ imageUrl, imageDataUrl }) {
+  const apiKey = requireEnv('OPENAI_API_KEY')
+  const model = process.env.OPENAI_VISION_MODEL || 'gpt-4.1'
+  const imageInputUrl = String(imageDataUrl || '').trim() || String(imageUrl || '').trim()
+  if (!imageInputUrl) return ''
+  const payload = {
+    model,
+    input: [
+      {
+        role: 'user',
+        content: [
+          { type: 'input_text', text: "what's in this image?" },
+          { type: 'input_image', image_url: imageInputUrl, detail: 'high' },
+        ],
+      },
+    ],
+  }
+
+  const res = await axios.post('https://api.openai.com/v1/responses', payload, {
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    timeout: 90_000,
+  })
+
+  return extractOpenAIOutputText(res?.data)
 }
 
 async function evolutionSendText({ instanceName, number, text }) {
@@ -187,7 +382,7 @@ async function evolutionSendText({ instanceName, number, text }) {
   }
 
   const url = `${baseUrl}/message/sendText/${encodeURIComponent(instanceName)}`
-  const payload = { number, text }
+  const payload = { number, text, delay: 4000, linkPreview: true }
   const res = await axios.post(url, payload, {
     headers: { apikey: apiKey, 'Content-Type': 'application/json', Accept: 'application/json' },
     timeout: 60_000,
@@ -212,6 +407,7 @@ async function evolutionSendMedia({ instanceName, number, mediatype, mimetype, c
     caption,
     media,
     fileName,
+    delay: 4000,
   }
   const res = await axios.post(url, payload, {
     headers: { apikey: apiKey, 'Content-Type': 'application/json', Accept: 'application/json' },
@@ -228,6 +424,76 @@ function createJobId() {
   return `job_${Date.now()}_${Math.random().toString(16).slice(2)}`
 }
 
+async function preGenerateJobAI(jobId) {
+  const current = disparosJobs.get(jobId)
+  if (!current) return
+  if (current.aiStatus === 'running' || current.aiStatus === 'done') return
+
+  disparosJobs.set(jobId, {
+    ...current,
+    aiStatus: 'running',
+    aiStage: current.media && current.media.mediatype === 'image' ? 'openai_vision' : 'openai_variation',
+    aiError: null,
+  })
+
+  try {
+    let imageDescription = ''
+    if (current.media && current.media.mediatype === 'image') {
+      const mimetype = normalizeImageMimeType(current.media.mimetype)
+      const base64 = String(current.media.media || '').trim()
+      const imageDataUrl = base64 ? `data:${mimetype};base64,${base64}` : ''
+      const imageUrl = typeof current.media.url === 'string' ? current.media.url.trim() : ''
+      imageDescription = await openaiDescribeImage({ imageUrl, imageDataUrl })
+    }
+
+    const variedText = await openaiVaryText({
+      text: current.baseText,
+      kind: current.media ? 'caption' : 'text',
+      aiOptions: { ...(current.aiOptions || {}), imageDescription, patientName: current.patientName },
+    })
+
+    const updated = disparosJobs.get(jobId)
+    if (!updated) return
+    disparosJobs.set(jobId, {
+      ...updated,
+      variedText,
+      imageDescription: imageDescription || null,
+      aiStatus: 'done',
+      aiStage: 'openai_done',
+      aiGeneratedAt: new Date().toISOString(),
+      aiError: null,
+    })
+  } catch (e) {
+    const updated = disparosJobs.get(jobId)
+    if (!updated) return
+
+    let errorDetails = null
+    try {
+      if (e?.response?.data) errorDetails = e.response.data
+      else if (e?.message) errorDetails = { message: e.message }
+      else errorDetails = { error: String(e) }
+    } catch {
+      errorDetails = { error: String(e) }
+    }
+
+    console.error('[DISPAROS] Falha ao pré-gerar IA', {
+      jobId,
+      url: e?.config?.url,
+      status: e?.response?.status,
+      error: e?.message || String(e),
+      errorDetails,
+    })
+
+    disparosJobs.set(jobId, {
+      ...updated,
+      aiStatus: 'failed',
+      aiStage: 'openai_failed',
+      aiError: e?.message || String(e),
+      aiErrorDetails: errorDetails,
+    })
+  }
+}
+
 function scheduleDisparoJob(job) {
   const delayMs = Math.max(0, job.scheduledAt - Date.now())
   const timeoutId = setTimeout(async () => {
@@ -238,12 +504,59 @@ function scheduleDisparoJob(job) {
     disparosJobs.set(job.id, { ...current, status: 'running', startedAt: new Date().toISOString() })
 
     try {
-      const variedText = await openaiVaryText({ text: current.baseText, kind: current.media ? 'caption' : 'text' })
+      let stage = 'openai'
+      let imageDescription = String(current.imageDescription || '').trim()
+      let variedText = String(current.variedText || '').trim()
 
+      // Se ainda não foi pré-gerado, gerar agora como fallback
+      if (!variedText) {
+        if (current.media && current.media.mediatype === 'image' && !imageDescription) {
+          stage = 'openai_vision'
+          const mimetype = normalizeImageMimeType(current.media.mimetype)
+          const base64 = String(current.media.media || '').trim()
+          const imageDataUrl = base64 ? `data:${mimetype};base64,${base64}` : ''
+          const imageUrl = typeof current.media.url === 'string' ? current.media.url.trim() : ''
+          imageDescription = await openaiDescribeImage({ imageUrl, imageDataUrl })
+        }
+
+        stage = 'openai_variation'
+        variedText = await openaiVaryText({
+          text: current.baseText,
+          kind: current.media ? 'caption' : 'text',
+          aiOptions: { ...(current.aiOptions || {}), imageDescription, patientName: current.patientName },
+        })
+      }
+
+      console.log('[DISPAROS] OpenAI', {
+        jobId: current.id,
+        kind: current.media ? 'caption' : 'text',
+        baseTextPreview: String(current.baseText || '').slice(0, 140),
+        imageDescriptionPreview: String(imageDescription || '').slice(0, 140),
+        variedTextPreview: String(variedText || '').slice(0, 140),
+      })
+
+      let evolutionResponse = null
+
+      const numberForSend = formatEvolutionNumber(current.sendNumber || current.number)
+      if (!numberForSend) {
+        const err = new Error('Número inválido para envio (vazio após formatação)')
+        err.statusCode = 400
+        throw err
+      }
+
+      console.log('[DISPAROS] Enviando', {
+        jobId: current.id,
+        instanceName: current.instanceName,
+        numberRaw: current.number,
+        numberForSend,
+        hasMedia: Boolean(current.media),
+      })
+
+      stage = 'evolution_send'
       if (current.media) {
-        await evolutionSendMedia({
+        evolutionResponse = await evolutionSendMedia({
           instanceName: current.instanceName,
-          number: current.number,
+          number: numberForSend,
           mediatype: current.media.mediatype,
           mimetype: current.media.mimetype,
           caption: variedText,
@@ -251,7 +564,24 @@ function scheduleDisparoJob(job) {
           fileName: current.media.fileName,
         })
       } else {
-        await evolutionSendText({ instanceName: current.instanceName, number: current.number, text: variedText })
+        evolutionResponse = await evolutionSendText({ instanceName: current.instanceName, number: numberForSend, text: variedText })
+      }
+
+      console.log('[DISPAROS] Evolution response', {
+        jobId: current.id,
+        numberForSend,
+        evolutionResponse,
+      })
+
+      const hasConfirmation =
+        (evolutionResponse?.status === 'PENDING' && Boolean(evolutionResponse?.key?.id)) ||
+        evolutionResponse?.ok === true ||
+        Boolean(evolutionResponse?.messageId) ||
+        Boolean(evolutionResponse?.id)
+      if (!hasConfirmation) {
+        const err = new Error('Evolution respondeu sem confirmação de envio (esperado status=PENDING e key.id)')
+        err.statusCode = 502
+        throw err
       }
 
       disparosJobs.set(job.id, {
@@ -259,13 +589,44 @@ function scheduleDisparoJob(job) {
         status: 'sent',
         finishedAt: new Date().toISOString(),
         variedText,
+        evolutionResponse,
+        numberForSend,
+        imageDescription: imageDescription || null,
+        aiStatus: current.aiStatus === 'done' ? 'done' : 'done',
+        aiStage: current.aiStatus === 'done' ? current.aiStage : 'openai_done',
+        aiGeneratedAt: current.aiGeneratedAt || new Date().toISOString(),
       })
+
+      const sentKey = getDateKeySaoPaulo(Date.now())
+      const sendDigits = normalizeSendNumberDigits(current.sendNumberDigits || current.sendNumber)
+      if (sendDigits) dailySentBySendNumber.set(sendDigits, sentKey)
     } catch (e) {
+      let errorDetails = null
+      try {
+        if (e?.response?.data) errorDetails = e.response.data
+        else if (e?.message) errorDetails = { message: e.message }
+        else errorDetails = { error: String(e) }
+      } catch {
+        errorDetails = { error: String(e) }
+      }
+
+      console.error('[DISPAROS] Falha ao enviar', {
+        stage,
+        jobId: current?.id,
+        numberRaw: current?.number,
+        numberForSend: current?.numberForSend,
+        url: e?.config?.url,
+        status: e?.response?.status,
+        error: e?.message || String(e),
+        errorDetails,
+      })
       disparosJobs.set(job.id, {
         ...current,
         status: 'failed',
         finishedAt: new Date().toISOString(),
         error: e?.message || String(e),
+        errorDetails,
+        stage,
       })
     }
   }, delayMs)
@@ -936,12 +1297,16 @@ app.post('/api/disparos/enqueue', async (req, res) => {
     const items = Array.isArray(body.items) ? body.items : []
     const minMinutes = Number(body.minMinutes ?? 5)
     const maxMinutes = Number(body.maxMinutes ?? 30)
+    const aiOptions = body.aiOptions || null
 
     if (!instanceName) {
       return res.status(400).json({ error: 'instanceName é obrigatório' })
     }
     if (!items.length) {
       return res.status(400).json({ error: 'items é obrigatório' })
+    }
+    if (items.length > DISPAROS_MAX_PER_BATCH) {
+      return res.status(400).json({ error: `Máximo de ${DISPAROS_MAX_PER_BATCH} pacientes por sessão/batch` })
     }
     if (!Number.isFinite(minMinutes) || !Number.isFinite(maxMinutes) || minMinutes < 1 || maxMinutes < minMinutes) {
       return res.status(400).json({ error: 'minMinutes/maxMinutes inválidos' })
@@ -953,7 +1318,14 @@ app.post('/api/disparos/enqueue', async (req, res) => {
     // Amarrar jobs ao batch
     jobIds.forEach((id) => {
       const j = disparosJobs.get(id)
-      if (j) disparosJobs.set(id, { ...j, batchId })
+      if (j) disparosJobs.set(id, { ...j, batchId, aiOptions })
+    })
+
+    // Pré-gerar variações imediatamente (não bloquear resposta)
+    jobIds.forEach((id) => {
+      setTimeout(() => {
+        void preGenerateJobAI(id)
+      }, 0)
     })
 
     const batch = {
@@ -989,7 +1361,12 @@ app.post('/api/disparos/:batchId/append', async (req, res) => {
     const items = Array.isArray(body.items) ? body.items : []
     const minMinutes = Number(body.minMinutes ?? batch.minMinutes ?? 5)
     const maxMinutes = Number(body.maxMinutes ?? batch.maxMinutes ?? 30)
+    const aiOptions = body.aiOptions || null
     if (!items.length) return res.status(400).json({ error: 'items é obrigatório' })
+    const currentCount = Array.isArray(batch.jobIds) ? batch.jobIds.length : 0
+    if (currentCount + items.length > DISPAROS_MAX_PER_BATCH) {
+      return res.status(400).json({ error: `Esta sessão já possui ${currentCount} pacientes. Máximo de ${DISPAROS_MAX_PER_BATCH} por sessão/batch.` })
+    }
     if (!Number.isFinite(minMinutes) || !Number.isFinite(maxMinutes) || minMinutes < 1 || maxMinutes < minMinutes) {
       return res.status(400).json({ error: 'minMinutes/maxMinutes inválidos' })
     }
@@ -998,7 +1375,14 @@ app.post('/api/disparos/:batchId/append', async (req, res) => {
 
     jobIds.forEach((id) => {
       const j = disparosJobs.get(id)
-      if (j) disparosJobs.set(id, { ...j, batchId })
+      if (j) disparosJobs.set(id, { ...j, batchId, aiOptions })
+    })
+
+    // Pré-gerar variações imediatamente (não bloquear resposta)
+    jobIds.forEach((id) => {
+      setTimeout(() => {
+        void preGenerateJobAI(id)
+      }, 0)
     })
 
     const updated = {

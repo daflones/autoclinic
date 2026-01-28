@@ -60,6 +60,15 @@ class WhatsAppService {
   private apiKey: string
   private webhookUrl: string
 
+  private formatNumberForEvolution(numberOrRemoteJid: string): string {
+    const raw = String(numberOrRemoteJid || '').trim()
+    if (!raw) return ''
+    const beforeAt = raw.includes('@') ? raw.split('@')[0] : raw
+    const cleanNumber = beforeAt.replace(/\D/g, '')
+    if (!cleanNumber) return ''
+    return cleanNumber.startsWith('55') ? cleanNumber : `55${cleanNumber}`
+  }
+
   constructor() {
     // Debug: verificar variáveis de ambiente
     console.log('🔧 WhatsApp Service Constructor')
@@ -358,24 +367,11 @@ class WhatsAppService {
       throw new Error(`Instância WhatsApp não está conectada. Status atual: ${instanceData.status}. Conecte a instância primeiro.`)
     }
 
-    // Se já for remoteJid (contém @s.whatsapp.net), usar direto
-    // Caso contrário, formatar número
-    let formattedNumber: string
-    
-    if (numberOrRemoteJid.includes('@s.whatsapp.net')) {
-      formattedNumber = numberOrRemoteJid
-      console.log('📱 Usando remoteJid:', formattedNumber)
-    } else {
-      // Limpar o número (remover caracteres especiais)
-      const cleanNumber = numberOrRemoteJid.replace(/\D/g, '')
-      
-      // Adicionar código do país se não tiver
-      const numberOnly = cleanNumber.startsWith('55') ? cleanNumber : `55${cleanNumber}`
-      
-      // Adicionar @s.whatsapp.net
-      formattedNumber = `${numberOnly}@s.whatsapp.net`
-      console.log('📞 Número formatado para remoteJid:', formattedNumber)
+    const formattedNumber = this.formatNumberForEvolution(numberOrRemoteJid)
+    if (!formattedNumber) {
+      throw new Error('Número inválido para envio (vazio após formatação)')
     }
+    console.log('📞 Número formatado para Evolution:', formattedNumber)
     
     console.log('🔗 URL da API:', this.baseUrl)
     console.log('📤 Enviando para instância:', instanceData.instanceName)
@@ -389,7 +385,7 @@ class WhatsAppService {
       caption: caption || '',
       media: base64,
       fileName: fileName,
-      delay: 1200 // 1.2 segundos de delay para evitar bloqueio
+      delay: 4000
     }
 
     console.log('📦 Payload preparado:', {
@@ -441,26 +437,18 @@ class WhatsAppService {
       throw new Error(`Instância WhatsApp não está conectada. Status atual: ${instanceData.status}`)
     }
 
-    // Se já for remoteJid (contém @s.whatsapp.net), usar direto
-    // Caso contrário, formatar número
-    let formattedNumber: string
-    
-    if (numberOrRemoteJid.includes('@s.whatsapp.net')) {
-      formattedNumber = numberOrRemoteJid
-      console.log('📱 Usando remoteJid:', formattedNumber)
-    } else {
-      const cleanNumber = numberOrRemoteJid.replace(/\D/g, '')
-      const numberOnly = cleanNumber.startsWith('55') ? cleanNumber : `55${cleanNumber}`
-      formattedNumber = `${numberOnly}@s.whatsapp.net`
-      console.log('📞 Número formatado para remoteJid:', formattedNumber)
+    const formattedNumber = this.formatNumberForEvolution(numberOrRemoteJid)
+    if (!formattedNumber) {
+      throw new Error('Número inválido para envio (vazio após formatação)')
     }
+    console.log('📞 Número formatado para Evolution:', formattedNumber)
 
     // Payload conforme documentação oficial Evolution API v2
     // https://doc.evolution-api.com/v2/api-reference/message-controller/send-text
     const payload = {
       number: formattedNumber,
       text: message,
-      delay: options?.delay || 1200,
+      delay: 4000,
       linkPreview: options?.linkPreview !== false // true por padrão
     }
 

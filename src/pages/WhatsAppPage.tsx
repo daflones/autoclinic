@@ -28,6 +28,7 @@ import {
   useDeleteWhatsAppInstance
 } from '@/hooks/useWhatsApp'
 import { useProfile } from '@/hooks/useConfiguracoes'
+import { useClinicaIAConfig, useUpdateClinicaIAConfig } from '@/hooks/useClinicaIAConfig'
 import { QRCodeDisplay } from '@/components/whatsapp/QRCodeDisplay'
 import { usePacientes } from '@/hooks/usePacientes'
 import { toast } from 'sonner'
@@ -39,6 +40,16 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { Switch } from '@/components/ui/switch'
+import { uploadMidia } from '@/services/api/storage-midias'
+import { supabase } from '@/lib/supabase'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -66,6 +77,7 @@ export default function WhatsAppPage() {
   const [mediaMimeType, setMediaMimeType] = useState<string | null>(null)
   const [mediaType, setMediaType] = useState<'image' | 'video' | null>(null)
   const [mediaFileName, setMediaFileName] = useState<string | null>(null)
+  const [mediaUrl, setMediaUrl] = useState<string | null>(null)
   const [selectedPacienteIds, setSelectedPacienteIds] = useState<Record<string, boolean>>({})
   const [disparosBatchId, setDisparosBatchId] = useState<string | null>(null)
   const [disparosBatchData, setDisparosBatchData] = useState<any>(null)
@@ -75,8 +87,14 @@ export default function WhatsAppPage() {
   const [nowTick, setNowTick] = useState(Date.now())
   const [disparosKanbanFilters, setDisparosKanbanFilters] = useState<string[]>([])
 
+  const [disparosAllowEmojis, setDisparosAllowEmojis] = useState(true)
+  const [disparosTone, setDisparosTone] = useState<'Casual' | 'Formal' | 'Profissional' | 'Extrovertido'>('Profissional')
+  const [disparosMaxChars, setDisparosMaxChars] = useState<string>('')
+
   const { data: instance, isLoading: instanceLoading } = useWhatsAppInstance()
   const { data: profile } = useProfile()
+  const { data: clinicaIAConfig } = useClinicaIAConfig()
+  const updateClinicaIAConfig = useUpdateClinicaIAConfig()
 
   const { data: pacientes, isLoading: pacientesLoading } = usePacientes({ limit: 1000 })
   
@@ -85,6 +103,24 @@ export default function WhatsAppPage() {
   
   const { data: status, isLoading: statusLoading } = useWhatsAppStatus(instance?.instanceName || undefined, shouldPoll)
   const { data: qrCode, isLoading: qrLoading } = useWhatsAppQRCode(instance?.instanceName || undefined, status?.status)
+
+  useEffect(() => {
+    const saved = (clinicaIAConfig as any)?.extra?.disparos_ai_options
+    if (!saved) return
+
+    if (typeof saved.allowEmojis === 'boolean') {
+      setDisparosAllowEmojis(saved.allowEmojis)
+    }
+    if (typeof saved.tone === 'string' && ['Casual', 'Formal', 'Profissional', 'Extrovertido'].includes(saved.tone)) {
+      setDisparosTone(saved.tone)
+    }
+    if (typeof saved.maxChars === 'number' && Number.isFinite(saved.maxChars) && saved.maxChars > 0) {
+      setDisparosMaxChars(String(Math.min(500, Math.floor(saved.maxChars))))
+    } else {
+      setDisparosMaxChars('')
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [clinicaIAConfig?.id])
   
   const createInstance = useCreateWhatsAppInstance()
   const deleteInstance = useDeleteWhatsAppInstance()
@@ -193,19 +229,39 @@ export default function WhatsAppPage() {
 
   const localStorageBatchKey = instance?.instanceName ? `disparos:lastBatch:${instance.instanceName}` : null
 
+  const resetDisparosSession = () => {
+    setDisparosBatchId(null)
+    setDisparosBatchData(null)
+    setSelectedPacienteIds({})
+    if (localStorageBatchKey) window.localStorage.removeItem(localStorageBatchKey)
+  }
+
   const pacientesComRemoteJid = (pacientes || []).filter((p: any) => {
     const remotejid = String((p as any)?.remotejid ?? (p as any)?.remoteJid ?? '').trim()
     return Boolean(remotejid)
   })
 
+  const passesKanbanFilter = (p: any) => {
+    const kanban = String((p as any)?.status_detalhado ?? '').trim().toLowerCase()
+    return disparosKanbanFilters.length === 0 ? true : disparosKanbanFilters.includes(kanban)
+  }
+
+  const hiddenByPendingCount = pacientesComRemoteJid.filter((p: any) => {
+    const remotejid = String((p as any)?.remotejid ?? (p as any)?.remoteJid ?? '').trim()
+    return remotejid && activeDisparoNumbers.has(remotejid)
+  }).length
+
+  const hiddenByKanbanCount = pacientesComRemoteJid.filter((p: any) => {
+    const remotejid = String((p as any)?.remotejid ?? (p as any)?.remoteJid ?? '').trim()
+    if (!remotejid) return false
+    if (activeDisparoNumbers.has(remotejid)) return false
+    return !passesKanbanFilter(p)
+  }).length
+
   const pacientesDisponiveisParaDisparo = pacientesComRemoteJid.filter((p: any) => {
     const remotejid = String((p as any)?.remotejid ?? (p as any)?.remoteJid ?? '').trim()
-    const kanban = String((p as any)?.status_detalhado ?? '').trim().toLowerCase()
-    const passesKanban = disparosKanbanFilters.length === 0 ? true : disparosKanbanFilters.includes(kanban)
-    return remotejid && !activeDisparoNumbers.has(remotejid) && passesKanban
+    return remotejid && !activeDisparoNumbers.has(remotejid) && passesKanbanFilter(p)
   })
-
-  const blockedCount = pacientesComRemoteJid.length - pacientesDisponiveisParaDisparo.length
 
   const remoteJidToWhatsApp = new Map<string, string>()
   const remoteJidToPacienteNome = new Map<string, string>()
@@ -295,9 +351,19 @@ export default function WhatsAppPage() {
     setMediaMimeType(null)
     setMediaType(null)
     setMediaFileName(null)
+    setMediaUrl(null)
 
     if (!file) {
       setMediaPreviewUrl(null)
+      return
+    }
+
+    const isJfif =
+      String(file.type || '').toLowerCase() === 'image/jfif' ||
+      String(file.name || '').toLowerCase().endsWith('.jfif')
+    if (isJfif) {
+      setMediaPreviewUrl(null)
+      toast.error('Arquivo .JFIF não é suportado pela Evolution. Remova/Converta para JPG ou PNG para enviar mídia.')
       return
     }
 
@@ -318,6 +384,17 @@ export default function WhatsAppPage() {
 
     const stripped = base64.includes('base64,') ? base64.split('base64,')[1] : base64
     setMediaBase64(stripped)
+
+    try {
+      if (file.type.startsWith('image/')) {
+        const uploaded = await uploadMidia({ bucket: 'clinica-midias', file, prefix: 'disparos' })
+        const { data } = supabase.storage.from(uploaded.bucket).getPublicUrl(uploaded.path)
+        setMediaUrl(data.publicUrl || null)
+      }
+    } catch (e: any) {
+      setMediaUrl(null)
+      toast.message('Não foi possível gerar URL pública da imagem para análise. O envio continuará sem análise de imagem.')
+    }
   }
 
   useEffect(() => {
@@ -356,14 +433,30 @@ export default function WhatsAppPage() {
     const selectedPacientes = pacientesDisponiveisParaDisparo.filter((p: any) => selectedPacienteIds[p.id])
     if (selectedPacientes.length === 0) return
 
+    const maxCharsNum = disparosMaxChars.trim() ? Number(disparosMaxChars) : null
+    const aiOptions = {
+      allowEmojis: Boolean(disparosAllowEmojis),
+      tone: disparosTone,
+      maxChars:
+        typeof maxCharsNum === 'number' && Number.isFinite(maxCharsNum) && maxCharsNum > 0
+          ? Math.min(500, Math.floor(maxCharsNum))
+          : null,
+    }
+
     setIsEnqueueing(true)
     try {
       const items = selectedPacientes
         .map((p: any) => {
           const remotejid = String((p as any)?.remotejid ?? (p as any)?.remoteJid ?? '').trim()
           const number = remotejid
+          const sendNumber = String((p as any)?.telefone ?? (p as any)?.whatsapp ?? '').trim()
+          const patientName = String(
+            (p as any)?.nome_completo ?? (p as any)?.nome ?? (p as any)?.name ?? (p as any)?.full_name ?? ''
+          ).trim()
           return {
             number,
+            sendNumber,
+            patientName,
             text: (disparosType === 'media' ? disparosCaption.trim() : disparosMessage.trim()),
             media:
               disparosType === 'media'
@@ -372,6 +465,7 @@ export default function WhatsAppPage() {
                     mimetype: mediaMimeType,
                     media: mediaBase64,
                     fileName: mediaFileName,
+                    url: mediaUrl,
                   }
                 : undefined,
           }
@@ -387,9 +481,10 @@ export default function WhatsAppPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           instanceName: instance.instanceName,
-          minMinutes: 5,
-          maxMinutes: 30,
+          minMinutes: 1,
+          maxMinutes: 1,
           items,
+          aiOptions,
         }),
       })
 
@@ -455,7 +550,26 @@ export default function WhatsAppPage() {
     async function poll() {
       try {
         const res = await fetch(`http://localhost:3001/api/disparos/${disparosBatchId}`)
-        const json = await res.json()
+        if (res.status === 404) {
+          if (!cancelled) {
+            toast.message('Sessão de disparos não encontrada no servidor. A fila pode ter sido reiniciada. Criando nova sessão.')
+            resetDisparosSession()
+          }
+          return
+        }
+
+        const raw = await res.text()
+        let json: any = null
+        try {
+          json = raw ? JSON.parse(raw) : null
+        } catch {
+          json = null
+        }
+
+        if (!res.ok) {
+          return
+        }
+
         if (!cancelled) setDisparosBatchData(json)
       } catch {
         // ignore
@@ -623,35 +737,41 @@ export default function WhatsAppPage() {
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-2">
                 <div className="text-sm font-medium">Sessão</div>
-                <select
-                  className="rounded-md border border-border bg-background px-3 py-2 text-sm"
-                  value={disparosBatchId || ''}
-                  onChange={(e) => {
-                    const v = e.target.value
-                    const nextId = v || null
-                    setDisparosBatchId(nextId)
-                    if (nextId && localStorageBatchKey) {
-                      window.localStorage.setItem(localStorageBatchKey, nextId)
+                <Select
+                  value={disparosBatchId || 'new'}
+                  onValueChange={(value) => {
+                    if (value === 'new') {
+                      resetDisparosSession()
+                      return
+                    }
+
+                    setDisparosBatchId(value)
+                    setDisparosBatchData(null)
+                    setSelectedPacienteIds({})
+                    if (localStorageBatchKey) {
+                      window.localStorage.setItem(localStorageBatchKey, value)
                     }
                   }}
                 >
-                  <option value="">Nova sessão</option>
-                  {disparosBatches.map((b: any) => (
-                    <option key={b.id} value={b.id}>
-                      {new Date(b.createdAt).toLocaleString('pt-BR')} ({b.total || 0})
-                    </option>
-                  ))}
-                </select>
+                  <SelectTrigger className="w-[260px]">
+                    <SelectValue placeholder="Selecione" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="new">Nova sessão</SelectItem>
+                    {disparosBatches.map((b: any) => (
+                      <SelectItem key={b.id} value={b.id}>
+                        {new Date(b.createdAt).toLocaleString('pt-BR')} ({b.total || 0})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => {
-                  setDisparosBatchId(null)
-                  setDisparosBatchData(null)
-                  setSelectedPacienteIds({})
-                  if (localStorageBatchKey) window.localStorage.removeItem(localStorageBatchKey)
+                  resetDisparosSession()
                 }}
               >
                 Nova sessão
@@ -690,6 +810,89 @@ export default function WhatsAppPage() {
               </p>
             </div>
 
+            <div className="rounded-lg border border-border/60 bg-background p-4 space-y-4">
+              <div className="flex items-center justify-between gap-3">
+                <div className="text-sm font-medium">Configuração da IA</div>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  disabled={updateClinicaIAConfig.isPending}
+                  onClick={async () => {
+                    const maxCharsNum = disparosMaxChars.trim() ? Number(disparosMaxChars) : null
+                    const payload = {
+                      allowEmojis: Boolean(disparosAllowEmojis),
+                      tone: disparosTone,
+                      maxChars:
+                        typeof maxCharsNum === 'number' && Number.isFinite(maxCharsNum) && maxCharsNum > 0
+                          ? Math.min(500, Math.floor(maxCharsNum))
+                          : null,
+                    }
+
+                    const currentExtra = ((clinicaIAConfig as any)?.extra as Record<string, any>) || {}
+                    await updateClinicaIAConfig.mutateAsync({
+                      extra: {
+                        ...currentExtra,
+                        disparos_ai_options: payload,
+                      },
+                    } as any)
+                  }}
+                >
+                  Salvar preferências
+                </Button>
+              </div>
+
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <div className="text-sm">Permitir emojis</div>
+                  <div className="text-xs text-muted-foreground">
+                    Se desativado, a IA não vai usar emojis na variação.
+                  </div>
+                </div>
+                <Switch checked={disparosAllowEmojis} onCheckedChange={setDisparosAllowEmojis} />
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label>Tom de fala</Label>
+                  <Select value={disparosTone} onValueChange={(v) => setDisparosTone(v as any)}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Casual">Casual</SelectItem>
+                      <SelectItem value="Formal">Formal</SelectItem>
+                      <SelectItem value="Profissional">Profissional</SelectItem>
+                      <SelectItem value="Extrovertido">Extrovertido</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Limite de caracteres (opcional)</Label>
+                  <Input
+                    type="number"
+                    inputMode="numeric"
+                    min={1}
+                    max={500}
+                    value={disparosMaxChars}
+                    onChange={(e) => {
+                      const v = e.target.value
+                      if (!v) {
+                        setDisparosMaxChars('')
+                        return
+                      }
+                      const n = Number(v)
+                      if (!Number.isFinite(n)) return
+                      setDisparosMaxChars(String(Math.min(500, Math.max(1, Math.floor(n)))))
+                    }}
+                    placeholder="Ex: 280"
+                  />
+                  <div className="text-xs text-muted-foreground">Máximo: 500 caracteres</div>
+                </div>
+              </div>
+            </div>
+
             {disparosType === 'media' && (
               <div className="rounded-lg border border-border/60 bg-background p-4 space-y-3">
                 <div>
@@ -726,9 +929,14 @@ export default function WhatsAppPage() {
                   <div className="text-xs text-muted-foreground">
                     Selecionados: <span className="font-medium">{selectedCount}</span> / {pacientesDisponiveisParaDisparo.length}
                   </div>
-                  {blockedCount > 0 && (
+                  {hiddenByPendingCount > 0 && (
                     <div className="text-xs text-muted-foreground">
-                      Ocultos por já estarem com disparo pendente: <span className="font-medium">{blockedCount}</span>
+                      Ocultos por já estarem com disparo pendente: <span className="font-medium">{hiddenByPendingCount}</span>
+                    </div>
+                  )}
+                  {hiddenByKanbanCount > 0 && (
+                    <div className="text-xs text-muted-foreground">
+                      Ocultos pelo filtro de status: <span className="font-medium">{hiddenByKanbanCount}</span>
                     </div>
                   )}
                 </div>
@@ -835,6 +1043,7 @@ export default function WhatsAppPage() {
                 disabled={
                   isEnqueueing ||
                   selectedCount === 0 ||
+                  selectedCount > 30 ||
                   (disparosType === 'text' ? !disparosMessage.trim() : !disparosCaption.trim()) ||
                   (disparosType === 'media' && (!mediaBase64 || !mediaType || !mediaMimeType || !mediaFileName))
                 }
@@ -905,6 +1114,7 @@ export default function WhatsAppPage() {
                       <tr>
                         <th className="px-3 py-2 text-left font-medium">Paciente</th>
                         <th className="px-3 py-2 text-left font-medium">Número</th>
+                        <th className="px-3 py-2 text-left font-medium">Mensagem (IA)</th>
                         <th className="px-3 py-2 text-left font-medium">Status</th>
                         <th className="px-3 py-2 text-left font-medium">Tempo</th>
                         <th className="px-3 py-2 text-left font-medium">Progresso</th>
@@ -917,6 +1127,9 @@ export default function WhatsAppPage() {
                         const pct = j.status === 'scheduled' ? calcProgress(j) : j.status === 'running' ? 95 : 100
                         const pacienteNome = remoteJidToPacienteNome.get(String(j.number || '')) || '-'
                         const displayNumber = remoteJidToWhatsApp.get(String(j.number || '')) || String(j.number || '')
+                        const messageForDisplay = String(j.variedText || '').trim()
+                        const messagePlaceholder =
+                          !messageForDisplay && j.status === 'running' ? 'Gerando...' : !messageForDisplay ? '' : messageForDisplay
                         const timeLabel =
                           j.status === 'scheduled' && remaining != null
                             ? `Falta ${formatRemaining(remaining)}`
@@ -934,6 +1147,11 @@ export default function WhatsAppPage() {
                           <tr key={j.id} className="hover:bg-muted/20">
                             <td className="px-3 py-2">{pacienteNome}</td>
                             <td className="px-3 py-2">{displayNumber}</td>
+                            <td className="px-3 py-2 max-w-[420px]">
+                              <div className="line-clamp-3 whitespace-pre-wrap" title={messageForDisplay || ''}>
+                                {messagePlaceholder}
+                              </div>
+                            </td>
                             <td className="px-3 py-2">{statusToPtBR(j.status)}</td>
                             <td className="px-3 py-2">{timeLabel}</td>
                             <td className="px-3 py-2">

@@ -1,11 +1,9 @@
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import {
   Menu,
   User,
   CreditCard,
   Sparkles,
-  Search,
   CalendarDays
 } from 'lucide-react'
 import { Link, useNavigate } from 'react-router-dom'
@@ -83,15 +81,6 @@ export function Header({ onMenuClick, onNotificationCenterOpen }: HeaderProps) {
               </span>
             </div>
           </div>
-        </div>
-
-        <div className="relative flex-1 max-w-lg">
-          <Input
-            type="search"
-            placeholder="Buscar pacientes, procedimentos ou agendamentos..."
-            className="h-11 rounded-2xl border-white/40 bg-white/70 pl-11 text-sm shadow-inner shadow-primary-200/30 placeholder:text-neutral-400 focus:border-primary-300 focus:ring-1 focus:ring-primary-400/60 dark:border-white/10 dark:bg-neutral-900/70 dark:placeholder:text-neutral-400"
-          />
-          <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-400" />
         </div>
       </div>
 

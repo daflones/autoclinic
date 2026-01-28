@@ -32,6 +32,14 @@ import { QRCodeDisplay } from '@/components/whatsapp/QRCodeDisplay'
 import { usePacientes } from '@/hooks/usePacientes'
 import { toast } from 'sonner'
 import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -53,7 +61,6 @@ export default function WhatsAppPage() {
   const [disparosType, setDisparosType] = useState<'text' | 'media'>('text')
   const [disparosMessage, setDisparosMessage] = useState('')
   const [disparosCaption, setDisparosCaption] = useState('')
-  const [mediaFile, setMediaFile] = useState<File | null>(null)
   const [mediaPreviewUrl, setMediaPreviewUrl] = useState<string | null>(null)
   const [mediaBase64, setMediaBase64] = useState<string | null>(null)
   const [mediaMimeType, setMediaMimeType] = useState<string | null>(null)
@@ -66,6 +73,7 @@ export default function WhatsAppPage() {
   const [activeDisparoNumbers, setActiveDisparoNumbers] = useState<Set<string>>(new Set())
   const [isEnqueueing, setIsEnqueueing] = useState(false)
   const [nowTick, setNowTick] = useState(Date.now())
+  const [disparosKanbanFilters, setDisparosKanbanFilters] = useState<string[]>([])
 
   const { data: instance, isLoading: instanceLoading } = useWhatsAppInstance()
   const { data: profile } = useProfile()
@@ -91,6 +99,39 @@ export default function WhatsAppPage() {
       .replace(/\s+/g, '-') // Substitui espaços por hífens
       .replace(/-+/g, '-') // Remove hífens duplicados
       .replace(/^-|-$/g, '') // Remove hífens no início e fim
+  }
+
+  const kanbanOptions = [
+    { value: 'novos', label: 'Novos' },
+    { value: 'agendado', label: 'Agendado' },
+    { value: 'concluido', label: 'Concluído' },
+    { value: 'arquivado', label: 'Arquivado' },
+  ]
+
+  const kanbanFilterLabel = () => {
+    if (disparosKanbanFilters.length === 0) return 'Todos os status'
+    const labels = kanbanOptions
+      .filter((o) => disparosKanbanFilters.includes(o.value))
+      .map((o) => o.label)
+    if (labels.length <= 2) return labels.join(', ')
+    return `${labels.slice(0, 2).join(', ')} +${labels.length - 2}`
+  }
+
+  const statusToPtBR = (status?: string) => {
+    switch (status) {
+      case 'scheduled':
+        return 'agendado'
+      case 'running':
+        return 'enviando'
+      case 'sent':
+        return 'enviado'
+      case 'failed':
+        return 'falhou'
+      case 'canceled':
+        return 'cancelado'
+      default:
+        return status || ''
+    }
   }
 
   // Atualizar nome da instância quando o perfil carregar
@@ -159,10 +200,24 @@ export default function WhatsAppPage() {
 
   const pacientesDisponiveisParaDisparo = pacientesComRemoteJid.filter((p: any) => {
     const remotejid = String((p as any)?.remotejid ?? (p as any)?.remoteJid ?? '').trim()
-    return remotejid && !activeDisparoNumbers.has(remotejid)
+    const kanban = String((p as any)?.status_detalhado ?? '').trim().toLowerCase()
+    const passesKanban = disparosKanbanFilters.length === 0 ? true : disparosKanbanFilters.includes(kanban)
+    return remotejid && !activeDisparoNumbers.has(remotejid) && passesKanban
   })
 
   const blockedCount = pacientesComRemoteJid.length - pacientesDisponiveisParaDisparo.length
+
+  const remoteJidToWhatsApp = new Map<string, string>()
+  const remoteJidToPacienteNome = new Map<string, string>()
+  pacientesComRemoteJid.forEach((p: any) => {
+    const remotejid = String((p as any)?.remotejid ?? (p as any)?.remoteJid ?? '').trim()
+    const whatsapp = String((p as any)?.whatsapp ?? '').trim()
+    const nome = String((p as any)?.nome_completo ?? '').trim()
+    if (remotejid) {
+      remoteJidToWhatsApp.set(remotejid, whatsapp)
+      remoteJidToPacienteNome.set(remotejid, nome)
+    }
+  })
 
   const selectedCount = Object.values(selectedPacienteIds).filter(Boolean).length
 
@@ -236,7 +291,6 @@ export default function WhatsAppPage() {
   }, [mediaPreviewUrl])
 
   const handleMediaFileChange = async (file: File | null) => {
-    setMediaFile(file)
     setMediaBase64(null)
     setMediaMimeType(null)
     setMediaType(null)
@@ -324,7 +378,11 @@ export default function WhatsAppPage() {
         })
         .filter((it: any) => Boolean(it.number && it.text))
 
-      const res = await fetch('http://localhost:3001/api/disparos/enqueue', {
+      const endpoint = disparosBatchId
+        ? `http://localhost:3001/api/disparos/${disparosBatchId}/append`
+        : 'http://localhost:3001/api/disparos/enqueue'
+
+      const res = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -350,7 +408,7 @@ export default function WhatsAppPage() {
         throw new Error(json?.error || raw || 'Erro ao iniciar disparos')
       }
 
-      const newBatchId = json?.batch?.id || null
+      const newBatchId = json?.batch?.id || disparosBatchId || null
       setDisparosBatchId(newBatchId)
       setDisparosBatchData({ batch: json?.batch, jobs: [] })
       if (newBatchId && localStorageBatchKey) {
@@ -359,7 +417,7 @@ export default function WhatsAppPage() {
       if (Array.isArray(json?.skipped) && json.skipped.length > 0) {
         toast.message(`Alguns números foram ignorados: ${json.skipped.length}`)
       }
-      toast.success('Fila de disparos iniciada!')
+      toast.success(disparosBatchId ? 'Destinatários adicionados à sessão!' : 'Fila de disparos iniciada!')
 
       // Atualizar metadados (batches/números pendentes) para refletir imediatamente
       void refreshDisparosMeta()
@@ -674,12 +732,53 @@ export default function WhatsAppPage() {
                     </div>
                   )}
                 </div>
-                <Button type="button" variant="outline" size="sm" onClick={toggleSelectAllPacientes}>
-                  {pacientesDisponiveisParaDisparo.length > 0 &&
-                  pacientesDisponiveisParaDisparo.every((p: any) => selectedPacienteIds[p.id])
-                    ? 'Desmarcar todos'
-                    : 'Selecionar todos'}
-                </Button>
+                <div className="flex items-center gap-2">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button type="button" variant="outline" size="sm">
+                        {kanbanFilterLabel()}
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-56">
+                      <DropdownMenuLabel>Status do Kanban</DropdownMenuLabel>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuCheckboxItem
+                        checked={disparosKanbanFilters.length === 0}
+                        onCheckedChange={() => {
+                          setSelectedPacienteIds({})
+                          setDisparosKanbanFilters([])
+                        }}
+                      >
+                        Todos os status
+                      </DropdownMenuCheckboxItem>
+                      <DropdownMenuSeparator />
+                      {kanbanOptions.map((opt) => (
+                        <DropdownMenuCheckboxItem
+                          key={opt.value}
+                          checked={disparosKanbanFilters.includes(opt.value)}
+                          onCheckedChange={(checked) => {
+                            setSelectedPacienteIds({})
+                            setDisparosKanbanFilters((prev) => {
+                              const next = new Set(prev)
+                              if (checked) next.add(opt.value)
+                              else next.delete(opt.value)
+                              return Array.from(next)
+                            })
+                          }}
+                        >
+                          {opt.label}
+                        </DropdownMenuCheckboxItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+
+                  <Button type="button" variant="outline" size="sm" onClick={toggleSelectAllPacientes}>
+                    {pacientesDisponiveisParaDisparo.length > 0 &&
+                    pacientesDisponiveisParaDisparo.every((p: any) => selectedPacienteIds[p.id])
+                      ? 'Desmarcar todos'
+                      : 'Selecionar todos'}
+                  </Button>
+                </div>
               </div>
 
               <div className="max-h-[320px] overflow-auto rounded-md border border-border/60">
@@ -742,7 +841,7 @@ export default function WhatsAppPage() {
                 className="gap-2"
               >
                 {isEnqueueing ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-                Iniciar disparos
+                {disparosBatchId ? 'Adicionar pacientes' : 'Iniciar disparos'}
               </Button>
               {disparosBatchId && (
                 <Button
@@ -762,7 +861,6 @@ export default function WhatsAppPage() {
                 <div className="flex items-center justify-between">
                   <div>
                     <div className="text-sm font-medium">Fila atual</div>
-                    <div className="text-xs text-muted-foreground">Batch: {disparosBatchData.batch.id}</div>
                   </div>
                 </div>
 
@@ -805,6 +903,7 @@ export default function WhatsAppPage() {
                   <table className="min-w-full text-xs">
                     <thead className="bg-muted/40 text-muted-foreground">
                       <tr>
+                        <th className="px-3 py-2 text-left font-medium">Paciente</th>
                         <th className="px-3 py-2 text-left font-medium">Número</th>
                         <th className="px-3 py-2 text-left font-medium">Status</th>
                         <th className="px-3 py-2 text-left font-medium">Tempo</th>
@@ -816,6 +915,8 @@ export default function WhatsAppPage() {
                         const scheduledAt = typeof j.scheduledAt === 'number' ? j.scheduledAt : null
                         const remaining = scheduledAt ? Math.max(0, scheduledAt - nowTick) : null
                         const pct = j.status === 'scheduled' ? calcProgress(j) : j.status === 'running' ? 95 : 100
+                        const pacienteNome = remoteJidToPacienteNome.get(String(j.number || '')) || '-'
+                        const displayNumber = remoteJidToWhatsApp.get(String(j.number || '')) || String(j.number || '')
                         const timeLabel =
                           j.status === 'scheduled' && remaining != null
                             ? `Falta ${formatRemaining(remaining)}`
@@ -831,8 +932,9 @@ export default function WhatsAppPage() {
 
                         return (
                           <tr key={j.id} className="hover:bg-muted/20">
-                            <td className="px-3 py-2">{String(j.number || '')}</td>
-                            <td className="px-3 py-2">{j.status}</td>
+                            <td className="px-3 py-2">{pacienteNome}</td>
+                            <td className="px-3 py-2">{displayNumber}</td>
+                            <td className="px-3 py-2">{statusToPtBR(j.status)}</td>
                             <td className="px-3 py-2">{timeLabel}</td>
                             <td className="px-3 py-2">
                               <div className="space-y-1">

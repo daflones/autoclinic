@@ -66,6 +66,68 @@ function summarizeBatch(batch) {
   }
 }
 
+function createJobsForInstance({ instanceName, items, minMinutes, maxMinutes }) {
+  const createdAt = new Date().toISOString()
+  const existingActiveNumbers = getActiveNumbersByInstance(instanceName)
+  const skipped = []
+  const seenInRequest = new Set()
+  const jobIds = []
+
+  for (const it of items) {
+    const number = typeof it?.number === 'string' ? it.number : String(it?.number ?? '')
+    const baseText = String(it?.text ?? '').trim()
+    if (!number || !baseText) continue
+
+    if (seenInRequest.has(number)) {
+      skipped.push({ number, reason: 'duplicate_in_request' })
+      continue
+    }
+    seenInRequest.add(number)
+
+    if (existingActiveNumbers.has(number)) {
+      skipped.push({ number, reason: 'already_pending' })
+      continue
+    }
+
+    const delayMinutes = randomIntInclusive(minMinutes, maxMinutes)
+    const scheduledAt = Date.now() + delayMinutes * 60_000
+    const jobId = createJobId()
+
+    const media = it.media
+      ? {
+          mediatype: String(it.media.mediatype || '').trim(),
+          mimetype: String(it.media.mimetype || '').trim(),
+          media: String(it.media.media || '').trim(),
+          fileName: String(it.media.fileName || '').trim() || 'file',
+        }
+      : null
+
+    const job = {
+      id: jobId,
+      batchId: null,
+      instanceName,
+      number,
+      baseText,
+      media,
+      status: 'scheduled',
+      createdAt,
+      scheduledAt,
+      delayMinutes,
+      startedAt: null,
+      finishedAt: null,
+      variedText: null,
+      error: null,
+      timeoutId: null,
+    }
+
+    const timeoutId = scheduleDisparoJob(job)
+    disparosJobs.set(jobId, { ...job, timeoutId })
+    jobIds.push(jobId)
+  }
+
+  return { jobIds, skipped, createdAt }
+}
+
 function randomIntInclusive(min, max) {
   const a = Math.ceil(min)
   const b = Math.floor(max)
@@ -886,64 +948,13 @@ app.post('/api/disparos/enqueue', async (req, res) => {
     }
 
     const batchId = createBatchId()
-    const createdAt = new Date().toISOString()
+    const { jobIds, skipped, createdAt } = createJobsForInstance({ instanceName, items, minMinutes, maxMinutes })
 
-    const existingActiveNumbers = getActiveNumbersByInstance(instanceName)
-    const skipped = []
-    const seenInRequest = new Set()
-
-    const jobIds = []
-    for (const it of items) {
-      const number = typeof it?.number === 'string' ? it.number : String(it?.number ?? '')
-      const baseText = String(it?.text ?? '').trim()
-      if (!number || !baseText) continue
-
-      if (seenInRequest.has(number)) {
-        skipped.push({ number, reason: 'duplicate_in_request' })
-        continue
-      }
-      seenInRequest.add(number)
-
-      if (existingActiveNumbers.has(number)) {
-        skipped.push({ number, reason: 'already_pending' })
-        continue
-      }
-
-      const delayMinutes = randomIntInclusive(minMinutes, maxMinutes)
-      const scheduledAt = Date.now() + delayMinutes * 60_000
-      const jobId = createJobId()
-
-      const media = it.media
-        ? {
-            mediatype: String(it.media.mediatype || '').trim(),
-            mimetype: String(it.media.mimetype || '').trim(),
-            media: String(it.media.media || '').trim(),
-            fileName: String(it.media.fileName || '').trim() || 'file',
-          }
-        : null
-
-      const job = {
-        id: jobId,
-        batchId,
-        instanceName,
-        number,
-        baseText,
-        media,
-        status: 'scheduled',
-        createdAt,
-        scheduledAt,
-        delayMinutes,
-        startedAt: null,
-        finishedAt: null,
-        variedText: null,
-        error: null,
-        timeoutId: null,
-      }
-
-      const timeoutId = scheduleDisparoJob(job)
-      disparosJobs.set(jobId, { ...job, timeoutId })
-      jobIds.push(jobId)
-    }
+    // Amarrar jobs ao batch
+    jobIds.forEach((id) => {
+      const j = disparosJobs.get(id)
+      if (j) disparosJobs.set(id, { ...j, batchId })
+    })
 
     const batch = {
       id: batchId,
@@ -957,6 +968,48 @@ app.post('/api/disparos/enqueue', async (req, res) => {
     disparosBatches.set(batchId, batch)
 
     return res.json({ batch, skipped })
+  } catch (e) {
+    const status = e?.statusCode || 500
+    return res.status(status).json({ error: e?.message || String(e) })
+  }
+})
+
+app.post('/api/disparos/:batchId/append', async (req, res) => {
+  try {
+    const batchId = req.params.batchId
+    const batch = disparosBatches.get(batchId)
+    if (!batch) return res.status(404).json({ error: 'Batch não encontrado' })
+
+    const body = req.body || {}
+    const instanceName = String(body.instanceName || '').trim() || batch.instanceName
+    if (instanceName !== batch.instanceName) {
+      return res.status(400).json({ error: 'instanceName não corresponde ao batch' })
+    }
+
+    const items = Array.isArray(body.items) ? body.items : []
+    const minMinutes = Number(body.minMinutes ?? batch.minMinutes ?? 5)
+    const maxMinutes = Number(body.maxMinutes ?? batch.maxMinutes ?? 30)
+    if (!items.length) return res.status(400).json({ error: 'items é obrigatório' })
+    if (!Number.isFinite(minMinutes) || !Number.isFinite(maxMinutes) || minMinutes < 1 || maxMinutes < minMinutes) {
+      return res.status(400).json({ error: 'minMinutes/maxMinutes inválidos' })
+    }
+
+    const { jobIds, skipped } = createJobsForInstance({ instanceName, items, minMinutes, maxMinutes })
+
+    jobIds.forEach((id) => {
+      const j = disparosJobs.get(id)
+      if (j) disparosJobs.set(id, { ...j, batchId })
+    })
+
+    const updated = {
+      ...batch,
+      minMinutes,
+      maxMinutes,
+      jobIds: [...(batch.jobIds || []), ...jobIds],
+    }
+    disparosBatches.set(batchId, updated)
+
+    return res.json({ batch: summarizeBatch(updated), appendedJobIds: jobIds, skipped })
   } catch (e) {
     const status = e?.statusCode || 500
     return res.status(status).json({ error: e?.message || String(e) })

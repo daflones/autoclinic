@@ -1550,8 +1550,7 @@ app.get('/health', (req, res) => {
 // - Qualquer outra rota retorna o index.html para suportar SPA (React Router).
 app.use(express.static(distDir))
 
-app.get('*', (req, res) => {
-  if (req.path.startsWith('/api/')) return res.status(404).json({ error: 'Endpoint não encontrado' })
+app.get(/^(?!\/api\/).*/, (req, res) => {
   res.sendFile(path.join(distDir, 'index.html'))
 })
 

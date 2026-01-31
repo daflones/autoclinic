@@ -8,16 +8,22 @@ import cors from 'cors';
 import { createServer } from 'http';
 import dotenv from 'dotenv'
 import axios from 'axios'
+import path from 'path'
+import { fileURLToPath } from 'url'
 
 // Configuração do servidor
 const app = express();
-const PORT = 3001;
+const PORT = Number(process.env.PORT) || 3000;
 
 dotenv.config()
 
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
+const distDir = path.resolve(__dirname, 'dist')
 
 // Criar servidor HTTP
 const server = createServer(app);
@@ -1457,7 +1463,7 @@ app.post('/api/disparos/:batchId/append', async (req, res) => {
     }
     disparosBatches.set(batchId, updated)
 
-    return res.json({ batch: summarizeBatch(updated), appendedJobIds: jobIds, skipped })
+    return res.json({ ok: true, batch: summarizeBatch(updated), appendedJobIds: jobIds, skipped })
   } catch (e) {
     const status = e?.statusCode || 500
     return res.status(status).json({ error: e?.message || String(e) })
@@ -1539,13 +1545,21 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+// Servir frontend (Vite build) no mesmo host/porta.
+// - Rotas /api/* continuam funcionando normalmente.
+// - Qualquer outra rota retorna o index.html para suportar SPA (React Router).
+app.use(express.static(distDir))
+
+app.get('*', (req, res) => {
+  if (req.path.startsWith('/api/')) return res.status(404).json({ error: 'Endpoint não encontrado' })
+  res.sendFile(path.join(distDir, 'index.html'))
+})
+
 // Iniciar servidor HTTP
 server.listen(PORT, () => {
   console.log(`Servidor HTTP rodando na porta ${PORT}`);
-  console.log(`WebSocket rodando em ws://localhost:${PORT}/whatsapp-web`);
+  console.log(`WebSocket rodando em /whatsapp-web`);
   console.log('Servidor WhatsApp Web pronto. Aguardando conexões...');
-  
-  // NÃO inicializar automaticamente - aguardar comando do frontend
 });
 
 // Lidar com sinais de encerramento

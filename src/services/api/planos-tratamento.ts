@@ -28,6 +28,7 @@ export interface PlanoTratamento {
   admin_profile_id: string
   paciente_id: string
   responsavel_profissional_id?: string | null
+  protocolo_pacote_id?: string | null
   titulo: string
   descricao?: string | null
   status: StatusPlanoTratamento
@@ -67,6 +68,7 @@ export interface PlanoTratamentoItemInput {
 export interface PlanoTratamentoCreateData {
   paciente_id: string
   responsavel_profissional_id?: string | null
+  protocolo_pacote_id?: string | null
   titulo: string
   descricao?: string | null
   status?: StatusPlanoTratamento
@@ -205,6 +207,7 @@ export const planosTratamentoService = {
       admin_profile_id: adminProfileId,
       paciente_id: payload.paciente_id,
       responsavel_profissional_id: payload.responsavel_profissional_id ?? null,
+      protocolo_pacote_id: payload.protocolo_pacote_id ?? null,
       titulo: payload.titulo,
       descricao: payload.descricao ?? null,
       status: payload.status ?? 'rascunho',
@@ -254,25 +257,21 @@ export const planosTratamentoService = {
   },
 
   async update(id: string, updates: PlanoTratamentoUpdateData): Promise<PlanoTratamento> {
-    const { adminProfileId } = await getAdminContext()
-
     const planoAnterior = await this.getById(id)
     if (!planoAnterior) {
       throw new Error('Plano de tratamento não encontrado')
     }
 
-    const { itens, ...planoUpdates } = updates
-
-    const updateData = {
-      ...planoUpdates,
-      updated_at: new Date().toISOString()
+    const baseUpdate = {
+      ...updates,
+      protocolo_pacote_id: updates.protocolo_pacote_id ?? undefined,
+      updated_at: new Date().toISOString(),
     }
 
     const { error } = await supabase
       .from('planos_tratamento')
-      .update(updateData)
+      .update(baseUpdate)
       .eq('id', id)
-      .eq('admin_profile_id', adminProfileId)
       .select('*')
       .single()
 
@@ -281,7 +280,7 @@ export const planosTratamentoService = {
       throw new Error(`Erro ao atualizar plano de tratamento: ${error.message}`)
     }
 
-    if (Array.isArray(itens)) {
+    if (Array.isArray(updates.itens)) {
       const { error: deleteError } = await supabase
         .from('planos_tratamento_itens')
         .delete()
@@ -292,7 +291,7 @@ export const planosTratamentoService = {
         throw new Error(`Erro ao atualizar itens do plano: ${deleteError.message}`)
       }
 
-      const itensToInsert = prepareItensForInsert(id, itens)
+      const itensToInsert = prepareItensForInsert(id, updates.itens)
 
       if (itensToInsert.length > 0) {
         const { error: insertError } = await supabase

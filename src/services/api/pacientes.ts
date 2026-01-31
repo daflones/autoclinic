@@ -7,12 +7,15 @@ export type StatusPaciente = 'ativo' | 'inativo' | 'arquivado'
 
 export type StatusPacienteDetalhado =
   | 'novos'
+  | 'agendado'
+  | 'concluido'
+  | 'arquivado'
   | 'avaliacao'
   | 'em-andamento'
   | 'retornos'
   | 'pausados'
-  | 'concluidos'
   | 'inativos'
+  | 'concluidos'
   | 'arquivados'
 
 export interface PacienteEndereco {

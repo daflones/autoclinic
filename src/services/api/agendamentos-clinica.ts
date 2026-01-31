@@ -1,6 +1,7 @@
 import { supabase } from '@/lib/supabase'
 import { AtividadeService } from './atividades'
 import { getAdminContext } from './_tenant'
+import type { StatusPacienteDetalhado } from './pacientes'
 
 export type StatusAgendamentoClinica =
   | 'agendado'
@@ -87,6 +88,50 @@ export interface AgendamentoClinicaCreateData {
 }
 
 export type AgendamentoClinicaUpdateData = Partial<AgendamentoClinicaCreateData>
+
+function mapAgendamentoStatusToPacienteKanban(status: StatusAgendamentoClinica | null | undefined): StatusPacienteDetalhado | null {
+  if (!status) return null
+  /**
+   * Observação: o kanban do paciente usa valores diferentes do status do agendamento.
+   * Mantemos um mapeamento simples para refletir o estágio do paciente.
+   */
+  switch (status) {
+    case 'agendado':
+    case 'confirmado':
+    case 'check_in':
+    case 'em_andamento':
+      return 'agendado'
+    case 'concluido':
+      return 'concluido'
+    case 'cancelado':
+    case 'nao_compareceu':
+    case 'remarcado':
+      return 'novos'
+    default:
+      return null
+  }
+}
+
+async function syncPacienteKanbanFromAgendamentoStatus(params: {
+  adminProfileId: string
+  pacienteId?: string | null
+  status: StatusAgendamentoClinica
+}) {
+  const pacienteId = params.pacienteId
+  if (!pacienteId) return
+  const nextKanban = mapAgendamentoStatusToPacienteKanban(params.status)
+  if (!nextKanban) return
+
+  const { error } = await supabase
+    .from('pacientes')
+    .update({ status_detalhado: nextKanban })
+    .eq('id', pacienteId)
+    .eq('admin_profile_id', params.adminProfileId)
+
+  if (error) {
+    console.error('Erro ao sincronizar kanban do paciente pelo status do agendamento:', error)
+  }
+}
 
 function buildSelectQuery() {
   return supabase
@@ -275,6 +320,12 @@ export const agendamentosClinicaService = {
       throw new Error(`Erro ao criar agendamento clínico: ${error.message}`)
     }
 
+    await syncPacienteKanbanFromAgendamentoStatus({
+      adminProfileId,
+      pacienteId: data?.paciente_id ?? null,
+      status: (data?.status ?? 'agendado') as StatusAgendamentoClinica,
+    })
+
     await AtividadeService.criar(
       'agendamento',
       data.id,
@@ -313,6 +364,14 @@ export const agendamentosClinicaService = {
     if (error) {
       console.error('Erro ao atualizar agendamento clínico:', error)
       throw new Error(`Erro ao atualizar agendamento clínico: ${error.message}`)
+    }
+
+    if (updates?.status) {
+      await syncPacienteKanbanFromAgendamentoStatus({
+        adminProfileId,
+        pacienteId: data?.paciente_id ?? null,
+        status: updates.status as StatusAgendamentoClinica,
+      })
     }
 
     await AtividadeService.editar(
@@ -368,6 +427,12 @@ export const agendamentosClinicaService = {
       throw new Error(`Erro ao reagendar agendamento clínico: ${error.message}`)
     }
 
+    await syncPacienteKanbanFromAgendamentoStatus({
+      adminProfileId,
+      pacienteId: data?.paciente_id ?? null,
+      status: 'remarcado',
+    })
+
     await AtividadeService.editar(
       'agendamento',
       id,
@@ -403,6 +468,13 @@ export const agendamentosClinicaService = {
       console.error('Erro ao atualizar status do agendamento clínico:', error)
       throw new Error(`Erro ao atualizar status do agendamento clínico: ${error.message}`)
     }
+
+    const { adminProfileId } = await getAdminContext()
+    await syncPacienteKanbanFromAgendamentoStatus({
+      adminProfileId,
+      pacienteId: data?.paciente_id ?? null,
+      status,
+    })
 
     await AtividadeService.editar(
       'agendamento',

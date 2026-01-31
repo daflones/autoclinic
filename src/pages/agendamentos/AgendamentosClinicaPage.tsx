@@ -56,6 +56,9 @@ import {
 } from '@/hooks/useAgendamentosClinica'
 import { usePacientes } from '@/hooks/usePacientes'
 import { useProfissionaisClinica } from '@/hooks/useProfissionaisClinica'
+import { useProcedimentos } from '@/hooks/useProcedimentos'
+import { useProtocolosPacotes } from '@/hooks/useProtocolosPacotes'
+import { useCreatePlanoTratamento, useUpdatePlanoTratamento } from '@/hooks/usePlanosTratamento'
 import { AgendamentoModals } from '@/components/agendamentos/AgendamentoModals'
 import type {
   AgendamentoClinica,
@@ -106,6 +109,8 @@ export function AgendamentosClinicaPage() {
     data_fim: '',
     paciente_id: null,
     profissional_id: null,
+    plano_tratamento_id: null,
+    procedimento_id: null,
     sala: '',
     status: 'agendado',
   })
@@ -117,9 +122,14 @@ export function AgendamentosClinicaPage() {
     data_fim: '',
     paciente_id: null,
     profissional_id: null,
+    plano_tratamento_id: null,
+    procedimento_id: null,
     sala: '',
     status: 'agendado',
   })
+
+  const [createProtocoloPacoteId, setCreateProtocoloPacoteId] = useState<string>('none')
+  const [editProtocoloPacoteId, setEditProtocoloPacoteId] = useState<string>('none')
 
   const filters = useMemo(
     () => ({
@@ -134,12 +144,16 @@ export function AgendamentosClinicaPage() {
   const { data: agendamentos, isLoading, count } = useAgendamentosClinica(filters)
   const { data: pacientes } = usePacientes({ limit: 1000 })
   const { data: profissionais } = useProfissionaisClinica({ limit: 1000 })
+  const { data: procedimentos } = useProcedimentos({ limit: 1000 } as any)
+  const { data: protocolosPacotes } = useProtocolosPacotes({ limit: 1000, status: 'ativo' } as any)
 
   const createMutation = useCreateAgendamentoClinica()
   const rescheduleMutation = useRescheduleAgendamentoClinica()
   const updateMutation = useUpdateAgendamentoClinica()
   const deleteMutation = useDeleteAgendamentoClinica()
   const updateStatusMutation = useUpdateAgendamentoClinicaStatus()
+  const createPlanoMutation = useCreatePlanoTratamento()
+  const updatePlanoMutation = useUpdatePlanoTratamento()
 
   const { data: waitlistQuery } = useListaEsperaAgendamentos({ limit: 200 })
   const createWaitlistMutation = useCreateListaEsperaAgendamento()
@@ -271,8 +285,33 @@ export function AgendamentosClinicaPage() {
       return
     }
 
+    const hasPacote = createProtocoloPacoteId && createProtocoloPacoteId !== 'none'
+    if (hasPacote && !formState.paciente_id) {
+      toast.error('Selecione o paciente para vincular o pacote')
+      return
+    }
+
     try {
-      await createMutation.mutateAsync(formState)
+      let payload: AgendamentoClinicaCreateData = { ...formState }
+
+      if (hasPacote) {
+        const pacote = (protocolosPacotes ?? []).find((p) => p.id === createProtocoloPacoteId)
+        const plano = await createPlanoMutation.mutateAsync({
+          paciente_id: payload.paciente_id as string,
+          titulo: pacote?.nome || payload.titulo,
+          descricao: pacote?.descricao ?? null,
+          protocolo_pacote_id: createProtocoloPacoteId,
+          status: 'aprovado',
+        } as any)
+
+        payload = {
+          ...payload,
+          plano_tratamento_id: plano?.id ?? null,
+          procedimento_id: null,
+        }
+      }
+
+      await createMutation.mutateAsync(payload)
       setIsCreateModalOpen(false)
       setFormState({
         titulo: '',
@@ -281,9 +320,12 @@ export function AgendamentosClinicaPage() {
         data_fim: '',
         paciente_id: null,
         profissional_id: null,
+        plano_tratamento_id: null,
+        procedimento_id: null,
         sala: '',
         status: 'agendado',
       })
+      setCreateProtocoloPacoteId('none')
     } catch (error) {
       console.error('Erro ao criar agendamento:', error)
     }
@@ -323,12 +365,15 @@ export function AgendamentosClinicaPage() {
       descricao: selectedAgendamento.descricao || '',
       data_inicio: selectedAgendamento.data_inicio,
       data_fim: selectedAgendamento.data_fim,
-      paciente_id: selectedAgendamento.paciente_id,
-      profissional_id: selectedAgendamento.profissional_id,
+      paciente_id: selectedAgendamento.paciente_id || null,
+      profissional_id: selectedAgendamento.profissional_id || null,
+      plano_tratamento_id: selectedAgendamento.plano_tratamento_id ?? null,
+      procedimento_id: selectedAgendamento.procedimento_id ?? null,
       sala: selectedAgendamento.sala || '',
       status: selectedAgendamento.status,
     })
-    setIsDetailsModalOpen(false)
+
+    setEditProtocoloPacoteId('none')
     setIsEditModalOpen(true)
   }
 
@@ -336,14 +381,58 @@ export function AgendamentosClinicaPage() {
     if (!selectedAgendamento) return
 
     try {
+      const hasPacote = editProtocoloPacoteId && editProtocoloPacoteId !== 'none'
+      if (hasPacote && !editFormState.paciente_id) {
+        toast.error('Selecione o paciente para vincular o pacote')
+        return
+      }
+
+      let payload: AgendamentoClinicaCreateData = { ...editFormState }
+
+      if (hasPacote) {
+        const pacote = (protocolosPacotes ?? []).find((p) => p.id === editProtocoloPacoteId)
+        const existingPlanoId = payload.plano_tratamento_id
+
+        if (existingPlanoId) {
+          await updatePlanoMutation.mutateAsync({
+            id: existingPlanoId,
+            data: {
+              paciente_id: payload.paciente_id as string,
+              titulo: pacote?.nome || payload.titulo,
+              descricao: pacote?.descricao ?? null,
+              protocolo_pacote_id: editProtocoloPacoteId,
+            } as any,
+          })
+        } else {
+          const plano = await createPlanoMutation.mutateAsync({
+            paciente_id: payload.paciente_id as string,
+            titulo: pacote?.nome || payload.titulo,
+            descricao: pacote?.descricao ?? null,
+            protocolo_pacote_id: editProtocoloPacoteId,
+            status: 'aprovado',
+          } as any)
+
+          payload = {
+            ...payload,
+            plano_tratamento_id: plano?.id ?? null,
+          }
+        }
+
+        payload = {
+          ...payload,
+          procedimento_id: null,
+        }
+      }
+
       await updateMutation.mutateAsync({
         id: selectedAgendamento.id,
-        data: editFormState,
+        data: payload,
       })
       setIsEditModalOpen(false)
       setSelectedAgendamento(null)
+      setEditProtocoloPacoteId('none')
     } catch (error) {
-      console.error('Erro ao atualizar agendamento:', error)
+      console.error('Erro ao salvar alterações:', error)
     }
   }
 
@@ -1172,6 +1261,12 @@ export function AgendamentosClinicaPage() {
         setEditFormState={setEditFormState}
         pacientes={pacientes}
         profissionais={profissionais}
+        procedimentos={procedimentos}
+        protocolosPacotes={protocolosPacotes}
+        createProtocoloPacoteId={createProtocoloPacoteId}
+        setCreateProtocoloPacoteId={setCreateProtocoloPacoteId}
+        editProtocoloPacoteId={editProtocoloPacoteId}
+        setEditProtocoloPacoteId={setEditProtocoloPacoteId}
         onCreateAgendamento={handleCreateAgendamento}
         onSaveEdit={handleSaveEdit}
         onRequestDelete={handleRequestDelete}

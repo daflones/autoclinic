@@ -50,6 +50,7 @@ import {
 import { Switch } from '@/components/ui/switch'
 import { uploadMidia } from '@/services/api/storage-midias'
 import { supabase } from '@/lib/supabase'
+import { useUpdatePaciente } from '@/hooks/usePacientes'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -61,6 +62,14 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 
 export default function WhatsAppPage() {
   const [instanceName, setInstanceName] = useState('')
@@ -91,10 +100,17 @@ export default function WhatsAppPage() {
   const [disparosTone, setDisparosTone] = useState<'Casual' | 'Formal' | 'Profissional' | 'Extrovertido'>('Profissional')
   const [disparosMaxChars, setDisparosMaxChars] = useState<string>('')
 
+  const [editPacienteOpen, setEditPacienteOpen] = useState(false)
+  const [editingPaciente, setEditingPaciente] = useState<any | null>(null)
+  const [editNomeCompleto, setEditNomeCompleto] = useState('')
+  const [editWhatsapp, setEditWhatsapp] = useState('')
+
   const { data: instance, isLoading: instanceLoading } = useWhatsAppInstance()
   const { data: profile } = useProfile()
   const { data: clinicaIAConfig } = useClinicaIAConfig()
   const updateClinicaIAConfig = useUpdateClinicaIAConfig()
+
+  const updatePaciente = useUpdatePaciente()
 
   const { data: pacientes, isLoading: pacientesLoading } = usePacientes({ limit: 1000 })
   
@@ -345,6 +361,40 @@ export default function WhatsAppPage() {
       }
     }
   }, [mediaPreviewUrl])
+
+  useEffect(() => {
+    if (!editPacienteOpen) return
+    if (!editingPaciente) return
+    setEditNomeCompleto(String((editingPaciente as any)?.nome_completo ?? '').trim())
+    setEditWhatsapp(String((editingPaciente as any)?.whatsapp ?? '').trim())
+  }, [editPacienteOpen, editingPaciente])
+
+  const openEditPaciente = (p: any) => {
+    setEditingPaciente(p)
+    setEditPacienteOpen(true)
+  }
+
+  const savePacienteEdits = async () => {
+    const p = editingPaciente
+    if (!p?.id) return
+    const nome = editNomeCompleto.trim()
+    if (!nome) {
+      toast.error('Nome completo é obrigatório')
+      return
+    }
+    const whatsapp = editWhatsapp.trim() || null
+
+    await updatePaciente.mutateAsync({
+      id: String(p.id),
+      data: {
+        nome_completo: nome,
+        whatsapp,
+      },
+    })
+
+    setEditPacienteOpen(false)
+    setEditingPaciente(null)
+  }
 
   const handleMediaFileChange = async (file: File | null) => {
     setMediaBase64(null)
@@ -996,6 +1046,7 @@ export default function WhatsAppPage() {
                       <th className="px-3 py-2 text-left font-medium w-10"> </th>
                       <th className="px-3 py-2 text-left font-medium">Paciente</th>
                       <th className="px-3 py-2 text-left font-medium">WhatsApp</th>
+                      <th className="px-3 py-2 text-right font-medium">Ações</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border/60">
@@ -1018,6 +1069,11 @@ export default function WhatsAppPage() {
                             <div className="font-medium text-foreground">{p.nome_completo}</div>
                           </td>
                           <td className="px-3 py-2 align-top text-muted-foreground">{display}</td>
+                          <td className="px-3 py-2 align-top text-right">
+                            <Button type="button" size="sm" variant="outline" onClick={() => openEditPaciente(p)}>
+                              Editar
+                            </Button>
+                          </td>
                         </tr>
                       )
                     })}
@@ -1319,6 +1375,36 @@ export default function WhatsAppPage() {
           )}
         </div>
       )}
+
+      <Dialog open={editPacienteOpen} onOpenChange={setEditPacienteOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Editar paciente</DialogTitle>
+            <DialogDescription>Atualize as informações do paciente.</DialogDescription>
+          </DialogHeader>
+
+          <div className="grid gap-4">
+            <div className="grid gap-2">
+              <Label>Nome completo</Label>
+              <Input value={editNomeCompleto} onChange={(e) => setEditNomeCompleto(e.target.value)} />
+            </div>
+
+            <div className="grid gap-2">
+              <Label>WhatsApp</Label>
+              <Input value={editWhatsapp} onChange={(e) => setEditWhatsapp(e.target.value)} />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setEditPacienteOpen(false)}>
+              Cancelar
+            </Button>
+            <Button type="button" onClick={() => void savePacienteEdits()} disabled={updatePaciente.isPending}>
+              Salvar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Informações importantes */}
       <Alert>

@@ -127,11 +127,15 @@ export function useUpdateAgendamentoClinicaStatus() {
       agendamentosClinicaService.updateStatus(id, status),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['agendamentos-clinica'] })
+      queryClient.invalidateQueries({ queryKey: ['pacientes'] })
+      queryClient.invalidateQueries({ queryKey: ['pacientes-status-stats'] })
       toast.success('Status do agendamento clínico atualizado com sucesso!')
     },
     onError: (error: Error) => {
       toast.error(error.message || 'Erro ao atualizar status do agendamento clínico')
       queryClient.invalidateQueries({ queryKey: ['agendamentos-clinica'] })
+      queryClient.invalidateQueries({ queryKey: ['pacientes'] })
+      queryClient.invalidateQueries({ queryKey: ['pacientes-status-stats'] })
     },
   })
 }

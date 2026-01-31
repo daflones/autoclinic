@@ -76,6 +76,70 @@ function getActiveNumbersByInstance(instanceName) {
   return active
 }
 
+function safeParseTime(value) {
+  if (!value) return null
+  const d = new Date(value)
+  const t = d.getTime()
+  if (!Number.isFinite(t)) return null
+  return t
+}
+
+function getDisparosStatsForJobs(jobs) {
+  const now = Date.now()
+  const todayKey = getDateKeySaoPaulo(now)
+  const weekStart = now - 7 * 24 * 60 * 60 * 1000
+  const monthStart = now - 30 * 24 * 60 * 60 * 1000
+
+  const agg = {
+    total: { scheduled: 0, running: 0, sent: 0, failed: 0, canceled: 0 },
+    hoje: { sent: 0, failed: 0, unique: 0 },
+    semana: { sent: 0, failed: 0, unique: 0 },
+    mes: { sent: 0, failed: 0, unique: 0 },
+  }
+
+  const uniqueHoje = new Set()
+  const uniqueSemana = new Set()
+  const uniqueMes = new Set()
+
+  for (const job of jobs) {
+    const status = job?.status
+    if (status && Object.prototype.hasOwnProperty.call(agg.total, status)) {
+      agg.total[status] += 1
+    }
+
+    if (status !== 'sent' && status !== 'failed') continue
+    const finishedTs = safeParseTime(job.finishedAt) ?? safeParseTime(job.startedAt) ?? safeParseTime(job.createdAt)
+    if (!finishedTs) continue
+
+    const recipientKey =
+      normalizeSendNumberDigits(job.sendNumberDigits || job.sendNumber || job.numberForSend || job.number) ||
+      String(job.number || '')
+
+    const isToday = getDateKeySaoPaulo(finishedTs) === todayKey
+    const isWeek = finishedTs >= weekStart
+    const isMonth = finishedTs >= monthStart
+
+    if (isToday) {
+      agg.hoje[status] += 1
+      if (recipientKey) uniqueHoje.add(recipientKey)
+    }
+    if (isWeek) {
+      agg.semana[status] += 1
+      if (recipientKey) uniqueSemana.add(recipientKey)
+    }
+    if (isMonth) {
+      agg.mes[status] += 1
+      if (recipientKey) uniqueMes.add(recipientKey)
+    }
+  }
+
+  agg.hoje.unique = uniqueHoje.size
+  agg.semana.unique = uniqueSemana.size
+  agg.mes.unique = uniqueMes.size
+
+  return agg
+}
+
 function summarizeBatch(batch) {
   const jobs = (batch.jobIds || []).map((id) => disparosJobs.get(id)).filter(Boolean)
   const counts = jobs.reduce(
@@ -1417,6 +1481,22 @@ app.get('/api/disparos/activeNumbers', (req, res) => {
   if (!instanceName) return res.status(400).json({ error: 'instanceName é obrigatório' })
   const activeNumbers = Array.from(getActiveNumbersByInstance(instanceName))
   return res.json({ activeNumbers })
+})
+
+app.get('/api/disparos/stats', (req, res) => {
+  const instanceName = String(req.query.instanceName || '').trim()
+  const jobs = Array.from(disparosJobs.values())
+    .filter((j) => {
+      if (!instanceName) return true
+      return j?.instanceName === instanceName
+    })
+    .map((j) => {
+      const { timeoutId, ...safe } = j || {}
+      return safe
+    })
+
+  const stats = getDisparosStatsForJobs(jobs)
+  return res.json({ instanceName: instanceName || null, stats })
 })
 
 app.get('/api/disparos/:batchId', (req, res) => {

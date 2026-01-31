@@ -28,6 +28,8 @@ import type {
 } from '@/services/api/agendamentos-clinica'
 import type { Paciente } from '@/services/api/pacientes'
 import type { ProfissionalClinica } from '@/services/api/profissionais-clinica'
+import type { Procedimento } from '@/services/api/procedimentos'
+import type { ProtocoloPacote } from '@/services/api/protocolos-pacotes'
 
 const STATUS_CONFIG: Record<
   StatusAgendamentoClinica,
@@ -75,6 +77,12 @@ interface AgendamentoModalsProps {
   setEditFormState: (state: AgendamentoClinicaCreateData) => void
   pacientes: Paciente[]
   profissionais: ProfissionalClinica[]
+  procedimentos: Procedimento[]
+  protocolosPacotes: ProtocoloPacote[]
+  createProtocoloPacoteId: string
+  setCreateProtocoloPacoteId: (value: string) => void
+  editProtocoloPacoteId: string
+  setEditProtocoloPacoteId: (value: string) => void
   onCreateAgendamento: () => void
   onSaveEdit: () => void
   onRequestDelete: () => void
@@ -103,6 +111,12 @@ export function AgendamentoModals({
   setEditFormState,
   pacientes,
   profissionais,
+  procedimentos,
+  protocolosPacotes,
+  createProtocoloPacoteId,
+  setCreateProtocoloPacoteId,
+  editProtocoloPacoteId,
+  setEditProtocoloPacoteId,
   onCreateAgendamento,
   onSaveEdit,
   onRequestDelete,
@@ -186,6 +200,67 @@ export function AgendamentoModals({
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="create-procedimento">Procedimento</Label>
+                <Select
+                  value={formState.procedimento_id || 'none'}
+                  onValueChange={(v) => {
+                    const nextId = v === 'none' ? null : v
+                    setCreateProtocoloPacoteId('none')
+                    setFormState({
+                      ...formState,
+                      procedimento_id: nextId,
+                      plano_tratamento_id: null,
+                    })
+                  }}
+                >
+                  <SelectTrigger id="create-procedimento">
+                    <SelectValue placeholder="Selecione o procedimento" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Nenhum</SelectItem>
+                    {procedimentos.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        {p.nome}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="create-pacote">Pacote</Label>
+                <Select
+                  value={createProtocoloPacoteId || 'none'}
+                  onValueChange={(v) => {
+                    const nextId = v === 'none' ? 'none' : v
+                    setCreateProtocoloPacoteId(nextId)
+                    setFormState({
+                      ...formState,
+                      procedimento_id: null,
+                      plano_tratamento_id: null,
+                    })
+                  }}
+                >
+                  <SelectTrigger id="create-pacote">
+                    <SelectValue placeholder="Selecione o pacote" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Nenhum</SelectItem>
+                    {protocolosPacotes.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        {p.nome}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {createProtocoloPacoteId && createProtocoloPacoteId !== 'none' && !formState.paciente_id && (
+                  <p className="text-xs text-muted-foreground">Selecione um paciente para vincular o pacote.</p>
+                )}
               </div>
             </div>
 
@@ -431,6 +506,67 @@ export function AgendamentoModals({
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="edit-procedimento">Procedimento</Label>
+                <Select
+                  value={editFormState.procedimento_id || 'none'}
+                  onValueChange={(v) => {
+                    const nextId = v === 'none' ? null : v
+                    setEditProtocoloPacoteId('none')
+                    setEditFormState({
+                      ...editFormState,
+                      procedimento_id: nextId,
+                      plano_tratamento_id: null,
+                    })
+                  }}
+                >
+                  <SelectTrigger id="edit-procedimento">
+                    <SelectValue placeholder="Selecione o procedimento" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Nenhum</SelectItem>
+                    {procedimentos.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        {p.nome}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-pacote">Pacote</Label>
+                <Select
+                  value={editProtocoloPacoteId || 'none'}
+                  onValueChange={(v) => {
+                    const nextId = v === 'none' ? 'none' : v
+                    setEditProtocoloPacoteId(nextId)
+                    setEditFormState({
+                      ...editFormState,
+                      procedimento_id: null,
+                      plano_tratamento_id: editFormState.plano_tratamento_id ?? null,
+                    })
+                  }}
+                >
+                  <SelectTrigger id="edit-pacote">
+                    <SelectValue placeholder="Selecione o pacote" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Nenhum</SelectItem>
+                    {protocolosPacotes.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        {p.nome}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {editProtocoloPacoteId && editProtocoloPacoteId !== 'none' && !editFormState.paciente_id && (
+                  <p className="text-xs text-muted-foreground">Selecione um paciente para vincular o pacote.</p>
+                )}
               </div>
             </div>
 

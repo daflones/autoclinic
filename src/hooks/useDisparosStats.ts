@@ -1,0 +1,45 @@
+import { useQuery } from '@tanstack/react-query'
+
+export interface DisparosPeriodStats {
+  sent: number
+  failed: number
+  unique: number
+}
+
+export interface DisparosStatsResponse {
+  instanceName: string | null
+  stats: {
+    total: {
+      scheduled: number
+      running: number
+      sent: number
+      failed: number
+      canceled: number
+    }
+    hoje: DisparosPeriodStats
+    semana: DisparosPeriodStats
+    mes: DisparosPeriodStats
+  }
+}
+
+export function useDisparosStats(instanceName?: string | null) {
+  return useQuery<DisparosStatsResponse>({
+    queryKey: ['disparos-stats', instanceName ?? null],
+    queryFn: async () => {
+      const baseUrl = 'http://localhost:3001'
+      const url = instanceName
+        ? `${baseUrl}/api/disparos/stats?instanceName=${encodeURIComponent(instanceName)}`
+        : `${baseUrl}/api/disparos/stats`
+
+      const res = await fetch(url)
+      if (!res.ok) {
+        const txt = await res.text()
+        throw new Error(txt || 'Erro ao buscar stats de disparos')
+      }
+      return (await res.json()) as DisparosStatsResponse
+    },
+    staleTime: 1000 * 15,
+    refetchInterval: 1000 * 15,
+    refetchOnWindowFocus: true,
+  })
+}

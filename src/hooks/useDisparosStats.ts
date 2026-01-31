@@ -22,14 +22,20 @@ export interface DisparosStatsResponse {
   }
 }
 
+function getWhatsAppServerBaseUrl() {
+  const raw = String((import.meta as any)?.env?.VITE_WHATSAPP_SERVER_URL ?? '').trim()
+  return raw ? raw.replace(/\/+$/, '') : ''
+}
+
 export function useDisparosStats(instanceName?: string | null) {
   return useQuery<DisparosStatsResponse>({
     queryKey: ['disparos-stats', instanceName ?? null],
     queryFn: async () => {
-      const baseUrl = 'http://localhost:3001'
-      const url = instanceName
-        ? `${baseUrl}/api/disparos/stats?instanceName=${encodeURIComponent(instanceName)}`
-        : `${baseUrl}/api/disparos/stats`
+      const baseUrl = getWhatsAppServerBaseUrl()
+      const path = instanceName
+        ? `/api/disparos/stats?instanceName=${encodeURIComponent(instanceName)}`
+        : '/api/disparos/stats'
+      const url = baseUrl ? `${baseUrl}${path}` : path
 
       const res = await fetch(url)
       if (!res.ok) {

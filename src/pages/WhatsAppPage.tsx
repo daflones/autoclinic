@@ -71,6 +71,11 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 
+function getWhatsAppServerBaseUrl() {
+  const raw = String((import.meta as any)?.env?.VITE_WHATSAPP_SERVER_URL ?? '').trim()
+  return raw ? raw.replace(/\/+$/, '') : ''
+}
+
 export default function WhatsAppPage() {
   const [instanceName, setInstanceName] = useState('')
   const [phoneNumber, setPhoneNumber] = useState('')
@@ -312,9 +317,17 @@ export default function WhatsAppPage() {
     if (!instance?.instanceName) return
 
     try {
+      const baseUrl = getWhatsAppServerBaseUrl()
+      const batchesUrl = baseUrl
+        ? `${baseUrl}/api/disparos?instanceName=${encodeURIComponent(instance.instanceName)}`
+        : `/api/disparos?instanceName=${encodeURIComponent(instance.instanceName)}`
+      const activeUrl = baseUrl
+        ? `${baseUrl}/api/disparos/activeNumbers?instanceName=${encodeURIComponent(instance.instanceName)}`
+        : `/api/disparos/activeNumbers?instanceName=${encodeURIComponent(instance.instanceName)}`
+
       const [batchesRes, activeRes] = await Promise.all([
-        fetch(`http://localhost:3001/api/disparos?instanceName=${encodeURIComponent(instance.instanceName)}`),
-        fetch(`http://localhost:3001/api/disparos/activeNumbers?instanceName=${encodeURIComponent(instance.instanceName)}`),
+        fetch(batchesUrl),
+        fetch(activeUrl),
       ])
 
       const batchesRaw = await batchesRes.text()
@@ -495,6 +508,7 @@ export default function WhatsAppPage() {
 
     setIsEnqueueing(true)
     try {
+      const baseUrl = getWhatsAppServerBaseUrl()
       const items = selectedPacientes
         .map((p: any) => {
           const remotejid = String((p as any)?.remotejid ?? (p as any)?.remoteJid ?? '').trim()
@@ -522,9 +536,8 @@ export default function WhatsAppPage() {
         })
         .filter((it: any) => Boolean(it.number && it.text))
 
-      const endpoint = disparosBatchId
-        ? `http://localhost:3001/api/disparos/${disparosBatchId}/append`
-        : 'http://localhost:3001/api/disparos/enqueue'
+      const endpointPath = disparosBatchId ? `/api/disparos/${disparosBatchId}/append` : '/api/disparos/enqueue'
+      const endpoint = baseUrl ? `${baseUrl}${endpointPath}` : endpointPath
 
       const res = await fetch(endpoint, {
         method: 'POST',
@@ -573,7 +586,9 @@ export default function WhatsAppPage() {
 
   const cancelDisparos = async () => {
     if (!disparosBatchId) return
-    const res = await fetch(`http://localhost:3001/api/disparos/${disparosBatchId}/cancel`, {
+    const baseUrl = getWhatsAppServerBaseUrl()
+    const url = baseUrl ? `${baseUrl}/api/disparos/${disparosBatchId}/cancel` : `/api/disparos/${disparosBatchId}/cancel`
+    const res = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
     })
@@ -599,7 +614,9 @@ export default function WhatsAppPage() {
 
     async function poll() {
       try {
-        const res = await fetch(`http://localhost:3001/api/disparos/${disparosBatchId}`)
+        const baseUrl = getWhatsAppServerBaseUrl()
+        const url = baseUrl ? `${baseUrl}/api/disparos/${disparosBatchId}` : `/api/disparos/${disparosBatchId}`
+        const res = await fetch(url)
         if (res.status === 404) {
           if (!cancelled) {
             toast.message('Sessão de disparos não encontrada no servidor. A fila pode ter sido reiniciada. Criando nova sessão.')

@@ -20,6 +20,13 @@ import {
 } from '@/hooks/usePlanosTratamento'
 import { usePacientes } from '@/hooks/usePacientes'
 import { useProfissionaisClinica } from '@/hooks/useProfissionaisClinica'
+import { useProtocolosPacotes } from '@/hooks/useProtocolosPacotes'
+import {
+  useCreateSessoesTratamento,
+  useDeleteSessaoTratamento,
+  useSessoesTratamento,
+  useUpdateSessaoTratamento,
+} from '@/hooks/useSessoesTratamento'
 import { type StatusPlanoTratamento, type PlanoTratamento } from '@/services/api/planos-tratamento'
 import { toast } from 'sonner'
 import {
@@ -50,6 +57,7 @@ const statusFilterOptions = [{ value: 'todos', label: 'Todos' as const }, ...sta
 const initialFormState = {
   paciente_id: '',
   responsavel_profissional_id: '',
+  protocolo_pacote_id: '',
   titulo: '',
   descricao: '',
   status: 'rascunho' as StatusPlanoTratamento,
@@ -59,6 +67,12 @@ const initialFormState = {
   observacoes: '',
   data_prevista_inicio: '',
   data_prevista_conclusao: '',
+}
+
+function addDaysISO(date: Date, days: number) {
+  const d = new Date(date.getTime())
+  d.setDate(d.getDate() + days)
+  return d.toISOString()
 }
 
 type PlanoFormState = typeof initialFormState
@@ -97,6 +111,19 @@ export function PlanosTratamentoPage() {
 
   const { data: pacientes = [] } = usePacientes({ limit: 100 })
   const { data: profissionais = [] } = useProfissionaisClinica()
+  const { data: pacotes = [] } = useProtocolosPacotes({ status: 'ativo', limit: 1000 } as any)
+
+  const { data: sessoesPlano = [] } = useSessoesTratamento({
+    plano_tratamento_id: isDetailsOpen ? selectedPlanoId ?? undefined : undefined,
+  })
+
+  const createSessoes = useCreateSessoesTratamento()
+  const deleteSessao = useDeleteSessaoTratamento()
+  const updateSessao = useUpdateSessaoTratamento()
+
+  const [gerarSessoesQtd, setGerarSessoesQtd] = useState<number>(0)
+  const [gerarSessoesIntervaloDias, setGerarSessoesIntervaloDias] = useState<number>(7)
+  const [sessaoInicioPrevistoById, setSessaoInicioPrevistoById] = useState<Record<string, string>>({})
 
   const createPlano = useCreatePlanoTratamento()
   const updatePlano = useUpdatePlanoTratamento()
@@ -110,6 +137,10 @@ export function PlanosTratamentoPage() {
   const profissionaisMap = useMemo(() => {
     return new Map(profissionais.map((profissional) => [profissional.id, profissional.nome]))
   }, [profissionais])
+
+  const pacotesMap = useMemo(() => {
+    return new Map(pacotes.map((p: any) => [p.id, p.nome]))
+  }, [pacotes])
 
   useEffect(() => {
     setPage(1)
@@ -132,6 +163,7 @@ export function PlanosTratamentoPage() {
       {
         paciente_id: formState.paciente_id,
         responsavel_profissional_id: formState.responsavel_profissional_id || null,
+        protocolo_pacote_id: formState.protocolo_pacote_id || null,
         titulo: formState.titulo,
         descricao: formState.descricao || undefined,
         status: formState.status,
@@ -181,6 +213,7 @@ export function PlanosTratamentoPage() {
     setEditFormState({
       paciente_id: planoDetalhes.paciente_id,
       responsavel_profissional_id: planoDetalhes.responsavel_profissional_id ?? '',
+      protocolo_pacote_id: planoDetalhes.protocolo_pacote_id ?? '',
       titulo: planoDetalhes.titulo,
       descricao: planoDetalhes.descricao ?? '',
       status: planoDetalhes.status,
@@ -204,6 +237,7 @@ export function PlanosTratamentoPage() {
         data: {
           paciente_id: editFormState.paciente_id,
           responsavel_profissional_id: editFormState.responsavel_profissional_id || null,
+          protocolo_pacote_id: editFormState.protocolo_pacote_id || null,
           titulo: editFormState.titulo,
           descricao: editFormState.descricao || undefined,
           status: editFormState.status,
@@ -499,7 +533,7 @@ export function PlanosTratamentoPage() {
 
       {/* Criação de plano */}
       <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
-        <DialogContent className="max-w-4xl">
+        <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Novo plano de tratamento</DialogTitle>
             <DialogDescription>
@@ -552,6 +586,31 @@ export function PlanosTratamentoPage() {
                   </SelectContent>
                 </Select>
               </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Protocolo/Pacote</Label>
+              <Select
+                value={formState.protocolo_pacote_id || 'none'}
+                onValueChange={(value) =>
+                  setFormState((prev) => ({
+                    ...prev,
+                    protocolo_pacote_id: value === 'none' ? '' : value,
+                  }))
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione um protocolo/pacote" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Sem protocolo/pacote</SelectItem>
+                  {pacotes.map((p: any) => (
+                    <SelectItem key={p.id} value={p.id}>
+                      {p.nome}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="space-y-2">
@@ -679,7 +738,7 @@ export function PlanosTratamentoPage() {
 
       {/* Detalhes do plano */}
       <Dialog open={isDetailsOpen} onOpenChange={(open) => (open ? setIsDetailsOpen(true) : handleCloseDetails())}>
-        <DialogContent className="max-w-3xl">
+        <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
               {planoDetalhes ? planoDetalhes.titulo : 'Detalhes do plano'}
@@ -709,6 +768,14 @@ export function PlanosTratamentoPage() {
                   </p>
                 </div>
                 <div className="rounded-lg border border-dashed border-gray-200 p-4 dark:border-gray-800">
+                  <p className="text-xs font-semibold uppercase text-muted-foreground">Protocolo/Pacote</p>
+                  <p className="mt-1 text-sm font-medium text-foreground">
+                    {planoDetalhes.protocolo_pacote_id
+                      ? pacotesMap.get(planoDetalhes.protocolo_pacote_id) ?? 'Não informado'
+                      : 'Não informado'}
+                  </p>
+                </div>
+                <div className="rounded-lg border border-dashed border-gray-200 p-4 dark:border-gray-800">
                   <p className="text-xs font-semibold uppercase text-muted-foreground">Status atual</p>
                   <div className="mt-2 flex items-center gap-2">
                     {selectedPlanoStatusMeta && <Badge className={selectedPlanoStatusMeta.badgeClass}>{selectedPlanoStatusMeta.label}</Badge>}
@@ -726,6 +793,219 @@ export function PlanosTratamentoPage() {
                     {formatCurrency(Number(planoDetalhes.total_pago || 0))}
                   </p>
                 </div>
+              </div>
+
+              <div className="rounded-lg border border-dashed border-gray-200 p-4 dark:border-gray-800">
+                <p className="text-xs font-semibold uppercase text-muted-foreground">Sessões</p>
+
+                {(() => {
+                  const sessoes = (sessoesPlano || []).filter((s: any) => s.plano_tratamento_id === planoDetalhes.id)
+                  const realizadas = sessoes.filter((s: any) => Boolean(s.inicio_real) || s.status === 'concluida')
+                  const pendentes = sessoes.filter((s: any) => !Boolean(s.inicio_real) && s.status !== 'concluida')
+
+                  const datasRealizadas = realizadas
+                    .map((s: any) => s.inicio_real || s.inicio_previsto)
+                    .filter((d: any) => Boolean(d))
+                    .map((d: any) => new Date(d).toLocaleDateString('pt-BR'))
+                    .filter((d: any, idx: number, arr: any[]) => arr.indexOf(d) === idx)
+                    .slice(0, 5)
+
+                  const proximasRecomendadas = pendentes
+                    .map((s: any) => s.inicio_previsto)
+                    .filter((d: any) => Boolean(d))
+                    .filter((d: any, idx: number, arr: any[]) => arr.indexOf(d) === idx)
+                    .slice(0, 5)
+                    .map((d: any) => new Date(d).toLocaleDateString('pt-BR'))
+
+                  const canGerar = Boolean(
+                    planoDetalhes.paciente_id &&
+                      gerarSessoesQtd > 0 &&
+                      Number.isFinite(gerarSessoesQtd) &&
+                      gerarSessoesIntervaloDias >= 0
+                  )
+
+                  const getStartDateForAppend = () => {
+                    const dates = (sessoes || [])
+                      .map((s: any) => (s?.inicio_previsto ? new Date(s.inicio_previsto).getTime() : null))
+                      .filter((x: any) => typeof x === 'number' && Number.isFinite(x)) as number[]
+                    if (dates.length === 0) return new Date()
+                    return new Date(Math.max(...dates))
+                  }
+
+                  return (
+                    <div className="mt-3 space-y-4">
+                      <div className="grid gap-3 sm:grid-cols-3">
+                        <div className="rounded-lg bg-muted/30 p-3">
+                          <div className="text-xs text-muted-foreground">Total de sessões</div>
+                          <div className="text-lg font-semibold text-foreground">{sessoes.length}</div>
+                        </div>
+                        <div className="rounded-lg bg-muted/30 p-3">
+                          <div className="text-xs text-muted-foreground">Sessões realizadas</div>
+                          <div className="text-lg font-semibold text-foreground">{realizadas.length}</div>
+                        </div>
+                        <div className="rounded-lg bg-muted/30 p-3">
+                          <div className="text-xs text-muted-foreground">Sessões pendentes</div>
+                          <div className="text-lg font-semibold text-foreground">{pendentes.length}</div>
+                        </div>
+                      </div>
+
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <div className="rounded-lg bg-muted/20 p-3">
+                          <div className="text-xs text-muted-foreground">Datas realizadas</div>
+                          <div className="mt-1 text-sm text-foreground">{datasRealizadas.length ? datasRealizadas.join(', ') : 'Nenhuma'}</div>
+                        </div>
+                        <div className="rounded-lg bg-muted/20 p-3">
+                          <div className="text-xs text-muted-foreground">Próximas recomendadas</div>
+                          <div className="mt-1 text-sm text-foreground">{proximasRecomendadas.length ? proximasRecomendadas.join(', ') : 'Nenhuma'}</div>
+                        </div>
+                      </div>
+
+                      <div className="rounded-lg border border-border/60 p-3">
+                        <div className="grid gap-3 sm:grid-cols-3 sm:items-end">
+                          <div className="space-y-2">
+                            <Label>Adicionar sessões</Label>
+                            <Input
+                              type="number"
+                              min={0}
+                              value={gerarSessoesQtd}
+                              onChange={(e) => setGerarSessoesQtd(Number(e.target.value) || 0)}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Intervalo (dias)</Label>
+                            <Input
+                              type="number"
+                              min={0}
+                              value={gerarSessoesIntervaloDias}
+                              onChange={(e) => setGerarSessoesIntervaloDias(Number(e.target.value) || 0)}
+                            />
+                          </div>
+                          <div>
+                            <Button
+                              type="button"
+                              disabled={!canGerar || createSessoes.isPending}
+                              onClick={async () => {
+                                try {
+                                  const start = getStartDateForAppend()
+                                  const payloads = Array.from({ length: gerarSessoesQtd }).map((_, idx) => ({
+                                    paciente_id: planoDetalhes.paciente_id,
+                                    plano_tratamento_id: planoDetalhes.id,
+                                    profissional_id: planoDetalhes.responsavel_profissional_id ?? null,
+                                    status: 'planejada' as any,
+                                    inicio_previsto: addDaysISO(start, (idx + 1) * gerarSessoesIntervaloDias),
+                                  }))
+                                  await createSessoes.mutateAsync(payloads)
+                                  toast.success('Sessões adicionadas!')
+                                } catch (e: any) {
+                                  toast.error(e?.message || 'Erro ao adicionar sessões')
+                                }
+                              }}
+                            >
+                              {createSessoes.isPending ? 'Adicionando...' : 'Adicionar'}
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+
+                      {sessoes.length === 0 ? null : (
+                        <div className="space-y-2">
+                          {sessoes.slice(0, 10).map((s: any, idx: number) => {
+                            const realizado = Boolean(s.inicio_real) || s.status === 'concluida'
+                            const label = s.inicio_previsto
+                              ? new Date(s.inicio_previsto).toLocaleDateString('pt-BR')
+                              : `Sessão ${idx + 1}`
+                            const localInicioPrevisto = sessaoInicioPrevistoById[s.id] ?? (s.inicio_previsto || '')
+                            return (
+                              <div key={s.id} className="flex items-center justify-between gap-3 rounded-lg border border-border/60 p-3">
+                                <div className="min-w-0">
+                                  <div className="text-sm font-medium text-foreground">{label}</div>
+                                  <div className="text-xs text-muted-foreground">Status: {String(s.status || '').replace(/_/g, ' ')}</div>
+
+                                  <div className="mt-2 grid gap-2 sm:grid-cols-2 sm:items-end">
+                                    <div className="space-y-1">
+                                      <div className="text-xs text-muted-foreground">Data prevista</div>
+                                      <SimpleDateTime
+                                        showTime={false}
+                                        value={localInicioPrevisto}
+                                        onChange={(value) =>
+                                          setSessaoInicioPrevistoById((prev) => ({ ...prev, [s.id]: value }))
+                                        }
+                                      />
+                                    </div>
+                                    <div>
+                                      <Button
+                                        type="button"
+                                        variant="outline"
+                                        disabled={updateSessao.isPending}
+                                        onClick={async () => {
+                                          try {
+                                            await updateSessao.mutateAsync({
+                                              id: s.id,
+                                              data: { inicio_previsto: localInicioPrevisto || null },
+                                            })
+                                            toast.success('Sessão atualizada!')
+                                          } catch (e: any) {
+                                            toast.error(e?.message || 'Erro ao atualizar sessão')
+                                          }
+                                        }}
+                                      >
+                                        Salvar data
+                                      </Button>
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="flex flex-col gap-2 sm:flex-row">
+                                  <Button
+                                    type="button"
+                                    variant={realizado ? 'outline' : 'default'}
+                                    disabled={updateSessao.isPending}
+                                    onClick={async () => {
+                                      try {
+                                        if (realizado) {
+                                          await updateSessao.mutateAsync({
+                                            id: s.id,
+                                            data: { status: 'planejada' as any, inicio_real: null, termino_real: null },
+                                          })
+                                        } else {
+                                          await updateSessao.mutateAsync({
+                                            id: s.id,
+                                            data: { status: 'concluida' as any, inicio_real: s.inicio_previsto || new Date().toISOString() },
+                                          })
+                                        }
+                                      } catch (e: any) {
+                                        toast.error(e?.message || 'Erro ao atualizar sessão')
+                                      }
+                                    }}
+                                  >
+                                    {realizado ? 'Desfazer' : 'Marcar realizada'}
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    variant="destructive"
+                                    disabled={deleteSessao.isPending}
+                                    onClick={async () => {
+                                      try {
+                                        await deleteSessao.mutateAsync(s.id)
+                                        toast.success('Sessão removida!')
+                                      } catch (e: any) {
+                                        toast.error(e?.message || 'Erro ao remover sessão')
+                                      }
+                                    }}
+                                  >
+                                    Remover
+                                  </Button>
+                                </div>
+                              </div>
+                            )
+                          })}
+                          {sessoes.length > 10 ? (
+                            <div className="text-xs text-muted-foreground">Mostrando 10 de {sessoes.length} sessões.</div>
+                          ) : null}
+                        </div>
+                      )}
+                    </div>
+                  )
+                })()}
               </div>
 
               {planoDetalhes.descricao && (
@@ -884,6 +1164,35 @@ export function PlanosTratamentoPage() {
                     </SelectContent>
                   </Select>
                 </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Protocolo/Pacote</Label>
+                <Select
+                  value={editFormState.protocolo_pacote_id || 'none'}
+                  onValueChange={(value) =>
+                    setEditFormState((prev) =>
+                      prev
+                        ? {
+                            ...prev,
+                            protocolo_pacote_id: value === 'none' ? '' : value,
+                          }
+                        : prev,
+                    )
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione um protocolo/pacote" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Sem protocolo/pacote</SelectItem>
+                    {pacotes.map((p: any) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        {p.nome}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="space-y-2">

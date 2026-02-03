@@ -11,6 +11,7 @@ import { useClinicaIAConfig, useUpdateClinicaIAConfig } from '@/hooks/useClinica
 import { deleteMidia, getSignedMidiaUrl, uploadMidia } from '@/services/api/storage-midias'
 import { useProfissionaisClinica } from '@/hooks/useProfissionaisClinica'
 import { useProtocolosPacotes } from '@/hooks/useProtocolosPacotes'
+import { profissionalMidiasService } from '@/services/api/profissional-midias'
 
 const defaultHorarios = {
   segunda: { ativo: true, inicio: '08:00', fim: '18:00' },
@@ -199,7 +200,23 @@ export function ClinicaIAConfigPage() {
       setRegrasInternas({ ...regrasInternas, ...(clinicaConfig.regras_internas || {}) })
       setGatilhos({ ...gatilhos, ...(clinicaConfig.gatilhos_diferenciais || {}) })
       setExtra({ ...(clinicaConfig.extra || {}) })
-      setSelectedProfissionalIds(((clinicaConfig.extra as any)?.selected_profissional_ids as string[]) || [])
+
+      const profissionaisSaved = Array.isArray((clinicaConfig as any)?.profissionais)
+        ? ((clinicaConfig as any).profissionais as any[])
+        : []
+      const profissionalIdsFromColumn = profissionaisSaved
+        .map((p: any) => {
+          if (typeof p === 'string') return p
+          if (p && typeof p === 'object' && typeof p.id === 'string') return p.id
+          return null
+        })
+        .filter(Boolean) as string[]
+
+      const profissionalIdsFromExtra = Array.isArray((clinicaConfig.extra as any)?.selected_profissional_ids)
+        ? (((clinicaConfig.extra as any).selected_profissional_ids as any[]) as string[])
+        : []
+
+      setSelectedProfissionalIds(profissionalIdsFromColumn.length > 0 ? profissionalIdsFromColumn : profissionalIdsFromExtra)
       setSelectedPacoteIds(((clinicaConfig.extra as any)?.selected_pacote_ids as string[]) || [])
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -366,10 +383,30 @@ export function ClinicaIAConfigPage() {
     }
   }
 
-  const handleSaveConfig = () => {
-    updateClinicaConfig.mutate({
+  const handleSaveConfig = async () => {
+    const profissionaisPayload = (
+      await Promise.all(
+        selectedProfissionalIds.map(async (id) => {
+          const prof = profissionaisExistentes.find((p) => p.id === id)
+          if (!prof) return null
+          let midiasDoProfissional: any[] = []
+          try {
+            midiasDoProfissional = await profissionalMidiasService.listByProfissionalId(id)
+          } catch {
+            midiasDoProfissional = []
+          }
+          return {
+            ...prof,
+            midias: midiasDoProfissional,
+          }
+        })
+      )
+    ).filter(Boolean)
+
+    await updateClinicaConfig.mutateAsync({
       identidade,
       posicionamento,
+      profissionais: profissionaisPayload,
       politicas,
       prova_social: provaSocial,
       midias,

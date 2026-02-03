@@ -1,9 +1,11 @@
 import { useMemo } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   sessoesTratamentoService,
   type SessaoTratamento,
   type SessaoTratamentoFilters,
+  type SessaoTratamentoCreateData,
+  type SessaoTratamentoUpdateData,
 } from '@/services/api/sessoes-tratamento'
 
 export function useSessoesTratamento(filters: SessaoTratamentoFilters = {}) {
@@ -24,4 +26,38 @@ export function useSessoesTratamento(filters: SessaoTratamentoFilters = {}) {
     ...query,
     data: sessoes,
   }
+}
+
+export function useCreateSessoesTratamento() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (payloads: SessaoTratamentoCreateData[]) => sessoesTratamentoService.createMany(payloads),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['sessoes-tratamento'] })
+    },
+  })
+}
+
+export function useDeleteSessaoTratamento() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (id: string) => sessoesTratamentoService.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['sessoes-tratamento'] })
+    },
+  })
+}
+
+export function useUpdateSessaoTratamento() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: SessaoTratamentoUpdateData }) =>
+      sessoesTratamentoService.update(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['sessoes-tratamento'] })
+    },
+  })
 }

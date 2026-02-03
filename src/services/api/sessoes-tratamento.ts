@@ -3,8 +3,8 @@ import { getAdminContext } from './_tenant'
 
 export type StatusSessaoTratamento =
   | 'planejada'
-  | 'agendada'
-  | 'realizada'
+  | 'em_andamento'
+  | 'concluida'
   | 'cancelada'
   | 'nao_compareceu'
 
@@ -35,6 +35,23 @@ export interface SessaoTratamentoFilters {
   data_fim?: string
 }
 
+export interface SessaoTratamentoCreateData {
+  plano_tratamento_id?: string | null
+  agendamento_id?: string | null
+  paciente_id: string
+  profissional_id?: string | null
+  procedimento_id?: string | null
+  status?: StatusSessaoTratamento
+  inicio_previsto?: string | null
+  termino_previsto?: string | null
+  inicio_real?: string | null
+  termino_real?: string | null
+  duracao_minutos?: number | null
+  observacoes?: string | null
+}
+
+export type SessaoTratamentoUpdateData = Partial<Omit<SessaoTratamentoCreateData, 'paciente_id'>>
+
 export const sessoesTratamentoService = {
   async list(filters: SessaoTratamentoFilters = {}): Promise<SessaoTratamento[]> {
     const { adminProfileId } = await getAdminContext()
@@ -60,5 +77,77 @@ export const sessoesTratamentoService = {
     }
 
     return (data as SessaoTratamento[]) ?? []
+  },
+
+  async createMany(payloads: SessaoTratamentoCreateData[]): Promise<SessaoTratamento[]> {
+    if (!Array.isArray(payloads) || payloads.length === 0) return []
+    const { adminProfileId } = await getAdminContext()
+
+    const baseRows = payloads.map((p) => ({
+      admin_profile_id: adminProfileId,
+      plano_tratamento_id: p.plano_tratamento_id ?? null,
+      agendamento_id: p.agendamento_id ?? null,
+      paciente_id: p.paciente_id,
+      profissional_id: p.profissional_id ?? null,
+      procedimento_id: p.procedimento_id ?? null,
+      status: p.status ?? 'planejada',
+      inicio_previsto: p.inicio_previsto ?? null,
+      termino_previsto: p.termino_previsto ?? null,
+      inicio_real: p.inicio_real ?? null,
+      termino_real: p.termino_real ?? null,
+      duracao_minutos: p.duracao_minutos ?? null,
+      observacoes: p.observacoes ?? null,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }))
+
+    const { data, error } = await supabase
+      .from('sessoes_tratamento')
+      .insert(baseRows)
+      .select('*')
+
+    if (error) {
+      console.error('Erro ao criar sessões de tratamento:', error)
+      throw new Error(`Erro ao criar sessões de tratamento: ${error.message}`)
+    }
+
+    return (data as SessaoTratamento[]) ?? []
+  },
+
+  async update(id: string, patch: SessaoTratamentoUpdateData): Promise<SessaoTratamento> {
+    const { adminProfileId } = await getAdminContext()
+
+    const { data, error } = await supabase
+      .from('sessoes_tratamento')
+      .update({
+        ...patch,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', id)
+      .eq('admin_profile_id', adminProfileId)
+      .select('*')
+      .single()
+
+    if (error || !data) {
+      console.error('Erro ao atualizar sessão de tratamento:', error)
+      throw new Error(error?.message || 'Erro ao atualizar sessão de tratamento')
+    }
+
+    return data as SessaoTratamento
+  },
+
+  async delete(id: string): Promise<void> {
+    const { adminProfileId } = await getAdminContext()
+
+    const { error } = await supabase
+      .from('sessoes_tratamento')
+      .delete()
+      .eq('id', id)
+      .eq('admin_profile_id', adminProfileId)
+
+    if (error) {
+      console.error('Erro ao deletar sessão de tratamento:', error)
+      throw new Error(error.message || 'Erro ao deletar sessão de tratamento')
+    }
   },
 }

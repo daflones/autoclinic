@@ -3,6 +3,7 @@ import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Loader2, Plus, Search, Users, UserPlus, Activity, Ban, Trash2 } from 'lucide-react'
+import { useQueryClient } from '@tanstack/react-query'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -17,6 +18,14 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { SimpleDateTime } from '@/components/ui/simple-datetime'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -36,13 +45,30 @@ import {
   useUpdatePaciente,
   useDeletePaciente,
 } from '@/hooks/usePacientes'
-import { useAgendamentosClinica } from '@/hooks/useAgendamentosClinica'
-import { usePlanosTratamento } from '@/hooks/usePlanosTratamento'
-import { useSessoesTratamento } from '@/hooks/useSessoesTratamento'
-import { usePacienteFotos, useCreatePacienteFoto } from '@/hooks/usePacienteFotos'
+import {
+  useAgendamentosClinica,
+  useDeleteAgendamentoClinica,
+  useUpdateAgendamentoClinica,
+} from '@/hooks/useAgendamentosClinica'
+import {
+  usePlanosTratamento,
+  useDeletePlanoTratamento,
+  useUpdatePlanoTratamento,
+} from '@/hooks/usePlanosTratamento'
+import {
+  useSessoesTratamento,
+  useUpdateSessaoTratamento,
+  useDeleteSessaoTratamento,
+} from '@/hooks/useSessoesTratamento'
+import { useProtocolosPacotes } from '@/hooks/useProtocolosPacotes'
+import {
+  usePacienteFotos,
+  useCreatePacienteFoto,
+  useDeletePacienteFoto,
+} from '@/hooks/usePacienteFotos'
 import type { PacienteFilters, PacienteCreateData } from '@/services/api/pacientes'
 import { type StatusPaciente, type SexoPaciente } from '@/services/api/pacientes'
-import { uploadMidia, getSignedMidiaUrl } from '@/services/api/storage-midias'
+import { deleteMidia, uploadMidia, getSignedMidiaUrl } from '@/services/api/storage-midias'
 
 const pacienteSchema = z.object({
   nome_completo: z.string().min(1, 'Nome completo é obrigatório'),
@@ -143,6 +169,11 @@ type StatusFilter = 'all' | StatusPaciente
 type ViewMode = 'lista' | 'kanban'
 
 export function PacientesPage() {
+  const queryClient = useQueryClient()
+  const [filters, setFilters] = useState<PacienteFilters>({
+    search: '',
+    status: 'all',
+  })
   const [searchTerm, setSearchTerm] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
@@ -339,11 +370,50 @@ export function PacientesPage() {
   const createPaciente = useCreatePaciente()
   const updatePaciente = useUpdatePaciente()
   const deletePaciente = useDeletePaciente()
+  const deleteAgendamentoClinica = useDeleteAgendamentoClinica()
+  const updateAgendamentoClinica = useUpdateAgendamentoClinica()
+  const deletePlanoTratamento = useDeletePlanoTratamento()
+  const updatePlanoTratamento = useUpdatePlanoTratamento()
+  const deletePacienteFoto = useDeletePacienteFoto()
+  const updateSessaoTratamento = useUpdateSessaoTratamento()
+  const deleteSessaoTratamento = useDeleteSessaoTratamento()
+
+  const [isEditingPaciente, setIsEditingPaciente] = useState(false)
+  const [editingPacienteDraft, setEditingPacienteDraft] = useState<Record<string, any> | null>(null)
+
+  const [editingAgendamentoId, setEditingAgendamentoId] = useState<string | null>(null)
+  const [editingAgendamentoDraft, setEditingAgendamentoDraft] = useState<Record<string, any> | null>(null)
+
+  const [editingPlanoId, setEditingPlanoId] = useState<string | null>(null)
+  const [editingPlanoDraft, setEditingPlanoDraft] = useState<Record<string, any> | null>(null)
+
+  const [editingSessaoId, setEditingSessaoId] = useState<string | null>(null)
+  const [editingSessaoDraft, setEditingSessaoDraft] = useState<Record<string, any> | null>(null)
+
+  const [expandedPlanoSessoesById, setExpandedPlanoSessoesById] = useState<Record<string, boolean>>({})
 
   const pacienteSelecionado = useMemo(
     () => pacientes.find((p) => p.id === selectedPacienteId) ?? null,
     [pacientes, selectedPacienteId],
   )
+
+  useEffect(() => {
+    if (!isDetailsOpen || !pacienteSelecionado) {
+      setIsEditingPaciente(false)
+      setEditingPacienteDraft(null)
+      setEditingAgendamentoId(null)
+      setEditingAgendamentoDraft(null)
+      setEditingPlanoId(null)
+      setEditingPlanoDraft(null)
+      setEditingSessaoId(null)
+      setEditingSessaoDraft(null)
+      setExpandedPlanoSessoesById({})
+      return
+    }
+    if (!isEditingPaciente) {
+      setEditingPacienteDraft(null)
+    }
+  }, [isDetailsOpen, pacienteSelecionado, isEditingPaciente])
 
   const { data: agendamentosPaciente, isLoading: isLoadingAgendamentos } = useAgendamentosClinica({
     paciente_id: selectedPacienteId ?? undefined,
@@ -356,6 +426,8 @@ export function PacientesPage() {
     limit: 50,
     page: 1,
   })
+
+  const { data: pacotesAtivos = [] } = useProtocolosPacotes({ status: 'ativo', limit: 1000 } as any)
 
   const { data: sessoesPaciente, isLoading: isLoadingSessoes } = useSessoesTratamento({
     paciente_id: selectedPacienteId ?? undefined,
@@ -1007,6 +1079,7 @@ export function PacientesPage() {
             const statusKanbanLabel = getKanbanStatusLabel(kanbanKey)
 
             const planosAtivos = (planosPaciente || []).filter((p) => p.status === 'aprovado' || p.status === 'em_execucao')
+            const pacotesMap = new Map((pacotesAtivos || []).map((p: any) => [p.id, p.nome]))
             const sessoesByPlanoId = (sessoesPaciente || []).reduce<Record<string, any[]>>((acc, s: any) => {
               const k = s.plano_tratamento_id || 'sem_plano'
               acc[k] = acc[k] ? [...acc[k], s] : [s]
@@ -1040,7 +1113,82 @@ export function PacientesPage() {
                   </div>
                 </div>
 
-                <Tabs value={tabPacientePerfil} onValueChange={(v) => setTabPacientePerfil(v as any)}>
+                {tabPacientePerfil === 'geral' ? (
+                  <div className="flex items-center justify-end gap-2">
+                    {isEditingPaciente ? (
+                      <>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => {
+                            setIsEditingPaciente(false)
+                            setEditingPacienteDraft(null)
+                          }}
+                        >
+                          Cancelar
+                        </Button>
+                        <Button
+                          type="button"
+                          disabled={updatePaciente.isPending}
+                          onClick={async () => {
+                            if (!editingPacienteDraft) return
+                            try {
+                              const enderecoRaw = editingPacienteDraft.endereco
+                              const endereco = enderecoRaw && typeof enderecoRaw === 'object' ? enderecoRaw : null
+                              await updatePaciente.mutateAsync({
+                                id: paciente.id,
+                                data: {
+                                  cpf: editingPacienteDraft.cpf || null,
+                                  rg: editingPacienteDraft.rg || null,
+                                  email: editingPacienteDraft.email || null,
+                                  telefone: editingPacienteDraft.telefone || null,
+                                  whatsapp: editingPacienteDraft.whatsapp || null,
+                                  endereco,
+                                },
+                              })
+                              setIsEditingPaciente(false)
+                              setEditingPacienteDraft(null)
+                            } catch {
+                              // handled by hook
+                            }
+                          }}
+                        >
+                          Salvar
+                        </Button>
+                      </>
+                    ) : (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => {
+                          setIsEditingPaciente(true)
+                          setEditingPacienteDraft({
+                            cpf: (paciente as any).cpf ?? '',
+                            rg: (paciente as any).rg ?? '',
+                            email: paciente.email ?? '',
+                            telefone: paciente.telefone ?? '',
+                            whatsapp: paciente.whatsapp ?? '',
+                            endereco: (paciente as any).endereco ?? {},
+                          })
+                        }}
+                      >
+                        Editar
+                      </Button>
+                    )}
+                  </div>
+                ) : null}
+
+                <Tabs
+                  value={tabPacientePerfil}
+                  onValueChange={(v) => {
+                    const next = v as any
+                    setTabPacientePerfil(next)
+                    if (next !== 'geral') {
+                      setIsEditingPaciente(false)
+                      setEditingPacienteDraft(null)
+                    }
+                  }}
+                >
                   <TabsList className="w-full justify-start">
                     <TabsTrigger value="geral">Geral</TabsTrigger>
                     <TabsTrigger value="agendamentos">Agendamentos</TabsTrigger>
@@ -1053,55 +1201,159 @@ export function PacientesPage() {
                       <div className="space-y-3 rounded-xl border border-border/60 bg-background p-4">
                         <div className="text-sm font-medium text-foreground">Documentos</div>
                         <div className="grid gap-3 sm:grid-cols-2">
-                          {(paciente as any).cpf && (
-                            <div className="text-sm">
-                              <div className="text-xs text-muted-foreground">CPF</div>
-                              <div className="font-medium text-foreground">{(paciente as any).cpf}</div>
-                            </div>
-                          )}
-                          {(paciente as any).rg && (
-                            <div className="text-sm">
-                              <div className="text-xs text-muted-foreground">RG</div>
-                              <div className="font-medium text-foreground">{(paciente as any).rg}</div>
-                            </div>
-                          )}
+                          <div className="text-sm">
+                            <div className="text-xs text-muted-foreground">CPF</div>
+                            {isEditingPaciente ? (
+                              <Input
+                                value={String(editingPacienteDraft?.cpf ?? '')}
+                                onChange={(e) => setEditingPacienteDraft((prev) => ({ ...(prev || {}), cpf: e.target.value }))}
+                              />
+                            ) : (
+                              <div className="font-medium text-foreground">{(paciente as any).cpf || '—'}</div>
+                            )}
+                          </div>
+                          <div className="text-sm">
+                            <div className="text-xs text-muted-foreground">RG</div>
+                            {isEditingPaciente ? (
+                              <Input
+                                value={String(editingPacienteDraft?.rg ?? '')}
+                                onChange={(e) => setEditingPacienteDraft((prev) => ({ ...(prev || {}), rg: e.target.value }))}
+                              />
+                            ) : (
+                              <div className="font-medium text-foreground">{(paciente as any).rg || '—'}</div>
+                            )}
+                          </div>
                         </div>
                       </div>
 
                       <div className="space-y-3 rounded-xl border border-border/60 bg-background p-4">
                         <div className="text-sm font-medium text-foreground">Contato</div>
                         <div className="grid gap-3 sm:grid-cols-2">
-                          {paciente.email && (
-                            <div className="text-sm">
-                              <div className="text-xs text-muted-foreground">E-mail</div>
-                              <div className="font-medium text-foreground">{paciente.email}</div>
-                            </div>
-                          )}
-                          {paciente.whatsapp && (
-                            <div className="text-sm">
-                              <div className="text-xs text-muted-foreground">Whatsapp</div>
-                              <div className="font-medium text-foreground">{paciente.whatsapp}</div>
-                            </div>
-                          )}
+                          <div className="text-sm">
+                            <div className="text-xs text-muted-foreground">E-mail</div>
+                            {isEditingPaciente ? (
+                              <Input
+                                value={String(editingPacienteDraft?.email ?? '')}
+                                onChange={(e) => setEditingPacienteDraft((prev) => ({ ...(prev || {}), email: e.target.value }))}
+                              />
+                            ) : (
+                              <div className="font-medium text-foreground">{paciente.email || '—'}</div>
+                            )}
+                          </div>
+                          <div className="text-sm">
+                            <div className="text-xs text-muted-foreground">Whatsapp</div>
+                            {isEditingPaciente ? (
+                              <Input
+                                value={String(editingPacienteDraft?.whatsapp ?? '')}
+                                onChange={(e) => setEditingPacienteDraft((prev) => ({ ...(prev || {}), whatsapp: e.target.value }))}
+                              />
+                            ) : (
+                              <div className="font-medium text-foreground">{paciente.whatsapp || '—'}</div>
+                            )}
+                          </div>
+                          <div className="text-sm">
+                            <div className="text-xs text-muted-foreground">Telefone</div>
+                            {isEditingPaciente ? (
+                              <Input
+                                value={String(editingPacienteDraft?.telefone ?? '')}
+                                onChange={(e) => setEditingPacienteDraft((prev) => ({ ...(prev || {}), telefone: e.target.value }))}
+                              />
+                            ) : (
+                              <div className="font-medium text-foreground">{paciente.telefone || '—'}</div>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </div>
 
-                    {(paciente as any).endereco && Object.keys((paciente as any).endereco || {}).length > 0 && (
-                      <div className="mt-4 rounded-xl border border-border/60 bg-background p-4 text-sm">
-                        <div className="text-sm font-medium text-foreground">Endereço</div>
-                        <div className="mt-2 font-medium text-foreground">
-                          {[(paciente as any).endereco?.logradouro, (paciente as any).endereco?.numero, (paciente as any).endereco?.bairro]
-                            .filter(Boolean)
-                            .join(', ')}
+                    <div className="mt-4 rounded-xl border border-border/60 bg-background p-4 text-sm">
+                      <div className="text-sm font-medium text-foreground">Endereço</div>
+                      {isEditingPaciente ? (
+                        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                          <Input
+                            placeholder="Logradouro"
+                            value={String(editingPacienteDraft?.endereco?.logradouro ?? '')}
+                            onChange={(e) =>
+                              setEditingPacienteDraft((prev) => ({
+                                ...(prev || {}),
+                                endereco: { ...(prev?.endereco || {}), logradouro: e.target.value },
+                              }))
+                            }
+                          />
+                          <Input
+                            placeholder="Número"
+                            value={String(editingPacienteDraft?.endereco?.numero ?? '')}
+                            onChange={(e) =>
+                              setEditingPacienteDraft((prev) => ({
+                                ...(prev || {}),
+                                endereco: { ...(prev?.endereco || {}), numero: e.target.value },
+                              }))
+                            }
+                          />
+                          <Input
+                            placeholder="Bairro"
+                            value={String(editingPacienteDraft?.endereco?.bairro ?? '')}
+                            onChange={(e) =>
+                              setEditingPacienteDraft((prev) => ({
+                                ...(prev || {}),
+                                endereco: { ...(prev?.endereco || {}), bairro: e.target.value },
+                              }))
+                            }
+                          />
+                          <Input
+                            placeholder="Cidade"
+                            value={String(editingPacienteDraft?.endereco?.cidade ?? '')}
+                            onChange={(e) =>
+                              setEditingPacienteDraft((prev) => ({
+                                ...(prev || {}),
+                                endereco: { ...(prev?.endereco || {}), cidade: e.target.value },
+                              }))
+                            }
+                          />
+                          <Input
+                            placeholder="Estado"
+                            value={String(editingPacienteDraft?.endereco?.estado ?? '')}
+                            onChange={(e) =>
+                              setEditingPacienteDraft((prev) => ({
+                                ...(prev || {}),
+                                endereco: { ...(prev?.endereco || {}), estado: e.target.value },
+                              }))
+                            }
+                          />
+                          <Input
+                            placeholder="CEP"
+                            value={String(editingPacienteDraft?.endereco?.cep ?? '')}
+                            onChange={(e) =>
+                              setEditingPacienteDraft((prev) => ({
+                                ...(prev || {}),
+                                endereco: { ...(prev?.endereco || {}), cep: e.target.value },
+                              }))
+                            }
+                          />
                         </div>
-                        <div className="text-muted-foreground">
-                          {[(paciente as any).endereco?.cidade, (paciente as any).endereco?.estado, (paciente as any).endereco?.cep]
-                            .filter(Boolean)
-                            .join(' - ')}
-                        </div>
-                      </div>
-                    )}
+                      ) : (
+                        <>
+                          <div className="mt-2 font-medium text-foreground">
+                            {[
+                              (paciente as any).endereco?.logradouro,
+                              (paciente as any).endereco?.numero,
+                              (paciente as any).endereco?.bairro,
+                            ]
+                              .filter(Boolean)
+                              .join(', ') || '—'}
+                          </div>
+                          <div className="text-muted-foreground">
+                            {[
+                              (paciente as any).endereco?.cidade,
+                              (paciente as any).endereco?.estado,
+                              (paciente as any).endereco?.cep,
+                            ]
+                              .filter(Boolean)
+                              .join(' - ') || '—'}
+                          </div>
+                        </>
+                      )}
+                    </div>
                   </TabsContent>
 
                   <TabsContent value="agendamentos">
@@ -1116,10 +1368,58 @@ export function PacientesPage() {
                             <div key={a.id} className="rounded-lg border border-border/60 p-3">
                               <div className="flex items-start justify-between gap-3">
                                 <div>
-                                  <div className="text-sm font-medium text-foreground">{a.titulo}</div>
-                                  <div className="mt-1 text-xs text-muted-foreground">
-                                    {new Date(a.data_inicio).toLocaleString('pt-BR')} - {new Date(a.data_fim).toLocaleTimeString('pt-BR')}
-                                  </div>
+                                  {editingAgendamentoId === a.id ? (
+                                    <div className="space-y-2">
+                                      <Input
+                                        value={String(editingAgendamentoDraft?.titulo ?? '')}
+                                        onChange={(e) =>
+                                          setEditingAgendamentoDraft((prev) => ({ ...(prev || {}), titulo: e.target.value }))
+                                        }
+                                      />
+                                      <div className="grid gap-3 sm:grid-cols-2">
+                                        <SimpleDateTime
+                                          value={String(editingAgendamentoDraft?.data_inicio ?? '')}
+                                          onChange={(v) => setEditingAgendamentoDraft((prev) => ({ ...(prev || {}), data_inicio: v }))}
+                                          label="Início"
+                                        />
+                                        <SimpleDateTime
+                                          value={String(editingAgendamentoDraft?.data_fim ?? '')}
+                                          onChange={(v) => setEditingAgendamentoDraft((prev) => ({ ...(prev || {}), data_fim: v }))}
+                                          label="Fim"
+                                        />
+                                      </div>
+                                      <div className="max-w-xs">
+                                        <Label className="text-xs text-muted-foreground">Status</Label>
+                                        <Select
+                                          value={String(editingAgendamentoDraft?.status ?? 'agendado')}
+                                          onValueChange={(v) =>
+                                            setEditingAgendamentoDraft((prev) => ({ ...(prev || {}), status: v }))
+                                          }
+                                        >
+                                          <SelectTrigger>
+                                            <SelectValue placeholder="Selecione" />
+                                          </SelectTrigger>
+                                          <SelectContent>
+                                            <SelectItem value="agendado">Agendado</SelectItem>
+                                            <SelectItem value="confirmado">Confirmado</SelectItem>
+                                            <SelectItem value="check_in">Check-in</SelectItem>
+                                            <SelectItem value="em_andamento">Em andamento</SelectItem>
+                                            <SelectItem value="concluido">Concluído</SelectItem>
+                                            <SelectItem value="cancelado">Cancelado</SelectItem>
+                                            <SelectItem value="nao_compareceu">Não compareceu</SelectItem>
+                                            <SelectItem value="remarcado">Remarcado</SelectItem>
+                                          </SelectContent>
+                                        </Select>
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <>
+                                      <div className="text-sm font-medium text-foreground">{a.titulo}</div>
+                                      <div className="mt-1 text-xs text-muted-foreground">
+                                        {new Date(a.data_inicio).toLocaleString('pt-BR')} - {new Date(a.data_fim).toLocaleTimeString('pt-BR')}
+                                      </div>
+                                    </>
+                                  )}
                                   {a.profissional?.nome && (
                                     <div className="mt-1 text-xs text-muted-foreground">Profissional: {a.profissional.nome}</div>
                                   )}
@@ -1128,6 +1428,84 @@ export function PacientesPage() {
                                   <span className="inline-flex rounded-full bg-muted px-3 py-1 text-xs font-medium text-foreground">
                                     {String(a.status || '').replace(/_/g, ' ')}
                                   </span>
+                                  <div className="mt-2 flex justify-end">
+                                    {editingAgendamentoId === a.id ? (
+                                      <div className="flex gap-2">
+                                        <Button
+                                          type="button"
+                                          size="sm"
+                                          variant="outline"
+                                          onClick={() => {
+                                            setEditingAgendamentoId(null)
+                                            setEditingAgendamentoDraft(null)
+                                          }}
+                                        >
+                                          Cancelar
+                                        </Button>
+                                        <Button
+                                          type="button"
+                                          size="sm"
+                                          disabled={updateAgendamentoClinica.isPending}
+                                          onClick={async () => {
+                                            if (!editingAgendamentoDraft) return
+                                            try {
+                                              await updateAgendamentoClinica.mutateAsync({
+                                                id: a.id,
+                                                data: {
+                                                  titulo: editingAgendamentoDraft.titulo,
+                                                  data_inicio: editingAgendamentoDraft.data_inicio,
+                                                  data_fim: editingAgendamentoDraft.data_fim,
+                                                  status: editingAgendamentoDraft.status,
+                                                } as any,
+                                              })
+                                              queryClient.invalidateQueries({ queryKey: ['agendamentos-clinica'] })
+                                              setEditingAgendamentoId(null)
+                                              setEditingAgendamentoDraft(null)
+                                            } catch {
+                                              // handled by hook
+                                            }
+                                          }}
+                                        >
+                                          Salvar
+                                        </Button>
+                                      </div>
+                                    ) : (
+                                      <div className="flex gap-2">
+                                        <Button
+                                          type="button"
+                                          size="sm"
+                                          variant="outline"
+                                          onClick={() => {
+                                            setEditingAgendamentoId(a.id)
+                                            setEditingAgendamentoDraft({
+                                              titulo: a.titulo ?? '',
+                                              data_inicio: a.data_inicio ?? '',
+                                              data_fim: a.data_fim ?? '',
+                                              status: a.status ?? 'agendado',
+                                            })
+                                          }}
+                                        >
+                                          Editar
+                                        </Button>
+                                        <Button
+                                          type="button"
+                                          size="sm"
+                                          variant="destructive"
+                                          disabled={deleteAgendamentoClinica.isPending}
+                                          onClick={async () => {
+                                            try {
+                                              await deleteAgendamentoClinica.mutateAsync(a.id)
+                                              queryClient.invalidateQueries({ queryKey: ['agendamentos-clinica'] })
+                                            } catch {
+                                              // handled by hook
+                                            }
+                                          }}
+                                        >
+                                          Excluir
+                                        </Button>
+                                      </div>
+                                    )}
+                                  </div>
                                   {String(a.status) === 'remarcado' && (a.data_inicio_anterior || a.data_fim_anterior) ? (
                                     <div className="mt-2 space-y-1 text-[11px] leading-snug text-muted-foreground">
                                       <div>
@@ -1161,8 +1539,8 @@ export function PacientesPage() {
                         <div className="space-y-4">
                           {planosAtivos.map((plano: any) => {
                             const sessoes = (sessoesByPlanoId[plano.id] ?? []) as any[]
-                            const realizadas = sessoes.filter((s) => Boolean(s.inicio_real))
-                            const pendentes = sessoes.filter((s) => !s.inicio_real)
+                            const realizadas = sessoes.filter((s) => Boolean(s.inicio_real) || s.status === 'concluida')
+                            const pendentes = sessoes.filter((s) => !s.inicio_real && s.status !== 'concluida')
                             const datasRealizadas = realizadas
                               .map((s) => s.inicio_real)
                               .filter(Boolean)
@@ -1187,8 +1565,148 @@ export function PacientesPage() {
                               <div key={plano.id} className="rounded-xl border border-border/60 p-4">
                                 <div className="flex items-start justify-between gap-3">
                                   <div>
-                                    <div className="text-sm font-semibold text-foreground">{plano.titulo}</div>
-                                    {plano.descricao && <div className="mt-1 text-xs text-muted-foreground">{plano.descricao}</div>}
+                                    {editingPlanoId === plano.id ? (
+                                      <div className="space-y-2">
+                                        <Input
+                                          value={String(editingPlanoDraft?.titulo ?? '')}
+                                          onChange={(e) => setEditingPlanoDraft((prev) => ({ ...(prev || {}), titulo: e.target.value }))}
+                                        />
+                                        <Textarea
+                                          value={String(editingPlanoDraft?.descricao ?? '')}
+                                          onChange={(e) =>
+                                            setEditingPlanoDraft((prev) => ({ ...(prev || {}), descricao: e.target.value }))
+                                          }
+                                        />
+                                        <div className="grid gap-3 sm:grid-cols-2">
+                                          <div>
+                                            <Label className="text-xs text-muted-foreground">Status</Label>
+                                            <Select
+                                              value={String(editingPlanoDraft?.status ?? plano.status)}
+                                              onValueChange={(v) => setEditingPlanoDraft((prev) => ({ ...(prev || {}), status: v }))}
+                                            >
+                                              <SelectTrigger>
+                                                <SelectValue placeholder="Selecione" />
+                                              </SelectTrigger>
+                                              <SelectContent>
+                                                <SelectItem value="rascunho">Rascunho</SelectItem>
+                                                <SelectItem value="em_aprovacao">Em aprovação</SelectItem>
+                                                <SelectItem value="aprovado">Aprovado</SelectItem>
+                                                <SelectItem value="em_execucao">Em execução</SelectItem>
+                                                <SelectItem value="concluido">Concluído</SelectItem>
+                                                <SelectItem value="cancelado">Cancelado</SelectItem>
+                                              </SelectContent>
+                                            </Select>
+                                          </div>
+                                          <div>
+                                            <Label className="text-xs text-muted-foreground">Pacote/Protocolo</Label>
+                                            <Select
+                                              value={String(editingPlanoDraft?.protocolo_pacote_id ?? 'none')}
+                                              onValueChange={(v) =>
+                                                setEditingPlanoDraft((prev) => ({
+                                                  ...(prev || {}),
+                                                  protocolo_pacote_id: v === 'none' ? null : v,
+                                                }))
+                                              }
+                                            >
+                                              <SelectTrigger>
+                                                <SelectValue placeholder="Selecione" />
+                                              </SelectTrigger>
+                                              <SelectContent>
+                                                <SelectItem value="none">Nenhum</SelectItem>
+                                                {(pacotesAtivos || []).map((p: any) => (
+                                                  <SelectItem key={p.id} value={p.id}>
+                                                    {p.nome}
+                                                  </SelectItem>
+                                                ))}
+                                              </SelectContent>
+                                            </Select>
+                                          </div>
+                                        </div>
+                                        <div className="mt-2 flex gap-2">
+                                          <Button
+                                            type="button"
+                                            size="sm"
+                                            variant="outline"
+                                            onClick={() => {
+                                              setEditingPlanoId(null)
+                                              setEditingPlanoDraft(null)
+                                            }}
+                                          >
+                                            Cancelar
+                                          </Button>
+                                          <Button
+                                            type="button"
+                                            size="sm"
+                                            disabled={updatePlanoTratamento.isPending}
+                                            onClick={async () => {
+                                              if (!editingPlanoDraft) return
+                                              try {
+                                                await updatePlanoTratamento.mutateAsync({
+                                                  id: plano.id,
+                                                  data: {
+                                                    titulo: editingPlanoDraft.titulo,
+                                                    descricao: editingPlanoDraft.descricao,
+                                                    status: editingPlanoDraft.status,
+                                                    protocolo_pacote_id: editingPlanoDraft.protocolo_pacote_id ?? null,
+                                                  } as any,
+                                                })
+                                                queryClient.invalidateQueries({ queryKey: ['planos-tratamento'] })
+                                                setEditingPlanoId(null)
+                                                setEditingPlanoDraft(null)
+                                              } catch {
+                                                // handled by hook
+                                              }
+                                            }}
+                                          >
+                                            Salvar
+                                          </Button>
+                                        </div>
+                                      </div>
+                                    ) : (
+                                      <>
+                                        <div className="text-sm font-semibold text-foreground">{plano.titulo}</div>
+                                        {plano.descricao && <div className="mt-1 text-xs text-muted-foreground">{plano.descricao}</div>}
+                                        {plano.protocolo_pacote_id ? (
+                                          <div className="mt-1 text-xs text-muted-foreground">
+                                            Pacote/Protocolo: {pacotesMap.get(plano.protocolo_pacote_id) ?? plano.protocolo_pacote_id}
+                                          </div>
+                                        ) : null}
+                                        <div className="mt-2 flex gap-2">
+                                          <Button
+                                            type="button"
+                                            size="sm"
+                                            variant="outline"
+                                            onClick={() => {
+                                              setEditingPlanoId(plano.id)
+                                              setEditingPlanoDraft({
+                                                titulo: plano.titulo ?? '',
+                                                descricao: plano.descricao ?? '',
+                                                status: plano.status,
+                                                protocolo_pacote_id: plano.protocolo_pacote_id ?? null,
+                                              })
+                                            }}
+                                          >
+                                            Editar
+                                          </Button>
+                                          <Button
+                                            type="button"
+                                            size="sm"
+                                            variant="destructive"
+                                            disabled={deletePlanoTratamento.isPending}
+                                            onClick={async () => {
+                                              try {
+                                                await deletePlanoTratamento.mutateAsync(plano.id)
+                                                queryClient.invalidateQueries({ queryKey: ['planos-tratamento'] })
+                                              } catch {
+                                                // handled by hook
+                                              }
+                                            }}
+                                          >
+                                            Excluir plano
+                                          </Button>
+                                        </div>
+                                      </>
+                                    )}
                                   </div>
                                   <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
                                     {statusPacote}
@@ -1224,6 +1742,179 @@ export function PacientesPage() {
                                     </div>
                                   </div>
                                 </div>
+
+                                <div className="mt-4">
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => {
+                                      setExpandedPlanoSessoesById((prev) => {
+                                        const nextValue = !Boolean(prev[plano.id])
+                                        return nextValue ? { [plano.id]: true } : {}
+                                      })
+                                      setEditingSessaoId(null)
+                                      setEditingSessaoDraft(null)
+                                    }}
+                                  >
+                                    {expandedPlanoSessoesById[plano.id] ? 'Ocultar detalhes de sessões' : 'Mostrar detalhes de sessões'}
+                                  </Button>
+                                </div>
+
+                                {expandedPlanoSessoesById[plano.id] ? (
+                                  <div className="mt-4">
+                                    <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Sessões</div>
+                                    {sessoes.length === 0 ? (
+                                      <div className="mt-2 text-sm text-muted-foreground">Nenhuma sessão encontrada.</div>
+                                    ) : (
+                                      <div className="mt-2 space-y-2">
+                                        {sessoes
+                                          .slice()
+                                          .sort((a, b) => {
+                                            const da = a.inicio_previsto || a.created_at || ''
+                                            const db = b.inicio_previsto || b.created_at || ''
+                                            return String(da).localeCompare(String(db))
+                                          })
+                                          .map((s: any, idx: number) => (
+                                            <div key={s.id} className="rounded-lg border border-border/60 p-3">
+                                              <div className="flex items-start justify-between gap-3">
+                                                <div className="min-w-0 flex-1">
+                                                  <div className="text-sm font-medium text-foreground">Sessão {idx + 1}</div>
+                                                  {editingSessaoId === s.id ? (
+                                                    <div className="mt-2 grid gap-3 sm:grid-cols-2">
+                                                      <SimpleDateTime
+                                                        value={String(editingSessaoDraft?.inicio_previsto ?? '')}
+                                                        onChange={(v) =>
+                                                          setEditingSessaoDraft((prev) => ({ ...(prev || {}), inicio_previsto: v }))
+                                                        }
+                                                        label="Prevista"
+                                                      />
+                                                      <SimpleDateTime
+                                                        value={String(editingSessaoDraft?.inicio_real ?? '')}
+                                                        onChange={(v) =>
+                                                          setEditingSessaoDraft((prev) => ({ ...(prev || {}), inicio_real: v }))
+                                                        }
+                                                        label="Realizada"
+                                                      />
+                                                      <div className="sm:col-span-2 max-w-xs">
+                                                        <Label className="text-xs text-muted-foreground">Status</Label>
+                                                        <Select
+                                                          value={String(editingSessaoDraft?.status ?? 'planejada')}
+                                                          onValueChange={(v) =>
+                                                            setEditingSessaoDraft((prev) => ({ ...(prev || {}), status: v }))
+                                                          }
+                                                        >
+                                                          <SelectTrigger>
+                                                            <SelectValue placeholder="Selecione" />
+                                                          </SelectTrigger>
+                                                          <SelectContent>
+                                                            <SelectItem value="planejada">Planejada</SelectItem>
+                                                            <SelectItem value="em_andamento">Em andamento</SelectItem>
+                                                            <SelectItem value="concluida">Concluída</SelectItem>
+                                                            <SelectItem value="cancelada">Cancelada</SelectItem>
+                                                            <SelectItem value="nao_compareceu">Não compareceu</SelectItem>
+                                                          </SelectContent>
+                                                        </Select>
+                                                      </div>
+                                                    </div>
+                                                  ) : (
+                                                    <div className="mt-2 text-xs text-muted-foreground space-y-1">
+                                                      <div>
+                                                        <span className="font-medium text-foreground">Prevista:</span>{' '}
+                                                        {s.inicio_previsto ? new Date(s.inicio_previsto).toLocaleString('pt-BR') : '—'}
+                                                      </div>
+                                                      <div>
+                                                        <span className="font-medium text-foreground">Realizada:</span>{' '}
+                                                        {s.inicio_real ? new Date(s.inicio_real).toLocaleString('pt-BR') : '—'}
+                                                      </div>
+                                                      <div>
+                                                        <span className="font-medium text-foreground">Status:</span> {String(s.status || '')}
+                                                      </div>
+                                                    </div>
+                                                  )}
+                                                </div>
+
+                                                <div className="flex flex-col items-end gap-2">
+                                                  {editingSessaoId === s.id ? (
+                                                    <>
+                                                      <Button
+                                                        type="button"
+                                                        size="sm"
+                                                        variant="outline"
+                                                        onClick={() => {
+                                                          setEditingSessaoId(null)
+                                                          setEditingSessaoDraft(null)
+                                                        }}
+                                                      >
+                                                        Cancelar
+                                                      </Button>
+                                                      <Button
+                                                        type="button"
+                                                        size="sm"
+                                                        disabled={updateSessaoTratamento.isPending}
+                                                        onClick={async () => {
+                                                          if (!editingSessaoDraft) return
+                                                          try {
+                                                            await updateSessaoTratamento.mutateAsync({
+                                                              id: s.id,
+                                                              data: {
+                                                                inicio_previsto: editingSessaoDraft.inicio_previsto || null,
+                                                                inicio_real: editingSessaoDraft.inicio_real || null,
+                                                                status: editingSessaoDraft.status,
+                                                              } as any,
+                                                            })
+                                                            setEditingSessaoId(null)
+                                                            setEditingSessaoDraft(null)
+                                                          } catch {
+                                                            // handled by hook
+                                                          }
+                                                        }}
+                                                      >
+                                                        Salvar
+                                                      </Button>
+                                                    </>
+                                                  ) : (
+                                                    <>
+                                                      <Button
+                                                        type="button"
+                                                        size="sm"
+                                                        variant="outline"
+                                                        onClick={() => {
+                                                          setEditingSessaoId(s.id)
+                                                          setEditingSessaoDraft({
+                                                            inicio_previsto: s.inicio_previsto ?? '',
+                                                            inicio_real: s.inicio_real ?? '',
+                                                            status: s.status ?? 'planejada',
+                                                          })
+                                                        }}
+                                                      >
+                                                        Editar
+                                                      </Button>
+                                                      <Button
+                                                        type="button"
+                                                        size="sm"
+                                                        variant="destructive"
+                                                        disabled={deleteSessaoTratamento.isPending}
+                                                        onClick={async () => {
+                                                          try {
+                                                            await deleteSessaoTratamento.mutateAsync(s.id)
+                                                          } catch {
+                                                            // handled by hook
+                                                          }
+                                                        }}
+                                                      >
+                                                        Excluir
+                                                      </Button>
+                                                    </>
+                                                  )}
+                                                </div>
+                                              </div>
+                                            </div>
+                                          ))}
+                                      </div>
+                                    )}
+                                  </div>
+                                ) : null}
                               </div>
                             )
                           })}
@@ -1292,6 +1983,28 @@ export function PacientesPage() {
                                       Carregando...
                                     </div>
                                   )}
+                                  <div className="p-2 flex justify-end">
+                                    <Button
+                                      type="button"
+                                      size="sm"
+                                      variant="destructive"
+                                      disabled={deletePacienteFoto.isPending}
+                                      onClick={async () => {
+                                        try {
+                                          try {
+                                            await deleteMidia({ bucket: f.storage_bucket, path: f.storage_path })
+                                          } catch {
+                                            // ignore
+                                          }
+                                          await deletePacienteFoto.mutateAsync({ id: f.id, pacienteId: paciente.id })
+                                        } catch {
+                                          // handled by hook
+                                        }
+                                      }}
+                                    >
+                                      Remover
+                                    </Button>
+                                  </div>
                                 </div>
                               ))}
                             </div>
@@ -1312,6 +2025,28 @@ export function PacientesPage() {
                                       Carregando...
                                     </div>
                                   )}
+                                  <div className="p-2 flex justify-end">
+                                    <Button
+                                      type="button"
+                                      size="sm"
+                                      variant="destructive"
+                                      disabled={deletePacienteFoto.isPending}
+                                      onClick={async () => {
+                                        try {
+                                          try {
+                                            await deleteMidia({ bucket: f.storage_bucket, path: f.storage_path })
+                                          } catch {
+                                            // ignore
+                                          }
+                                          await deletePacienteFoto.mutateAsync({ id: f.id, pacienteId: paciente.id })
+                                        } catch {
+                                          // handled by hook
+                                        }
+                                      }}
+                                    >
+                                      Remover
+                                    </Button>
+                                  </div>
                                 </div>
                               ))}
                             </div>

@@ -162,12 +162,15 @@ function summarizeBatch(batch) {
   }
 }
 
-function createJobsForInstance({ instanceName, items, minMinutes, maxMinutes }) {
+function createJobsForInstance({ instanceName, items, minMinutes, maxMinutes, startAtMs }) {
   const createdAt = new Date().toISOString()
   const existingActiveNumbers = getActiveNumbersByInstance(instanceName)
   const skipped = []
   const seenInRequest = new Set()
   const jobIds = []
+
+  const baseStartAtMs = Number.isFinite(Number(startAtMs)) ? Number(startAtMs) : Date.now()
+  let cumulativeDelayMinutes = 0
 
   if (items.length > DISPAROS_MAX_PER_BATCH) {
     throw new Error(`Máximo de ${DISPAROS_MAX_PER_BATCH} pacientes por sessão/batch`)
@@ -208,7 +211,8 @@ function createJobsForInstance({ instanceName, items, minMinutes, maxMinutes }) 
     }
 
     const delayMinutes = randomIntInclusive(minMinutes, maxMinutes)
-    const scheduledAt = Date.now() + delayMinutes * 60_000
+    cumulativeDelayMinutes += delayMinutes
+    const scheduledAt = baseStartAtMs + cumulativeDelayMinutes * 60_000
     const jobId = createJobId()
 
     const media = it.media
@@ -236,7 +240,7 @@ function createJobsForInstance({ instanceName, items, minMinutes, maxMinutes }) 
       aiStage: null,
       createdAt,
       scheduledAt,
-      delayMinutes,
+      delayMinutes: cumulativeDelayMinutes,
       startedAt: null,
       finishedAt: null,
       variedText: null,
@@ -1383,7 +1387,7 @@ app.post('/api/disparos/enqueue', async (req, res) => {
     }
 
     const batchId = createBatchId()
-    const { jobIds, skipped, createdAt } = createJobsForInstance({ instanceName, items, minMinutes, maxMinutes })
+    const { jobIds, skipped, createdAt } = createJobsForInstance({ instanceName, items, minMinutes, maxMinutes, startAtMs: Date.now() })
 
     // Amarrar jobs ao batch
     jobIds.forEach((id) => {
@@ -1441,7 +1445,15 @@ app.post('/api/disparos/:batchId/append', async (req, res) => {
       return res.status(400).json({ error: 'minMinutes/maxMinutes inválidos' })
     }
 
-    const { jobIds, skipped } = createJobsForInstance({ instanceName, items, minMinutes, maxMinutes })
+    const lastScheduledAt = (batch.jobIds || [])
+      .map((id) => disparosJobs.get(id))
+      .filter(Boolean)
+      .map((j) => Number(j.scheduledAt || 0))
+      .filter((n) => Number.isFinite(n) && n > 0)
+      .reduce((acc, n) => Math.max(acc, n), 0)
+
+    const startAtMs = Math.max(Date.now(), lastScheduledAt || 0)
+    const { jobIds, skipped } = createJobsForInstance({ instanceName, items, minMinutes, maxMinutes, startAtMs })
 
     jobIds.forEach((id) => {
       const j = disparosJobs.get(id)

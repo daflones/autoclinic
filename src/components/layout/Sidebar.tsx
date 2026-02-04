@@ -179,12 +179,12 @@ export function Sidebar() {
           onClick={handleDashboardClick}
           className="flex w-full items-center gap-3 text-left"
         >
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-primary-500 to-secondary-400 text-white shadow-lg">
-            <span className="text-lg font-semibold">A</span>
+          <div className="flex h-14 w-14 items-center justify-center rounded-2xl overflow-hidden flex-shrink-0">
+            <img src="/Logo2.jpg" alt="AutomaClinic" className="h-full w-full object-contain" />
           </div>
           <div className="flex flex-1 flex-col">
-            <span className="font-display text-lg font-semibold text-neutral-900 dark:text-white">Automaclinic</span>
-            <span className="text-xs font-medium uppercase tracking-[0.22em] text-neutral-500 dark:text-neutral-300">Esthetic CRM Suite</span>
+            <span className="font-display text-lg font-semibold text-neutral-900 dark:text-white">AutomaClinic</span>
+            <span className="text-[10px] font-medium uppercase tracking-[0.15em] text-neutral-500 dark:text-neutral-400">CRM COM IA PARA ESTÉTICA</span>
           </div>
         </button>
       </div>

@@ -113,8 +113,8 @@ export function MobileNav({ open, onClose }: MobileNavProps) {
               <div className="flex grow flex-col gap-y-5 overflow-y-auto bg-white dark:bg-gray-800 px-6 pb-4">
                 <div className="flex h-16 shrink-0 items-center justify-center bg-gradient-to-r from-indigo-600 to-purple-600 rounded-lg -mx-2">
                   <img 
-                    src="/LogoNanoSyncBranca.png" 
-                    alt="NanoSync CRM Logo" 
+                    src="/Logo2.jpg" 
+                    alt="AutomaClinic Logo" 
                     className="h-[65%] w-auto object-contain"
                   />
                 </div>

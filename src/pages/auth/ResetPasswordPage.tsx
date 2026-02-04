@@ -71,8 +71,8 @@ export function ResetPasswordPage() {
           <div className="w-full max-w-md">
             <div className="text-center mb-8">
               <img 
-                src="/LogoNanoSyncBranca.png" 
-                alt="Logo" 
+                src="/Logo.jpg" 
+                alt="AutomaClinic Logo" 
                 className="w-32 h-32 mx-auto mb-4 object-contain"
               />
               <p className="text-xl text-white/90 font-light">
@@ -103,7 +103,7 @@ export function ResetPasswordPage() {
               </Card>
               
               <p className="text-center mt-6 text-sm text-white/60">
-                © 2024 NanoSync. Todos os direitos reservados.
+                © 2024 AutomaClinic. Todos os direitos reservados.
               </p>
             </div>
           </div>
@@ -129,12 +129,12 @@ export function ResetPasswordPage() {
           {/* Logo */}
           <div className="text-center mb-8">
             <img 
-              src="/LogoNanoSyncBranca.png" 
-              alt="Logo" 
+              src="/Logo.jpg" 
+              alt="AutomaClinic Logo" 
               className="w-32 h-32 mx-auto mb-4 object-contain"
             />
             <p className="text-xl text-white/90 font-light">
-              Sistema Inteligente de Relacionamento com Clientes
+              CRM com IA para Estética
             </p>
           </div>
 
@@ -248,7 +248,7 @@ export function ResetPasswordPage() {
           </div>
           
           <p className="text-center mt-6 text-sm text-white/60">
-            © 2024 NanoSync. Todos os direitos reservados.
+            © 2024 AutomaClinic. Todos os direitos reservados.
           </p>
           </div>
         </div>

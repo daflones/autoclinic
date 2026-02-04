@@ -49,12 +49,12 @@ export function LoginPage() {
         <div className="text-center mb-4">
           <div className="flex flex-col items-center">
             <img 
-              src="/LogoNanoSyncBranca.png" 
-              alt="Logo" 
-              className="w-80 h-80 -mb-24 object-contain mb-01"
+              src="/Logo.jpg" 
+              alt="AutomaClinic Logo" 
+              className="w-80 sm:w-96 md:w-[450px] lg:w-[500px] h-auto object-contain mb-8"
             />
-            <p className="text-xl text-white/90 font-light max-w-2xl mx-auto leading-relaxed">
-              Sistema Inteligente de Relacionamento com Clientes — da captura ao fechamento, IA que trabalha por você.
+            <p className="text-base sm:text-lg md:text-xl text-white/90 font-light max-w-3xl mx-auto leading-relaxed px-4">
+              CRM com IA para Estética — Automatize captação, agendamentos e atendimento com inteligência artificial.
             </p>
           </div>
         </div>
@@ -156,7 +156,7 @@ export function LoginPage() {
           </Card>
 
           <p className="text-center mt-6 text-sm text-white/60">
-            © 2024 NanoSync. Todos os direitos reservados.
+            © 2024 AutomaClinic. Todos os direitos reservados.
           </p>
         </div>
       </div>

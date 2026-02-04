@@ -101,7 +101,7 @@ export const PWAInstallPrompt: React.FC = () => {
           </Button>
         </div>
         <CardDescription className="text-xs text-blue-700">
-          Instale o NanoSync CRM no seu dispositivo para automação WhatsApp 24h
+          Instale a AutomaClinic no seu dispositivo para automação com IA 24h
         </CardDescription>
       </CardHeader>
       <CardContent className="pt-0">

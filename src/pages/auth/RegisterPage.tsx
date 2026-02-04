@@ -78,41 +78,41 @@ export function RegisterPage() {
           <div className="relative bg-white/10 backdrop-blur-xl rounded-3xl p-12 xl:p-16 2xl:p-20 border border-white/20 shadow-2xl w-full max-w-none">
             <div className="text-center space-y-2">
               <div>
-                <div className="flex flex-col items-center -mt-24">
+                <div className="flex flex-col items-center -mt-20">
                   <img 
-                    src="/LogoNanoSyncBranca.png" 
-                    alt="Logo" 
-                    className="w-96 h-96 object-contain -mb-24"
+                    src="/Logo.jpg" 
+                    alt="AutomaClinic Logo" 
+                    className="w-72 xl:w-80 h-auto object-contain mb-6"
                   />
-                  <h1 className="text-5xl font-black bg-gradient-to-r from-white via-blue-100 to-purple-100 bg-clip-text text-transparent leading-tight mb-2">
-                    Bem-vindo ao NanoSync
+                  <h1 className="text-3xl xl:text-4xl font-black bg-gradient-to-r from-white via-blue-100 to-purple-100 bg-clip-text text-transparent leading-tight mb-4">
+                    Bem-vindo à<br/>AutomaClinic
                   </h1>
                 </div>
-                <p className="text-lg text-white/90 mb-2 font-light leading-relaxed">
-                  O CRM inteligente que conecta leads, agenda e WhatsApp para automatizar todo o seu fluxo de vendas — da captura ao fechamento.
+                <p className="text-sm xl:text-base text-white/90 mb-4 font-light leading-relaxed">
+                  CRM com IA para Estética — Automatize captação de leads, agendamentos e atendimento via WhatsApp com inteligência artificial.
                 </p>
                 <div className="w-24 h-1 bg-gradient-to-r from-blue-400 to-purple-400 rounded-full mx-auto"></div>
               </div>
               
-              <div className="grid grid-cols-2 gap-6 mt-12">
-                <div className="bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/10">
+              <div className="grid grid-cols-2 gap-4 mt-8">
+                <div className="bg-white/5 backdrop-blur-sm rounded-2xl p-5 border border-white/10">
                   <div className="w-12 h-12 bg-blue-500/20 rounded-xl flex items-center justify-center mb-4 mx-auto">
                     <svg className="w-6 h-6 text-blue-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
                     </svg>
                   </div>
                   <h3 className="font-bold text-white mb-2">Gestão Inteligente</h3>
-                  <p className="text-white/80 text-sm">Organize, acompanhe e qualifique seus leads com automação integrada ao WhatsApp e agendamentos automáticos.</p>
+                  <p className="text-white/80 text-sm">Organize pacientes, procedimentos e agendamentos com IA integrada ao WhatsApp para atendimento 24/7.</p>
                 </div>
                 
-                <div className="bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/10">
+                <div className="bg-white/5 backdrop-blur-sm rounded-2xl p-5 border border-white/10">
                   <div className="w-12 h-12 bg-purple-500/20 rounded-xl flex items-center justify-center mb-4 mx-auto">
                     <svg className="w-6 h-6 text-purple-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                     </svg>
                   </div>
                   <h3 className="font-bold text-white mb-2">Análises Avançadas</h3>
-                  <p className="text-white/80 text-sm">Acompanhe métricas, conversões e performance em tempo real com dashboards claros e relatórios inteligentes.</p>
+                  <p className="text-white/80 text-sm">Acompanhe métricas da clínica, conversões e performance em tempo real com dashboards e relatórios inteligentes.</p>
                 </div>
               </div>
             </div>
@@ -124,12 +124,12 @@ export function RegisterPage() {
             <div className="relative w-full max-w-md xl:max-w-lg 2xl:max-w-xl">
             <div className="lg:hidden text-center mb-8">
               <img 
-                src="/LogoNanoSyncBranca.png" 
-                alt="Logo" 
-                className="w-56 h-56 mx-auto -mb-16 object-contain"
+                src="/Logo.jpg" 
+                alt="AutomaClinic Logo" 
+                className="w-48 sm:w-56 h-auto mx-auto mb-4 object-contain"
               />
-              <p className="text-white/80">
-                CRM Inteligente
+              <p className="text-white/80 text-sm sm:text-base">
+                CRM com IA para Estética
               </p>
             </div>
 
@@ -281,7 +281,7 @@ export function RegisterPage() {
                 </Card>
 
                 <p className="text-center mt-6 text-sm text-white/60">
-                  © 2024 NanoSync. Todos os direitos reservados.
+                  © 2024 AutomaClinic. Todos os direitos reservados.
                 </p>
               </div>
             </div>

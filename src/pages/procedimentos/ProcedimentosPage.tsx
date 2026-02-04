@@ -30,7 +30,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Plus, Search, Filter, Stethoscope, Edit, Trash2, DollarSign, Clock } from 'lucide-react'
+import { Plus, Search, Filter, Stethoscope, Edit, Trash2, DollarSign, Clock, Upload } from 'lucide-react'
 import { toast } from 'sonner'
 import {
   useProcedimentos,
@@ -54,6 +54,50 @@ const STATUS_CONFIG: Record<StatusProcedimento, { label: string; variant: 'defau
   descontinuado: { label: 'Descontinuado', variant: 'destructive' },
 }
 
+function FileUploadButton({
+  label,
+  accept,
+  multiple,
+  disabled,
+  onFiles,
+}: {
+  label: string
+  accept?: string
+  multiple?: boolean
+  disabled?: boolean
+  onFiles: (files: File[]) => void
+}) {
+  return (
+    <div>
+      <input
+        type="file"
+        accept={accept}
+        multiple={multiple}
+        className="hidden"
+        disabled={disabled}
+        onChange={(e) => {
+          const files = Array.from(e.target.files ?? [])
+          onFiles(files)
+          e.currentTarget.value = ''
+        }}
+      />
+      <Button
+        type="button"
+        variant="outline"
+        className="justify-start"
+        disabled={disabled}
+        onClick={(e) => {
+          const input = (e.currentTarget.previousSibling as HTMLInputElement | null)
+          input?.click()
+        }}
+      >
+        <Upload className="mr-2 h-4 w-4" />
+        {label}
+      </Button>
+    </div>
+  )
+}
+
 export function ProcedimentosPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState<StatusProcedimento | 'all'>('all')
@@ -68,7 +112,7 @@ export function ProcedimentosPage() {
   const [uploadingMidiaKey, setUploadingMidiaKey] = useState<string | null>(null)
   const [midiaUrlByKey, setMidiaUrlByKey] = useState<Record<string, string>>({})
 
-  const [formState, setFormState] = useState<ProcedimentoCreateData>({
+  const getEmptyFormState = (): ProcedimentoCreateData => ({
     nome: '',
     descricao: '',
     detalhes: '',
@@ -88,6 +132,8 @@ export function ProcedimentosPage() {
     observacoes: '',
     status: 'ativo',
   })
+
+  const [formState, setFormState] = useState<ProcedimentoCreateData>(getEmptyFormState())
 
   const iaConfig = (formState.ia_config || {}) as Record<string, any>
 
@@ -187,6 +233,7 @@ export function ProcedimentosPage() {
       'material_apoio',
       'videos_whatsapp',
       'videos_explicativos',
+      'videos_depoimentos',
     ]
     for (const cat of buckets) {
       const arr = (midias?.[cat] as any[]) || []
@@ -275,6 +322,13 @@ export function ProcedimentosPage() {
   const updateMutation = useUpdateProcedimento()
   const deleteMutation = useDeleteProcedimento()
 
+  const handleOpenCreate = () => {
+    setSelectedProcedimento(null)
+    setIsEditModalOpen(false)
+    setFormState(getEmptyFormState())
+    setIsCreateModalOpen(true)
+  }
+
   const stats = useMemo(() => {
     return {
       total: count,
@@ -295,26 +349,7 @@ export function ProcedimentosPage() {
       })
 
       setIsCreateModalOpen(false)
-      setFormState({
-        nome: '',
-        descricao: '',
-        detalhes: '',
-        ia_config: {},
-        cuidados_durante: '',
-        cuidados_apos: '',
-        quebra_objecoes: '',
-        ia_informa_preco: false,
-        ia_envia_imagens: false,
-        codigo: '',
-        categoria_id: null,
-        duracao_estimada: undefined,
-        valor_base: undefined,
-        valor_minimo: undefined,
-        valor_maximo: undefined,
-        requer_autorizacao: false,
-        observacoes: '',
-        status: 'ativo',
-      })
+      setFormState(getEmptyFormState())
     } catch (error) {
       console.error('Erro ao criar procedimento:', error)
     }
@@ -409,7 +444,7 @@ export function ProcedimentosPage() {
     const hours = Math.floor(n / 60)
     const mins = n % 60
     if (hours > 0) {
-      return `${hours}h${mins > 0 ? ` ${mins}min` : ''}`
+      return `${hours}h${mins > 0 ? ' ' + mins + 'min' : ''}`
     }
     return `${mins}min`
   }
@@ -421,7 +456,7 @@ export function ProcedimentosPage() {
           <h1 className="text-3xl font-bold tracking-tight">Procedimentos</h1>
           <p className="text-muted-foreground">Gerencie os procedimentos e tratamentos oferecidos</p>
         </div>
-        <Button onClick={() => setIsCreateModalOpen(true)}>
+        <Button onClick={handleOpenCreate}>
           <Plus className="mr-2 h-4 w-4" />
           Novo Procedimento
         </Button>
@@ -688,8 +723,16 @@ export function ProcedimentosPage() {
 
                     <div className="grid gap-4 md:grid-cols-2">
                       <div className="space-y-1">
-                        <Label>IA informa preço?</Label>
-                        <div className="text-sm text-muted-foreground">{(detailsProcedimento as any).ia_informa_preco ? 'Sim' : 'Não'}</div>
+                        <Label>IA pode mostrar valores?</Label>
+                        <div className="text-sm text-muted-foreground">
+                          {(() => {
+                            const ia = ((detailsProcedimento as any).ia_config || {}) as any
+                            const v = String(ia?.valores?.ia_pode_mostrar || 'nao')
+                            if (v === 'exato') return 'Sim, valor exato'
+                            if (v === 'faixa') return 'Sim, faixa de preço'
+                            return 'Não'
+                          })()}
+                        </div>
                       </div>
                       <div className="space-y-1">
                         <Label>IA envia imagens?</Label>
@@ -830,6 +873,7 @@ export function ProcedimentosPage() {
                       { key: 'material_apoio', label: 'Material de apoio' },
                       { key: 'videos_whatsapp', label: 'Vídeos para WhatsApp' },
                       { key: 'videos_explicativos', label: 'Vídeos explicativos' },
+                      { key: 'videos_depoimentos', label: 'Vídeos de depoimentos' },
                     ]
 
                     return (
@@ -866,25 +910,6 @@ export function ProcedimentosPage() {
                             </div>
                           )
                         })}
-
-                        <div className="grid gap-4 md:grid-cols-2">
-                          <div className="space-y-2">
-                            <Label>URLs vídeos WhatsApp</Label>
-                            <div className="text-sm text-muted-foreground whitespace-pre-wrap">
-                              {(((ia?.midias || {}) as any)?.videos_whatsapp_urls || []).length
-                                ? (((ia?.midias || {}) as any)?.videos_whatsapp_urls || []).join('\n')
-                                : '—'}
-                            </div>
-                          </div>
-                          <div className="space-y-2">
-                            <Label>URLs vídeos explicativos</Label>
-                            <div className="text-sm text-muted-foreground whitespace-pre-wrap">
-                              {(((ia?.midias || {}) as any)?.videos_explicativos_urls || []).length
-                                ? (((ia?.midias || {}) as any)?.videos_explicativos_urls || []).join('\n')
-                                : '—'}
-                            </div>
-                          </div>
-                        </div>
                       </div>
                     )
                   })()}
@@ -892,90 +917,93 @@ export function ProcedimentosPage() {
               </Tabs>
             </div>
           )}
-
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => {
-                if (!detailsProcedimento) return
-                setIsDetailsModalOpen(false)
-                handleOpenEdit(detailsProcedimento)
-              }}
-              disabled={!detailsProcedimento}
-            >
-              <Edit className="mr-2 h-4 w-4" />
-              Editar
-            </Button>
-            <Button variant="default" onClick={() => setIsDetailsModalOpen(false)}>
-              Fechar
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* Modal de Criação */}
       <Dialog
-        open={isCreateModalOpen || isEditModalOpen}
-        onOpenChange={(open) => {
-          if (!open) {
-            setIsCreateModalOpen(false)
-            setIsEditModalOpen(false)
-            setSelectedProcedimento(null)
-          }
-        }}
-      >
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{selectedProcedimento ? 'Editar Procedimento' : 'Novo Procedimento'}</DialogTitle>
-            <DialogDescription>
-              {selectedProcedimento ? 'Atualize as informações do procedimento' : 'Cadastre um novo procedimento ou tratamento'}
-            </DialogDescription>
-          </DialogHeader>
+          open={isCreateModalOpen || isEditModalOpen}
+          onOpenChange={(open) => {
+            if (!open) {
+              setIsCreateModalOpen(false)
+              setIsEditModalOpen(false)
+              setSelectedProcedimento(null)
+            }
+          }}
+        >
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>{selectedProcedimento ? 'Editar Procedimento' : 'Novo Procedimento'}</DialogTitle>
+              <DialogDescription>
+                {selectedProcedimento ? 'Atualize as informações do procedimento' : 'Cadastre um novo procedimento ou tratamento'}
+              </DialogDescription>
+            </DialogHeader>
 
-          <div className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="create-nome">Nome *</Label>
-                <Input
-                  id="create-nome"
-                  value={formState.nome}
-                  onChange={(e) => setFormState({ ...formState, nome: e.target.value })}
-                  placeholder="Ex: Limpeza de Pele"
-                />
+            <div className="space-y-4">
+              <div className="grid gap-4 md:grid-cols-3">
+                <div className="space-y-2">
+                  <Label htmlFor="create-nome">Nome *</Label>
+                  <Input
+                    id="create-nome"
+                    value={formState.nome}
+                    onChange={(e) => setFormState({ ...formState, nome: e.target.value })}
+                    placeholder="Ex: Limpeza de Pele"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="create-codigo">Código</Label>
+                  <Input
+                    id="create-codigo"
+                    value={formState.codigo || ''}
+                    onChange={(e) => setFormState({ ...formState, codigo: e.target.value })}
+                    placeholder="Ex: LP001"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="edit-status">Status</Label>
+                  <Select
+                    value={formState.status}
+                    onValueChange={(v) =>
+                      setFormState({ ...formState, status: v as StatusProcedimento })
+                    }
+                  >
+                    <SelectTrigger id="edit-status">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(STATUS_CONFIG).map(([key, config]) => (
+                        <SelectItem key={key} value={key}>
+                          {config.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="create-codigo">Código</Label>
-                <Input
-                  id="create-codigo"
-                  value={formState.codigo || ''}
-                  onChange={(e) => setFormState({ ...formState, codigo: e.target.value })}
-                  placeholder="Ex: LP001"
-                />
+                <Label htmlFor="create-categoria">Categoria</Label>
+                <Select
+                  value={formState.categoria_id || 'none'}
+                  onValueChange={(v) =>
+                    setFormState({ ...formState, categoria_id: v === 'none' ? null : v })
+                  }
+                >
+                  <SelectTrigger id="create-categoria">
+                    <SelectValue placeholder="Selecione a categoria" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Nenhuma</SelectItem>
+                    {categorias.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.nome}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="create-categoria">Categoria</Label>
-              <Select
-                value={formState.categoria_id || 'none'}
-                onValueChange={(v) =>
-                  setFormState({ ...formState, categoria_id: v === 'none' ? null : v })
-                }
-              >
-                <SelectTrigger id="create-categoria">
-                  <SelectValue placeholder="Selecione a categoria" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Nenhuma</SelectItem>
-                  {categorias.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>
-                      {c.nome}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
 
             <div className="space-y-2">
               <Label htmlFor="create-descricao">Descrição</Label>
@@ -1090,16 +1118,32 @@ export function ProcedimentosPage() {
                     })}
                   </DropdownMenuContent>
                 </DropdownMenu>
-                <div className="text-xs text-muted-foreground">
-                  {(() => {
-                    const ids = (getIA('execucao.profissionais_ids', []) as string[]) || []
-                    if (ids.length === 0) return 'Nenhum selecionado'
-                    const nomes = profissionaisClinica
-                      .filter((p: any) => ids.includes(p.id))
-                      .map((p: any) => p.nome)
-                    return nomes.join(', ')
-                  })()}
-                </div>
+                {(() => {
+                  const ids = (getIA('execucao.profissionais_ids', []) as string[]) || []
+                  if (ids.length === 0) {
+                    return <div className="text-xs text-muted-foreground">Nenhum selecionado</div>
+                  }
+                  const selected = profissionaisClinica.filter((p: any) => ids.includes(p.id))
+                  return (
+                    <div className="flex flex-wrap gap-2 pt-1">
+                      {selected.map((p: any) => (
+                        <Badge key={p.id} variant="secondary" className="flex items-center gap-2">
+                          <span className="max-w-[220px] truncate">{p.nome}</span>
+                          <button
+                            type="button"
+                            className="rounded-sm opacity-80 hover:opacity-100"
+                            onClick={() => {
+                              const current = (getIA('execucao.profissionais_ids', []) as string[]) || []
+                              setIA('execucao.profissionais_ids', current.filter((x) => x !== p.id))
+                            }}
+                          >
+                            ×
+                          </button>
+                        </Badge>
+                      ))}
+                    </div>
+                  )
+                })()}
               </div>
               <div className="space-y-2">
                 <Label>Equipamentos usados (opcional)</Label>
@@ -1109,6 +1153,97 @@ export function ProcedimentosPage() {
                   onChange={(items) => setIA('tecnica.equipamentos', items)}
                 />
               </div>
+            </div>
+
+            <div className="space-y-3 pt-4 border-t">
+              <Label className="text-base font-semibold">Valores</Label>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label>IA pode mostrar valores desse procedimento?</Label>
+                  <Select
+                    value={getIA('valores.ia_pode_mostrar', 'nao')}
+                    onValueChange={(v) => {
+                      setIA('valores.ia_pode_mostrar', v)
+                      if (v === 'nao') {
+                        setFormState((prev) => ({ ...prev, valor_base: undefined, valor_minimo: undefined, valor_maximo: undefined }))
+                      }
+                      if (v === 'exato') {
+                        setFormState((prev) => ({ ...prev, valor_minimo: undefined, valor_maximo: undefined }))
+                      }
+                      if (v === 'faixa') {
+                        setFormState((prev) => ({ ...prev, valor_base: undefined }))
+                      }
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="exato">Sim, valor exato</SelectItem>
+                      <SelectItem value="faixa">Sim, faixa de preço</SelectItem>
+                      <SelectItem value="nao">Não</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="edit-observacoes">Observações</Label>
+                  <Textarea
+                    id="edit-observacoes"
+                    value={formState.observacoes || ''}
+                    onChange={(e) => setFormState({ ...formState, observacoes: e.target.value })}
+                    rows={2}
+                  />
+                </div>
+              </div>
+
+              {getIA('valores.ia_pode_mostrar', 'nao') === 'exato' ? (
+                <div className="grid gap-4 md:grid-cols-3">
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-valor-base">Valor (R$)</Label>
+                    <Input
+                      id="edit-valor-base"
+                      type="number"
+                      step="0.01"
+                      value={formState.valor_base || ''}
+                      onChange={(e) =>
+                        setFormState({ ...formState, valor_base: parseFloat(e.target.value) || undefined })
+                      }
+                    />
+                  </div>
+                </div>
+              ) : null}
+
+              {getIA('valores.ia_pode_mostrar', 'nao') === 'faixa' ? (
+                <div className="grid gap-4 md:grid-cols-3">
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-valor-minimo">Valor Mínimo (R$)</Label>
+                    <Input
+                      id="edit-valor-minimo"
+                      type="number"
+                      step="0.01"
+                      value={formState.valor_minimo || ''}
+                      onChange={(e) =>
+                        setFormState({ ...formState, valor_minimo: parseFloat(e.target.value) || undefined })
+                      }
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-valor-maximo">Valor Máximo (R$)</Label>
+                    <Input
+                      id="edit-valor-maximo"
+                      type="number"
+                      step="0.01"
+                      value={formState.valor_maximo || ''}
+                      onChange={(e) =>
+                        setFormState({ ...formState, valor_maximo: parseFloat(e.target.value) || undefined })
+                      }
+                    />
+                  </div>
+                </div>
+              ) : null}
             </div>
 
             <div className="pt-4 border-t space-y-4">
@@ -1151,9 +1286,9 @@ export function ProcedimentosPage() {
                     <Label>Como funciona (leigo)</Label>
                     <Textarea value={getIA('tecnica.como_funciona_leigo', '')} onChange={(e) => setIA('tecnica.como_funciona_leigo', e.target.value)} rows={4} />
                   </div>
-                  <div className="grid gap-2">
+                  <div className="grid gap-2 md:col-span-2">
                     <Label>Tecnologia</Label>
-                    <Input value={getIA('tecnica.tecnologia', '')} onChange={(e) => setIA('tecnica.tecnologia', e.target.value)} />
+                    <Textarea value={getIA('tecnica.tecnologia', '')} onChange={(e) => setIA('tecnica.tecnologia', e.target.value)} rows={4} />
                   </div>
                   <div className="grid gap-2">
                     <ListEditor
@@ -1316,17 +1451,19 @@ export function ProcedimentosPage() {
                   <div className="grid gap-2">
                     <ListEditor
                       label="Antes"
-                      placeholder="Adicione cuidados antes"
+                      placeholder=""
                       items={(getIA('cuidados.antes', []) as any[]) as string[]}
                       onChange={(items) => setIA('cuidados.antes', items)}
+                      hideEmptyState
                     />
                   </div>
                   <div className="grid gap-2">
                     <ListEditor
                       label="Depois"
-                      placeholder="Adicione cuidados depois"
+                      placeholder=""
                       items={(getIA('cuidados.depois', []) as any[]) as string[]}
                       onChange={(items) => setIA('cuidados.depois', items)}
+                      hideEmptyState
                     />
                   </div>
                 </div>
@@ -1347,13 +1484,97 @@ export function ProcedimentosPage() {
                     <Label>Diferenciais do equipamento ou técnica</Label>
                     <Textarea value={getIA('vendas.diferenciais_tecnica', '')} onChange={(e) => setIA('vendas.diferenciais_tecnica', e.target.value)} rows={4} />
                   </div>
-                  <div className="grid gap-2">
+                  <div className="grid gap-2 md:col-span-2">
                     <Label>Selo de segurança</Label>
-                    <Input value={getIA('vendas.selo_seguranca', '')} onChange={(e) => setIA('vendas.selo_seguranca', e.target.value)} />
+                    <Textarea value={getIA('vendas.selo_seguranca', '')} onChange={(e) => setIA('vendas.selo_seguranca', e.target.value)} rows={3} />
                   </div>
                   <div className="grid gap-2">
                     <Label>Garantias (se houver)</Label>
                     <Textarea value={getIA('vendas.garantias', '')} onChange={(e) => setIA('vendas.garantias', e.target.value)} rows={3} />
+                  </div>
+                </div>
+
+                <div className="space-y-3 pt-4 border-t">
+                  <Label className="text-sm font-semibold">Depoimentos</Label>
+                  {(((getIA('midias.depoimentos', []) as any[]) || []) as any[]).map((d: any, idx) => (
+                    <div key={idx} className="grid gap-3 md:grid-cols-3 border rounded-lg p-3">
+                      <div className="grid gap-2">
+                        <Label>Nome</Label>
+                        <Input
+                          value={d?.nome || ''}
+                          onChange={(e) => {
+                            const items = [ ...(((getIA('midias.depoimentos', []) as any[]) || []) as any[]) ]
+                            items[idx] = { ...(items[idx] || {}), nome: e.target.value }
+                            setIA('midias.depoimentos', items)
+                          }}
+                        />
+                      </div>
+                      <div className="grid gap-2">
+                        <Label>Idade</Label>
+                        <Input
+                          type="number"
+                          value={d?.idade ?? ''}
+                          onChange={(e) => {
+                            const items = [ ...(((getIA('midias.depoimentos', []) as any[]) || []) as any[]) ]
+                            items[idx] = { ...(items[idx] || {}), idade: e.target.value === '' ? null : Number(e.target.value) }
+                            setIA('midias.depoimentos', items)
+                          }}
+                        />
+                      </div>
+                      <div className="grid gap-2 md:col-span-3">
+                        <Label>Depoimento</Label>
+                        <Textarea
+                          value={d?.texto || ''}
+                          onChange={(e) => {
+                            const items = [ ...(((getIA('midias.depoimentos', []) as any[]) || []) as any[]) ]
+                            items[idx] = { ...(items[idx] || {}), texto: e.target.value }
+                            setIA('midias.depoimentos', items)
+                          }}
+                          rows={3}
+                        />
+                      </div>
+                      <div className="md:col-span-3 flex justify-end">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => {
+                            const items = [ ...(((getIA('midias.depoimentos', []) as any[]) || []) as any[]) ]
+                            items.splice(idx, 1)
+                            setIA('midias.depoimentos', items)
+                          }}
+                        >
+                          Remover
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      const items = [ ...(((getIA('midias.depoimentos', []) as any[]) || []) as any[]) ]
+                      items.push({ nome: '', idade: null, texto: '' })
+                      setIA('midias.depoimentos', items)
+                    }}
+                  >
+                    Adicionar depoimento
+                  </Button>
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-2 pt-4 border-t">
+                  <div className="grid gap-2">
+                    <Label>Prova social específica (texto)</Label>
+                    <Textarea value={getIA('midias.prova_social_texto', '')} onChange={(e) => setIA('midias.prova_social_texto', e.target.value)} rows={3} />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label>Prova social específica (upload)</Label>
+                    <FileUploadButton
+                      label="Enviar imagens"
+                      accept="image/*"
+                      multiple
+                      disabled={uploadingMidiaKey === 'midia:prova_social_especifica'}
+                      onFiles={(files) => void handleUploadMidias('prova_social_especifica', files)}
+                    />
                   </div>
                 </div>
               </div>
@@ -1525,17 +1746,12 @@ export function ProcedimentosPage() {
                   </div>
                   <div className="grid gap-2 md:col-span-2">
                     <Label>Material de apoio (upload imagem e vídeo)</Label>
-                    <Input
-                      type="file"
+                    <FileUploadButton
+                      label="Enviar arquivos"
                       accept="image/*,video/*"
                       multiple
-                      className="file:text-foreground file:bg-transparent file:border-0 file:mr-3"
                       disabled={uploadingMidiaKey === 'midia:material_apoio'}
-                      onChange={(e) => {
-                        const files = Array.from(e.target.files ?? [])
-                        void handleUploadMidias('material_apoio', files)
-                        e.currentTarget.value = ''
-                      }}
+                      onFiles={(files) => void handleUploadMidias('material_apoio', files)}
                     />
                     {(((getIA('midias.material_apoio', []) as any[]) || []) as any[]).length > 0 ? (
                       <div className="grid grid-cols-2 gap-3">
@@ -1577,17 +1793,12 @@ export function ProcedimentosPage() {
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="grid gap-2">
                     <Label>Antes e depois</Label>
-                    <Input
-                      type="file"
+                    <FileUploadButton
+                      label="Enviar imagens"
                       accept="image/*"
                       multiple
-                      className="file:text-foreground file:bg-transparent file:border-0 file:mr-3"
                       disabled={uploadingMidiaKey === 'midia:antes_depois'}
-                      onChange={(e) => {
-                        const files = Array.from(e.target.files ?? [])
-                        void handleUploadMidias('antes_depois', files)
-                        e.currentTarget.value = ''
-                      }}
+                      onFiles={(files) => void handleUploadMidias('antes_depois', files)}
                     />
                     {(((getIA('midias.antes_depois', []) as any[]) || []) as any[]).length > 0 ? (
                       <div className="grid grid-cols-2 gap-3">
@@ -1616,17 +1827,12 @@ export function ProcedimentosPage() {
 
                   <div className="grid gap-2">
                     <Label>Imagens ilustrativas</Label>
-                    <Input
-                      type="file"
+                    <FileUploadButton
+                      label="Enviar imagens"
                       accept="image/*"
                       multiple
-                      className="file:text-foreground file:bg-transparent file:border-0 file:mr-3"
                       disabled={uploadingMidiaKey === 'midia:imagens_ilustrativas'}
-                      onChange={(e) => {
-                        const files = Array.from(e.target.files ?? [])
-                        void handleUploadMidias('imagens_ilustrativas', files)
-                        e.currentTarget.value = ''
-                      }}
+                      onFiles={(files) => void handleUploadMidias('imagens_ilustrativas', files)}
                     />
                     {(((getIA('midias.imagens_ilustrativas', []) as any[]) || []) as any[]).length > 0 ? (
                       <div className="grid grid-cols-2 gap-3">
@@ -1655,17 +1861,12 @@ export function ProcedimentosPage() {
 
                   <div className="grid gap-2">
                     <Label>Carrossel comercial</Label>
-                    <Input
-                      type="file"
+                    <FileUploadButton
+                      label="Enviar imagens"
                       accept="image/*"
                       multiple
-                      className="file:text-foreground file:bg-transparent file:border-0 file:mr-3"
                       disabled={uploadingMidiaKey === 'midia:carrossel_comercial'}
-                      onChange={(e) => {
-                        const files = Array.from(e.target.files ?? [])
-                        void handleUploadMidias('carrossel_comercial', files)
-                        e.currentTarget.value = ''
-                      }}
+                      onFiles={(files) => void handleUploadMidias('carrossel_comercial', files)}
                     />
                     {(((getIA('midias.carrossel_comercial', []) as any[]) || []) as any[]).length > 0 ? (
                       <div className="grid grid-cols-2 gap-3">
@@ -1694,20 +1895,15 @@ export function ProcedimentosPage() {
 
                   <div className="grid gap-2 md:col-span-2">
                     <Label className="text-sm font-semibold">Vídeos curtos para WhatsApp</Label>
-                    <div className="grid gap-4 md:grid-cols-2">
+                    <div className="grid gap-4">
                       <div className="grid gap-2">
                         <Label>Upload</Label>
-                        <Input
-                          type="file"
+                        <FileUploadButton
+                          label="Enviar vídeos"
                           accept="video/*"
                           multiple
-                          className="file:text-foreground file:bg-transparent file:border-0 file:mr-3"
                           disabled={uploadingMidiaKey === 'midia:videos_whatsapp'}
-                          onChange={(e) => {
-                            const files = Array.from(e.target.files ?? [])
-                            void handleUploadMidias('videos_whatsapp', files)
-                            e.currentTarget.value = ''
-                          }}
+                          onFiles={(files) => void handleUploadMidias('videos_whatsapp', files)}
                         />
                         {(((getIA('midias.videos_whatsapp', []) as any[]) || []) as any[]).length > 0 ? (
                           <div className="grid grid-cols-1 gap-3">
@@ -1733,69 +1929,20 @@ export function ProcedimentosPage() {
                           </div>
                         ) : null}
                       </div>
-                      <div className="grid gap-2">
-                        <Label>URLs</Label>
-                        <div className="flex gap-2">
-                          <Input
-                            value={String(getIA('midias._ui_video_whatsapp_url', '') || '')}
-                            onChange={(e) => setIA('midias._ui_video_whatsapp_url', e.target.value)}
-                            placeholder="https://..."
-                          />
-                          <Button
-                            type="button"
-                            variant="outline"
-                            onClick={() => {
-                              const raw = String(getIA('midias._ui_video_whatsapp_url', '') || '').trim()
-                              if (!raw) return
-                              const prev = (((getIA('midias.videos_whatsapp_urls', []) as any[]) || []) as any[]) as any[]
-                              if (prev.includes(raw)) return
-                              setIA('midias.videos_whatsapp_urls', [...prev, raw])
-                              setIA('midias._ui_video_whatsapp_url', '')
-                            }}
-                          >
-                            Adicionar
-                          </Button>
-                        </div>
-                        {(((getIA('midias.videos_whatsapp_urls', []) as any[]) || []) as any[]).length > 0 ? (
-                          <div className="space-y-2">
-                            {(((getIA('midias.videos_whatsapp_urls', []) as any[]) || []) as any[]).map((u: any) => (
-                              <div key={String(u)} className="flex items-center justify-between gap-2 rounded-md border p-2">
-                                <div className="min-w-0 text-xs text-muted-foreground truncate">{String(u)}</div>
-                                <Button
-                                  type="button"
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => {
-                                    const prev = (((getIA('midias.videos_whatsapp_urls', []) as any[]) || []) as any[]) as any[]
-                                    setIA('midias.videos_whatsapp_urls', prev.filter((x) => x !== u))
-                                  }}
-                                >
-                                  Remover
-                                </Button>
-                              </div>
-                            ))}
-                          </div>
-                        ) : null}
-                      </div>
                     </div>
                   </div>
 
                   <div className="grid gap-2 md:col-span-2">
                     <Label className="text-sm font-semibold">Vídeos explicativos</Label>
-                    <div className="grid gap-4 md:grid-cols-2">
+                    <div className="grid gap-4">
                       <div className="grid gap-2">
                         <Label>Upload</Label>
-                        <Input
-                          type="file"
+                        <FileUploadButton
+                          label="Enviar vídeos"
                           accept="video/*"
                           multiple
-                          className="file:text-foreground file:bg-transparent file:border-0 file:mr-3"
                           disabled={uploadingMidiaKey === 'midia:videos_explicativos'}
-                          onChange={(e) => {
-                            const files = Array.from(e.target.files ?? [])
-                            void handleUploadMidias('videos_explicativos', files)
-                            e.currentTarget.value = ''
-                          }}
+                          onFiles={(files) => void handleUploadMidias('videos_explicativos', files)}
                         />
                         {(((getIA('midias.videos_explicativos', []) as any[]) || []) as any[]).length > 0 ? (
                           <div className="grid grid-cols-1 gap-3">
@@ -1821,157 +1968,50 @@ export function ProcedimentosPage() {
                           </div>
                         ) : null}
                       </div>
-                      <div className="grid gap-2">
-                        <Label>URLs</Label>
-                        <div className="flex gap-2">
-                          <Input
-                            value={String(getIA('midias._ui_video_explicativo_url', '') || '')}
-                            onChange={(e) => setIA('midias._ui_video_explicativo_url', e.target.value)}
-                            placeholder="https://..."
-                          />
-                          <Button
-                            type="button"
-                            variant="outline"
-                            onClick={() => {
-                              const raw = String(getIA('midias._ui_video_explicativo_url', '') || '').trim()
-                              if (!raw) return
-                              const prev = (((getIA('midias.videos_explicativos_urls', []) as any[]) || []) as any[]) as any[]
-                              if (prev.includes(raw)) return
-                              setIA('midias.videos_explicativos_urls', [...prev, raw])
-                              setIA('midias._ui_video_explicativo_url', '')
-                            }}
-                          >
-                            Adicionar
-                          </Button>
-                        </div>
-                        {(((getIA('midias.videos_explicativos_urls', []) as any[]) || []) as any[]).length > 0 ? (
-                          <div className="space-y-2">
-                            {(((getIA('midias.videos_explicativos_urls', []) as any[]) || []) as any[]).map((u: any) => (
-                              <div key={String(u)} className="flex items-center justify-between gap-2 rounded-md border p-2">
-                                <div className="min-w-0 text-xs text-muted-foreground truncate">{String(u)}</div>
-                                <Button
-                                  type="button"
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => {
-                                    const prev = (((getIA('midias.videos_explicativos_urls', []) as any[]) || []) as any[]) as any[]
-                                    setIA('midias.videos_explicativos_urls', prev.filter((x) => x !== u))
-                                  }}
-                                >
-                                  Remover
-                                </Button>
+                    </div>
+                  </div>
+
+                  <div className="grid gap-2 md:col-span-2">
+                    <Label className="text-sm font-semibold">Vídeos de depoimentos</Label>
+                    <div className="grid gap-2">
+                      <Label>Upload</Label>
+                      <FileUploadButton
+                        label="Enviar vídeos"
+                        accept="video/*"
+                        multiple
+                        disabled={uploadingMidiaKey === 'midia:videos_depoimentos'}
+                        onFiles={(files) => void handleUploadMidias('videos_depoimentos', files)}
+                      />
+                      {(((getIA('midias.videos_depoimentos', []) as any[]) || []) as any[]).length > 0 ? (
+                        <div className="grid grid-cols-1 gap-3">
+                          {(((getIA('midias.videos_depoimentos', []) as any[]) || []) as any[]).map((m: any) => {
+                            const urlKey = `${m.bucket}:${m.path}`
+                            const url = midiaUrlByKey[urlKey]
+                            return (
+                              <div key={m.path} className="overflow-hidden rounded-md border border-border/60">
+                                {url ? (
+                                  <video src={url} controls className="h-40 w-full object-cover" />
+                                ) : (
+                                  <div className="flex h-40 items-center justify-center text-xs text-muted-foreground">Carregando...</div>
+                                )}
+                                <div className="flex items-center justify-between gap-2 p-2">
+                                  <div className="min-w-0 text-xs text-muted-foreground truncate">{m.path}</div>
+                                  <Button type="button" variant="outline" size="sm" onClick={() => void handleRemoveMidia('videos_depoimentos', m)}>
+                                    Remover
+                                  </Button>
+                                </div>
                               </div>
-                            ))}
-                          </div>
-                        ) : null}
-                      </div>
+                            )
+                          })}
+                        </div>
+                      ) : null}
                     </div>
-                  </div>
-                </div>
-
-                <div className="space-y-3">
-                  <Label className="text-sm font-semibold">Depoimentos</Label>
-                  {(((getIA('midias.depoimentos', []) as any[]) || []) as any[]).map((d: any, idx) => (
-                    <div key={idx} className="grid gap-3 md:grid-cols-3 border rounded-lg p-3">
-                      <div className="grid gap-2">
-                        <Label>Nome</Label>
-                        <Input
-                          value={d?.nome || ''}
-                          onChange={(e) => {
-                            const items = [ ...(((getIA('midias.depoimentos', []) as any[]) || []) as any[]) ]
-                            items[idx] = { ...(items[idx] || {}), nome: e.target.value }
-                            setIA('midias.depoimentos', items)
-                          }}
-                        />
-                      </div>
-                      <div className="grid gap-2">
-                        <Label>Idade</Label>
-                        <Input
-                          type="number"
-                          value={d?.idade ?? ''}
-                          onChange={(e) => {
-                            const items = [ ...(((getIA('midias.depoimentos', []) as any[]) || []) as any[]) ]
-                            items[idx] = { ...(items[idx] || {}), idade: e.target.value === '' ? null : Number(e.target.value) }
-                            setIA('midias.depoimentos', items)
-                          }}
-                        />
-                      </div>
-                      <div className="grid gap-2 md:col-span-3">
-                        <Label>Depoimento</Label>
-                        <Textarea
-                          value={d?.texto || ''}
-                          onChange={(e) => {
-                            const items = [ ...(((getIA('midias.depoimentos', []) as any[]) || []) as any[]) ]
-                            items[idx] = { ...(items[idx] || {}), texto: e.target.value }
-                            setIA('midias.depoimentos', items)
-                          }}
-                          rows={3}
-                        />
-                      </div>
-                      <div className="md:col-span-3 flex justify-end">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          onClick={() => {
-                            const items = [ ...(((getIA('midias.depoimentos', []) as any[]) || []) as any[]) ]
-                            items.splice(idx, 1)
-                            setIA('midias.depoimentos', items)
-                          }}
-                        >
-                          Remover
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => {
-                      const items = [ ...(((getIA('midias.depoimentos', []) as any[]) || []) as any[]) ]
-                      items.push({ nome: '', idade: null, texto: '' })
-                      setIA('midias.depoimentos', items)
-                    }}
-                  >
-                    Adicionar depoimento
-                  </Button>
-                </div>
-
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div className="grid gap-2">
-                    <Label>Prova social específica (texto)</Label>
-                    <Textarea value={getIA('midias.prova_social_texto', '')} onChange={(e) => setIA('midias.prova_social_texto', e.target.value)} rows={3} />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label>Prova social específica (upload)</Label>
-                    <Input
-                      type="file"
-                      accept="image/*"
-                      multiple
-                      className="file:text-foreground file:bg-transparent file:border-0 file:mr-3"
-                      disabled={uploadingMidiaKey === 'midia:prova_social_especifica'}
-                      onChange={(e) => {
-                        const files = Array.from(e.target.files ?? [])
-                        void handleUploadMidias('prova_social_especifica', files)
-                        e.currentTarget.value = ''
-                      }}
-                    />
                   </div>
                 </div>
               </div>
             </div>
 
             <div className="grid gap-4 md:grid-cols-2">
-              <div className="flex items-center justify-between rounded-lg border p-3">
-                <div className="space-y-0.5">
-                  <Label>IA informa preço?</Label>
-                  <p className="text-sm text-muted-foreground">Permite a IA mencionar valores do procedimento</p>
-                </div>
-                <Switch
-                  checked={Boolean(formState.ia_informa_preco)}
-                  onCheckedChange={(checked) => setFormState({ ...formState, ia_informa_preco: checked })}
-                />
-              </div>
-
               <div className="flex items-center justify-between rounded-lg border p-3">
                 <div className="space-y-0.5">
                   <Label>IA envia imagens do procedimento?</Label>
@@ -1982,95 +2022,6 @@ export function ProcedimentosPage() {
                   onCheckedChange={(checked) => setFormState({ ...formState, ia_envia_imagens: checked })}
                 />
               </div>
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-3">
-              <div className="space-y-2">
-                <Label htmlFor="edit-valor-base">Valor Base (R$)</Label>
-                <Input
-                  id="edit-valor-base"
-                  type="number"
-                  step="0.01"
-                  value={formState.valor_base || ''}
-                  onChange={(e) =>
-                    setFormState({ ...formState, valor_base: parseFloat(e.target.value) || undefined })
-                  }
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="edit-valor-minimo">Valor Mínimo (R$)</Label>
-                <Input
-                  id="edit-valor-minimo"
-                  type="number"
-                  step="0.01"
-                  value={formState.valor_minimo || ''}
-                  onChange={(e) =>
-                    setFormState({ ...formState, valor_minimo: parseFloat(e.target.value) || undefined })
-                  }
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="edit-valor-maximo">Valor Máximo (R$)</Label>
-                <Input
-                  id="edit-valor-maximo"
-                  type="number"
-                  step="0.01"
-                  value={formState.valor_maximo || ''}
-                  onChange={(e) =>
-                    setFormState({ ...formState, valor_maximo: parseFloat(e.target.value) || undefined })
-                  }
-                />
-              </div>
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="edit-duracao">Duração Estimada (minutos)</Label>
-                <Input
-                  id="edit-duracao"
-                  type="number"
-                  value={formState.duracao_estimada || ''}
-                  onChange={(e) =>
-                    setFormState({
-                      ...formState,
-                      duracao_estimada: parseInt(e.target.value) || undefined,
-                    })
-                  }
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="edit-status">Status</Label>
-                <Select
-                  value={formState.status}
-                  onValueChange={(v) =>
-                    setFormState({ ...formState, status: v as StatusProcedimento })
-                  }
-                >
-                  <SelectTrigger id="edit-status">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Object.entries(STATUS_CONFIG).map(([key, config]) => (
-                      <SelectItem key={key} value={key}>
-                        {config.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="edit-observacoes">Observações</Label>
-              <Textarea
-                id="edit-observacoes"
-                value={formState.observacoes || ''}
-                onChange={(e) => setFormState({ ...formState, observacoes: e.target.value })}
-                rows={2}
-              />
             </div>
           </div>
 

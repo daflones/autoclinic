@@ -11,6 +11,7 @@ interface ListEditorProps {
   items: string[]
   onChange: (items: string[]) => void
   disabled?: boolean
+  hideEmptyState?: boolean
 }
 
 export function ListEditor({
@@ -20,6 +21,7 @@ export function ListEditor({
   items,
   onChange,
   disabled,
+  hideEmptyState = true,
 }: ListEditorProps) {
   const [draft, setDraft] = useState('')
   const dragIndexRef = useRef<number | null>(null)
@@ -107,7 +109,7 @@ export function ListEditor({
             </Badge>
           ))}
         </div>
-      ) : (
+      ) : hideEmptyState ? null : (
         <div className="text-sm text-muted-foreground">{placeholder || 'Nenhum item adicionado'}</div>
       )}
     </div>

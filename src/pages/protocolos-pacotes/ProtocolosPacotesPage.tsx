@@ -6,6 +6,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { ListEditor } from '@/components/ui/list-editor'
 import { PairsEditor, type PairItem } from '@/components/ui/pairs-editor'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   Dialog,
   DialogContent,
@@ -23,6 +24,7 @@ import {
 } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
 import { Switch } from '@/components/ui/switch'
+import { FileUploadButton } from '@/components/ui/file-upload-button'
 import { Plus, Search, Package, Edit, Trash2, Image as ImageIcon, GripVertical } from 'lucide-react'
 import { toast } from 'sonner'
 import {
@@ -33,6 +35,9 @@ import {
   useUpdateProtocoloPacoteStatus,
 } from '@/hooks/useProtocolosPacotes'
 import { useProcedimentos } from '@/hooks/useProcedimentos'
+import { usePlanosTratamento } from '@/hooks/usePlanosTratamento'
+import { sessoesTratamentoService, type SessaoTratamento } from '@/services/api/sessoes-tratamento'
+import { useQuery } from '@tanstack/react-query'
 import type { ProtocoloPacote, ProtocoloPacoteCreateData, ProtocoloPacoteStatus } from '@/services/api/protocolos-pacotes'
 import { deleteMidia, getSignedMidiaUrl, uploadMidia } from '@/services/api/storage-midias'
 import {
@@ -49,8 +54,11 @@ const STATUS_BADGE: Record<ProtocoloPacoteStatus | 'all', { label: string; varia
 }
 
 export function ProtocolosPacotesPage() {
+  const [activeTab, setActiveTab] = useState<'lista' | 'pacientes'>('lista')
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState<ProtocoloPacoteStatus | 'all'>('all')
+
+  const [selectedPacoteIdForPacientes, setSelectedPacoteIdForPacientes] = useState<string>('')
 
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
@@ -181,6 +189,57 @@ export function ProtocolosPacotesPage() {
 
   const { data: itens, isLoading } = useProtocolosPacotes(filters)
   const { data: procedimentos = [] } = useProcedimentos({} as any)
+
+  const planosFilters = useMemo(() => {
+    if (!selectedPacoteIdForPacientes) return null
+    return {
+      protocolo_pacote_id: selectedPacoteIdForPacientes,
+      limit: 1000,
+    } as any
+  }, [selectedPacoteIdForPacientes])
+
+  const { data: planosTratamentoForPacote = [], isLoading: isLoadingPlanosForPacote } = usePlanosTratamento(
+    (planosFilters || {}) as any
+  )
+
+  const planoIdsForPacote = useMemo(
+    () => Array.from(new Set((planosTratamentoForPacote || []).map((p: any) => p.id).filter(Boolean))),
+    [planosTratamentoForPacote]
+  )
+
+  const { data: sessoesForPacote = [], isLoading: isLoadingSessoesForPacote } = useQuery({
+    queryKey: ['sessoes-tratamento', 'by-plano-ids', planoIdsForPacote],
+    queryFn: () => sessoesTratamentoService.listByPlanoIds(planoIdsForPacote),
+    enabled: planoIdsForPacote.length > 0,
+    staleTime: 1000 * 60 * 2,
+    gcTime: 1000 * 60 * 10,
+    refetchOnWindowFocus: false,
+  })
+
+  const sessoesByPlanoId = useMemo(() => {
+    const map: Record<string, SessaoTratamento[]> = {}
+    for (const s of sessoesForPacote || []) {
+      const pid = String((s as any).plano_tratamento_id || '')
+      if (!pid) continue
+      map[pid] = map[pid] ? [...map[pid], s] : [s]
+    }
+    return map
+  }, [sessoesForPacote])
+
+  const formatDate = (iso?: string | null) => {
+    if (!iso) return ''
+    const d = new Date(iso)
+    if (Number.isNaN(d.getTime())) return ''
+    return d.toLocaleDateString('pt-BR')
+  }
+
+  const mapPlanoStatus = (status: string) => {
+    if (status === 'em_execucao') return { label: 'Ativo', variant: 'default' as const }
+    if (status === 'concluido') return { label: 'Concluído', variant: 'secondary' as const }
+    if (status === 'cancelado') return { label: 'Abandonado', variant: 'destructive' as const }
+    if (status === 'aprovado') return { label: 'Pausado', variant: 'outline' as const }
+    return { label: status || '—', variant: 'outline' as const }
+  }
 
   const createMutation = useCreateProtocoloPacote()
   const updateMutation = useUpdateProtocoloPacote()
@@ -438,14 +497,12 @@ export function ProtocolosPacotesPage() {
         <Label>{label}</Label>
 
         {canUpload ? (
-          <Input
-            type="file"
+          <FileUploadButton
+            label="Enviar arquivos"
             accept={accept}
             multiple
-            className="file:text-foreground file:bg-transparent file:border-0 file:mr-3"
             disabled={uploadingImagem}
-            onChange={(e) => {
-              const files = Array.from(e.target.files ?? [])
+            onFiles={(files) => {
               if (!files.length) return
 
               if (selectedItem) {
@@ -456,7 +513,6 @@ export function ProtocolosPacotesPage() {
                   [tipo]: [ ...(prev[tipo] || []), ...files ],
                 }))
               }
-              e.currentTarget.value = ''
             }}
           />
         ) : null}
@@ -574,118 +630,214 @@ export function ProtocolosPacotesPage() {
         </Card>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Lista</CardTitle>
-          <CardDescription>Crie, edite e gerencie seus protocolos/pacotes</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-            <div className="flex-1 space-y-2">
-              <Label htmlFor="search">Buscar</Label>
-              <div className="relative">
-                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="search"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  placeholder="Buscar por nome ou descrição"
-                  className="pl-9"
-                />
-              </div>
-            </div>
+      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)}>
+        <TabsList className="w-full justify-start flex-wrap h-auto">
+          <TabsTrigger value="lista">Lista</TabsTrigger>
+          <TabsTrigger value="pacientes">Pacientes com pacotes ativos</TabsTrigger>
+        </TabsList>
 
-            <div className="w-full md:w-64 space-y-2">
-              <Label>Status</Label>
-              <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as any)}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.entries(STATUS_BADGE).map(([key, cfg]) => (
-                    <SelectItem key={key} value={key}>
-                      {cfg.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          {isLoading ? (
-            <div className="text-sm text-muted-foreground">Carregando...</div>
-          ) : itens.length === 0 ? (
-            <div className="text-sm text-muted-foreground">Nenhum item encontrado.</div>
-          ) : (
-            <div className="space-y-3">
-              {itens.map((item) => (
-                <div
-                  key={item.id}
-                  className="border rounded-lg p-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between cursor-pointer hover:bg-accent/30 transition-colors"
-                  onClick={() => openDetails(item)}
-                >
-                  <div className="flex items-start gap-3">
-                    <div className="h-12 w-12 rounded border bg-muted flex items-center justify-center overflow-hidden">
-                      {item.imagem_path ? (
-                        <ImageIcon className="h-5 w-5 text-muted-foreground" />
-                      ) : (
-                        <ImageIcon className="h-5 w-5 text-muted-foreground" />
-                      )}
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <div className="font-medium">{item.nome}</div>
-                        <Badge variant={item.ativo ? 'default' : 'outline'}>
-                          {item.ativo ? 'Ativo' : 'Inativo'}
-                        </Badge>
-                      </div>
-                      {item.descricao ? (
-                        <div className="text-sm text-muted-foreground line-clamp-2">{item.descricao}</div>
-                      ) : null}
-                      {typeof item.preco === 'number' ? (
-                        <div className="text-xs text-muted-foreground">Valor total do pacote: R$ {item.preco.toFixed(2)}</div>
-                      ) : null}
-                    </div>
-                  </div>
-
-                  <div className="flex flex-col gap-2 md:flex-row md:items-center">
-                    <Button
-                      variant="outline"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        void handleToggleAtivo(item)
-                      }}
-                      disabled={statusMutation.isPending}
-                    >
-                      {item.ativo ? 'Desativar' : 'Ativar'}
-                    </Button>
-                    <Button
-                      variant="outline"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        openEdit(item)
-                      }}
-                    >
-                      <Edit className="mr-2 h-4 w-4" />
-                      Editar
-                    </Button>
-                    <Button
-                      variant="destructive"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        requestDelete(item)
-                      }}
-                    >
-                      <Trash2 className="mr-2 h-4 w-4" />
-                      Excluir
-                    </Button>
+        <TabsContent value="lista">
+          <Card>
+            <CardHeader>
+              <CardTitle>Lista</CardTitle>
+              <CardDescription>Crie, edite e gerencie seus protocolos/pacotes</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+                <div className="flex-1 space-y-2">
+                  <Label htmlFor="search">Buscar</Label>
+                  <div className="relative">
+                    <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="search"
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      placeholder="Buscar por nome ou descrição"
+                      className="pl-9"
+                    />
                   </div>
                 </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+
+                <div className="w-full md:w-64 space-y-2">
+                  <Label>Status</Label>
+                  <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as any)}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(STATUS_BADGE).map(([key, cfg]) => (
+                        <SelectItem key={key} value={key}>
+                          {cfg.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {isLoading ? (
+                <div className="text-sm text-muted-foreground">Carregando...</div>
+              ) : itens.length === 0 ? (
+                <div className="text-sm text-muted-foreground">Nenhum item encontrado.</div>
+              ) : (
+                <div className="space-y-3">
+                  {itens.map((item) => (
+                    <div
+                      key={item.id}
+                      className="border rounded-lg p-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between cursor-pointer hover:bg-accent/30 transition-colors"
+                      onClick={() => openDetails(item)}
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className="h-12 w-12 rounded border bg-muted flex items-center justify-center overflow-hidden">
+                          <ImageIcon className="h-5 w-5 text-muted-foreground" />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <div className="font-medium">{item.nome}</div>
+                            <Badge variant={item.ativo ? 'default' : 'outline'}>
+                              {item.ativo ? 'Ativo' : 'Inativo'}
+                            </Badge>
+                          </div>
+                          {item.descricao ? (
+                            <div className="text-sm text-muted-foreground line-clamp-2">{item.descricao}</div>
+                          ) : null}
+                          {typeof item.preco === 'number' ? (
+                            <div className="text-xs text-muted-foreground">Valor total do pacote: R$ {item.preco.toFixed(2)}</div>
+                          ) : null}
+                        </div>
+                      </div>
+
+                      <div className="flex flex-col gap-2 md:flex-row md:items-center">
+                        <Button
+                          variant="outline"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            void handleToggleAtivo(item)
+                          }}
+                          disabled={statusMutation.isPending}
+                        >
+                          {item.ativo ? 'Desativar' : 'Ativar'}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            openEdit(item)
+                          }}
+                        >
+                          <Edit className="mr-2 h-4 w-4" />
+                          Editar
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            requestDelete(item)
+                          }}
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          Excluir
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="pacientes">
+          <Card>
+            <CardHeader>
+              <CardTitle>Pacientes com pacotes ativos</CardTitle>
+              <CardDescription>Veja quais pacientes possuem um plano vinculado a um pacote</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label>Pacote</Label>
+                  <Select value={selectedPacoteIdForPacientes || 'none'} onValueChange={(v) => setSelectedPacoteIdForPacientes(v === 'none' ? '' : v)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione um pacote" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Selecione</SelectItem>
+                      {itens.map((p) => (
+                        <SelectItem key={p.id} value={p.id}>
+                          {p.nome}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {!selectedPacoteIdForPacientes ? (
+                <div className="text-sm text-muted-foreground">Selecione um pacote para listar os pacientes.</div>
+              ) : isLoadingPlanosForPacote ? (
+                <div className="text-sm text-muted-foreground">Carregando planos...</div>
+              ) : planosTratamentoForPacote.length === 0 ? (
+                <div className="text-sm text-muted-foreground">Nenhum paciente com plano vinculado a este pacote.</div>
+              ) : (
+                <div className="space-y-3">
+                  {(isLoadingSessoesForPacote ? <div className="text-sm text-muted-foreground">Carregando sessões...</div> : null)}
+
+                  {planosTratamentoForPacote.map((plano: any) => {
+                    const paciente = plano.paciente
+                    const sessoes = sessoesByPlanoId[plano.id] || []
+                    const total = sessoes.length
+                    const realizadas = sessoes.filter((s) => s.status === 'concluida').length
+                    const pendentes = Math.max(0, total - realizadas)
+                    const datasRealizadas = sessoes
+                      .filter((s) => s.status === 'concluida')
+                      .map((s) => formatDate(s.inicio_real || s.inicio_previsto))
+                      .filter(Boolean)
+                    const datasRecomendadas = sessoes
+                      .filter((s) => s.status === 'planejada')
+                      .map((s) => formatDate(s.inicio_previsto))
+                      .filter(Boolean)
+
+                    const st = mapPlanoStatus(String(plano.status || ''))
+
+                    return (
+                      <div key={plano.id} className="rounded-lg border p-4 space-y-3">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <div className="font-medium truncate">{paciente?.nome_completo || 'Paciente'}</div>
+                            <div className="text-xs text-muted-foreground truncate">Plano: {plano.titulo}</div>
+                            {paciente?.whatsapp || paciente?.telefone ? (
+                              <div className="text-xs text-muted-foreground truncate">Contato: {paciente?.whatsapp || paciente?.telefone}</div>
+                            ) : null}
+                          </div>
+                          <Badge variant={st.variant}>{st.label}</Badge>
+                        </div>
+
+                        <div className="grid gap-3 md:grid-cols-3">
+                          <div className="text-sm"><span className="text-muted-foreground">Total de sessões:</span> {total || '—'}</div>
+                          <div className="text-sm"><span className="text-muted-foreground">Realizadas:</span> {realizadas || '—'}</div>
+                          <div className="text-sm"><span className="text-muted-foreground">Pendentes:</span> {pendentes || '—'}</div>
+                        </div>
+
+                        <div className="grid gap-3 md:grid-cols-2">
+                          <div className="space-y-1">
+                            <div className="text-sm font-medium">Datas realizadas</div>
+                            <div className="text-sm text-muted-foreground whitespace-pre-wrap">{datasRealizadas.length ? datasRealizadas.join('\n') : '—'}</div>
+                          </div>
+                          <div className="space-y-1">
+                            <div className="text-sm font-medium">Datas recomendadas (próximas)</div>
+                            <div className="text-sm text-muted-foreground whitespace-pre-wrap">{datasRecomendadas.length ? datasRecomendadas.join('\n') : '—'}</div>
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
 
       <Dialog
         open={isDetailsOpen}

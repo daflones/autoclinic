@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -7,7 +7,7 @@ import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { ListEditor } from '@/components/ui/list-editor'
-import { Bot, Check, Loader2 } from 'lucide-react'
+import { Bot, Check, Loader2, Upload } from 'lucide-react'
 import { useClinicaIAConfig, useUpdateClinicaIAConfig } from '@/hooks/useClinicaIAConfig'
 import { deleteMidia, getSignedMidiaUrl, uploadMidia } from '@/services/api/storage-midias'
 import { useProfissionaisClinica } from '@/hooks/useProfissionaisClinica'
@@ -22,6 +22,45 @@ const defaultHorarios = {
   sexta: { ativo: true, inicio: '08:00', fim: '18:00' },
   sabado: { ativo: false, inicio: '08:00', fim: '12:00' },
   domingo: { ativo: false, inicio: '08:00', fim: '12:00' },
+}
+
+function FileUploadButton(props: {
+  accept: string
+  multiple?: boolean
+  disabled?: boolean
+  label: string
+  onFiles: (files: FileList) => void
+}) {
+  const { accept, multiple, disabled, label, onFiles } = props
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  return (
+    <div className="space-y-2">
+      <input
+        ref={inputRef}
+        type="file"
+        accept={accept}
+        multiple={multiple}
+        className="hidden"
+        disabled={disabled}
+        onChange={(e) => {
+          const files = e.currentTarget.files
+          if (files && files.length > 0) onFiles(files)
+          e.currentTarget.value = ''
+        }}
+      />
+      <Button
+        type="button"
+        variant="outline"
+        className="w-full justify-start"
+        disabled={disabled}
+        onClick={() => inputRef.current?.click()}
+      >
+        <Upload className="mr-2 h-4 w-4" />
+        {label}
+      </Button>
+    </div>
+  )
 }
 
 type TomDeVoz =
@@ -43,10 +82,6 @@ export function ClinicaIAConfigPage() {
   const updateClinicaConfig = useUpdateClinicaIAConfig()
   const { data: profissionaisExistentes = [] } = useProfissionaisClinica({ status: 'ativo' })
   const { data: protocolosPacotes = [] } = useProtocolosPacotes({ status: 'ativo' })
-
-  const formatDayLabel = (dia: string) => {
-    return dia.charAt(0).toUpperCase() + dia.slice(1)
-  }
 
   const normalizePeriods = (config: any) => {
     if (!config) return { ativo: false, periodos: [] }
@@ -293,7 +328,7 @@ export function ClinicaIAConfigPage() {
     JSON.stringify(provaSocial?.fotos_clinica_midias || []),
   ])
 
-  const uploadSingleMidia = async (key: 'imagem_apresentacao' | 'foto_fachada', file: File) => {
+  const uploadSingleMidia = async (key: 'imagem_apresentacao' | 'foto_fachada' | 'video_institucional', file: File) => {
     setUploadingMidia(key)
     try {
       const uploaded = await uploadMidia({ bucket: 'clinica-midias', file, prefix: key })
@@ -522,7 +557,10 @@ export function ClinicaIAConfigPage() {
 
             <div className="space-y-3 pt-4 border-t">
               <Label>Horário de funcionamento</Label>
-              {Object.entries(identidade.horarios_funcionamento || defaultHorarios).map(([dia, config]: [string, any]) => (
+              {(['segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado', 'domingo'] as const).map((dia) => {
+                const horarios = identidade.horarios_funcionamento || defaultHorarios
+                const config = (horarios as any)[dia] || (defaultHorarios as any)[dia]
+                return (
                 <div key={dia} className="flex items-center gap-4 p-3 border rounded-lg">
                   <div className="w-24">
                     <Label className="capitalize">{dia}</Label>
@@ -544,7 +582,7 @@ export function ClinicaIAConfigPage() {
                       <div className="space-y-2">
                         {(normalizePeriods(config).periodos || []).map((p: any, idx: number) => (
                           <div key={idx} className="flex items-center gap-2">
-                            <span className="text-xs text-muted-foreground w-14">{formatDayLabel(dia)} {idx + 1}</span>
+                            <span className="text-xs text-muted-foreground w-20">Intervalo {idx + 1}</span>
                             <Input
                               type="time"
                               value={p?.inicio || '08:00'}
@@ -613,7 +651,8 @@ export function ClinicaIAConfigPage() {
                     <span className="text-sm text-gray-400">Inativo</span>
                   )}
                 </div>
-              ))}
+                )
+              })}
             </div>
           </CardContent>
         </Card>
@@ -1037,17 +1076,12 @@ export function ClinicaIAConfigPage() {
             <div className="grid gap-4 md:grid-cols-2">
               <div className="grid gap-2">
                 <Label>Cases (foto/vídeo)</Label>
-                <Input
-                  type="file"
+                <FileUploadButton
                   accept="image/*,video/*"
                   multiple
-                  className="file:text-foreground file:bg-transparent file:border-0 file:mr-3"
                   disabled={!!uploadingMidia}
-                  onChange={(e) => {
-                    const files = e.target.files
-                    if (files && files.length) uploadProvaSocialMidia('cases_midias', files)
-                    e.currentTarget.value = ''
-                  }}
+                  label="Enviar arquivos"
+                  onFiles={(files) => uploadProvaSocialMidia('cases_midias', files)}
                 />
 
                 <div className="grid grid-cols-3 gap-2">
@@ -1077,17 +1111,12 @@ export function ClinicaIAConfigPage() {
 
               <div className="grid gap-2">
                 <Label>Fotos da clínica (foto/vídeo)</Label>
-                <Input
-                  type="file"
+                <FileUploadButton
                   accept="image/*,video/*"
                   multiple
-                  className="file:text-foreground file:bg-transparent file:border-0 file:mr-3"
                   disabled={!!uploadingMidia}
-                  onChange={(e) => {
-                    const files = e.target.files
-                    if (files && files.length) uploadProvaSocialMidia('fotos_clinica_midias', files)
-                    e.currentTarget.value = ''
-                  }}
+                  label="Enviar arquivos"
+                  onFiles={(files) => uploadProvaSocialMidia('fotos_clinica_midias', files)}
                 />
 
                 <div className="grid grid-cols-3 gap-2">
@@ -1127,11 +1156,15 @@ export function ClinicaIAConfigPage() {
             <div className="grid gap-4 md:grid-cols-2">
               <div className="grid gap-2">
                 <Label>Imagem de apresentação</Label>
-                <Input type="file" accept="image/*" className="file:text-foreground file:bg-transparent file:border-0 file:mr-3" disabled={!!uploadingMidia} onChange={(e) => {
-                  const file = e.target.files?.[0]
-                  if (file) uploadSingleMidia('imagem_apresentacao', file)
-                  e.currentTarget.value = ''
-                }} />
+                <FileUploadButton
+                  accept="image/*"
+                  disabled={!!uploadingMidia}
+                  label="Enviar imagem"
+                  onFiles={(files) => {
+                    const file = files?.[0]
+                    if (file) uploadSingleMidia('imagem_apresentacao', file)
+                  }}
+                />
 
                 {midias?.imagem_apresentacao ? (
                   <div className="flex items-center justify-between gap-3">
@@ -1151,11 +1184,15 @@ export function ClinicaIAConfigPage() {
               </div>
               <div className="grid gap-2">
                 <Label>Foto da fachada</Label>
-                <Input type="file" accept="image/*" className="file:text-foreground file:bg-transparent file:border-0 file:mr-3" disabled={!!uploadingMidia} onChange={(e) => {
-                  const file = e.target.files?.[0]
-                  if (file) uploadSingleMidia('foto_fachada', file)
-                  e.currentTarget.value = ''
-                }} />
+                <FileUploadButton
+                  accept="image/*"
+                  disabled={!!uploadingMidia}
+                  label="Enviar imagem"
+                  onFiles={(files) => {
+                    const file = files?.[0]
+                    if (file) uploadSingleMidia('foto_fachada', file)
+                  }}
+                />
 
                 {midias?.foto_fachada ? (
                   <div className="flex items-center justify-between gap-3">
@@ -1175,15 +1212,25 @@ export function ClinicaIAConfigPage() {
               </div>
               <div className="grid gap-2">
                 <Label>Vídeo institucional</Label>
-                <Input value={midias.video_institucional || ''} onChange={(e) => setMidias({ ...midias, video_institucional: e.target.value })} />
+                <FileUploadButton
+                  accept="video/*"
+                  disabled={!!uploadingMidia}
+                  label="Enviar vídeo"
+                  onFiles={(files) => {
+                    const file = files?.[0]
+                    if (file) uploadSingleMidia('video_institucional', file)
+                  }}
+                />
               </div>
               <div className="grid gap-2">
                 <Label>Fotos das salas</Label>
-                <Input type="file" accept="image/*" multiple className="file:text-foreground file:bg-transparent file:border-0 file:mr-3" disabled={!!uploadingMidia} onChange={(e) => {
-                  const files = e.target.files
-                  if (files && files.length) uploadMultiMidia('fotos_salas', files)
-                  e.currentTarget.value = ''
-                }} />
+                <FileUploadButton
+                  accept="image/*"
+                  multiple
+                  disabled={!!uploadingMidia}
+                  label="Enviar imagens"
+                  onFiles={(files) => uploadMultiMidia('fotos_salas', files)}
+                />
 
                 <div className="grid grid-cols-3 gap-2">
                   {(Array.isArray(midias.fotos_salas) ? midias.fotos_salas : []).map((path: string) => (
@@ -1202,11 +1249,13 @@ export function ClinicaIAConfigPage() {
               </div>
               <div className="grid gap-2">
                 <Label>Antes/depois de paciente</Label>
-                <Input type="file" accept="image/*" multiple className="file:text-foreground file:bg-transparent file:border-0 file:mr-3" disabled={!!uploadingMidia} onChange={(e) => {
-                  const files = e.target.files
-                  if (files && files.length) uploadMultiMidia('antes_depois_genericos', files)
-                  e.currentTarget.value = ''
-                }} />
+                <FileUploadButton
+                  accept="image/*"
+                  multiple
+                  disabled={!!uploadingMidia}
+                  label="Enviar imagens"
+                  onFiles={(files) => uploadMultiMidia('antes_depois_genericos', files)}
+                />
 
                 <div className="grid grid-cols-3 gap-2">
                   {(Array.isArray(midias.antes_depois_genericos) ? midias.antes_depois_genericos : []).map((path: string) => (

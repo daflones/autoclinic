@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from 'react'
 import { Plus, Pencil, Trash, Eye, Package, X, Upload, Image } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { FileUploadButton } from '@/components/ui/file-upload-button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -822,28 +823,18 @@ export function ProdutosPage() {
             {/* Image Upload */}
             <div className="space-y-3">
               <Label>Imagem Principal do Produto</Label>
-              <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition-colors">
-                <div className="flex flex-col items-center space-y-2">
-                  <div className="p-3 bg-gray-100 rounded-full">
-                    <Upload className="h-6 w-6 text-gray-600" />
-                  </div>
-                  <div>
-                    <label
-                      htmlFor="image"
-                      className="cursor-pointer text-sm font-medium text-blue-600 hover:text-blue-500"
-                    >
-                      Clique para selecionar uma imagem
-                    </label>
-                    <p className="text-xs text-gray-500 mt-1">PNG, JPG, GIF até 10MB</p>
-                  </div>
-                  <Input
-                    id="image"
-                    type="file"
-                    accept="image/*"
-                    onChange={handleImageSelect}
-                    className="hidden"
-                  />
-                </div>
+              <div className="space-y-2">
+                <FileUploadButton
+                  label="Selecionar imagem"
+                  accept="image/*"
+                  onFiles={(files) => {
+                    if (files[0]) {
+                      setSelectedImage(files[0])
+                      setSelectedImageName(files[0].name)
+                    }
+                  }}
+                />
+                <p className="text-xs text-muted-foreground">PNG, JPG, GIF até 10MB</p>
                 {selectedImageName && (
                   <div className="mt-3 p-2 bg-green-50 border border-green-200 rounded flex items-center justify-center space-x-2">
                     <Image className="h-4 w-4 text-green-600" />

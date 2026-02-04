@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { useState, useEffect, useMemo } from 'react'
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { FileUploadButton } from '@/components/ui/file-upload-button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
@@ -964,13 +965,11 @@ export default function WhatsAppPage() {
               <div className="rounded-lg border border-border/60 bg-background p-4 space-y-3">
                 <div>
                   <Label htmlFor="disparos-media">Mídia (imagem ou vídeo)</Label>
-                  <Input
-                    id="disparos-media"
-                    type="file"
+                  <FileUploadButton
+                    label="Selecionar mídia"
                     accept="image/*,video/*"
-                    className="mt-1"
-                    onChange={(e) => {
-                      const f = e.target.files?.[0] || null
+                    onFiles={(files) => {
+                      const f = files[0] || null
                       void handleMediaFileChange(f)
                     }}
                   />

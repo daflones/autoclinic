@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader } from '../../components/ui/card'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../../components/ui/dialog'
 import { Input } from '../../components/ui/input'
 import { Button } from '../../components/ui/button'
+import { FileUploadButton } from '../../components/ui/file-upload-button'
 import { Label } from '../../components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select'
 import { Badge } from '../../components/ui/badge'
@@ -753,11 +754,10 @@ export default function ArquivosIAPage() {
             {uploadMode === 'file' && (
               <div>
                 <Label htmlFor="file">Arquivo *</Label>
-                <Input
-                  id="file"
-                  type="file"
-                  onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
+                <FileUploadButton
+                  label="Selecionar arquivo"
                   accept="*/*"
+                  onFiles={(files: File[]) => setSelectedFile(files[0] || null)}
                 />
               </div>
             )}

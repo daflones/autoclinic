@@ -23,6 +23,7 @@ import {
 } from '@/components/ui/select'
 import { Plus, Search, Filter, UserSquare, Edit, Trash2, Mail, Phone, Award } from 'lucide-react'
 import { toast } from 'sonner'
+import { FileUploadButton } from '@/components/ui/file-upload-button'
 import { deleteMidia, getSignedMidiaUrl, uploadMidia } from '@/services/api/storage-midias'
 import {
   useCreateProfissionalMidia,
@@ -547,18 +548,12 @@ export function ProfissionaisClinicaPage() {
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
                 <Label>Foto</Label>
-                <Input
-                  type="file"
+                <FileUploadButton
+                  label="Enviar fotos"
                   accept="image/*"
                   multiple
-                  className="file:text-foreground file:bg-transparent file:border-0 file:mr-3"
                   disabled={uploadingFoto}
-                  onChange={(e) => {
-                    const files = e.target.files
-                    if (!files) return
-                    setPendingCreateFotos(Array.from(files))
-                    e.currentTarget.value = ''
-                  }}
+                  onFiles={(files) => setPendingCreateFotos(files)}
                 />
                 {pendingCreateFotos.length > 0 ? (
                   <div className="grid grid-cols-2 gap-3">
@@ -826,17 +821,15 @@ export function ProfissionaisClinicaPage() {
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
                 <Label>Foto</Label>
-                <Input
-                  type="file"
+                <FileUploadButton
+                  label="Enviar fotos"
                   accept="image/*"
                   multiple
-                  className="file:text-foreground file:bg-transparent file:border-0 file:mr-3"
                   disabled={uploadingFoto || !selectedProfissional}
-                  onChange={(e) => {
-                    const files = e.target.files
-                    if (!files) return
-                    void handleUploadMidiasForProfissional(selectedProfissional.id, Array.from(files))
-                    e.currentTarget.value = ''
+                  onFiles={(files) => {
+                    if (selectedProfissional) {
+                      void handleUploadMidiasForProfissional(selectedProfissional.id, files)
+                    }
                   }}
                 />
                 {isLoadingMidias ? (

@@ -42,11 +42,19 @@ export interface PlanoTratamento {
   created_at: string
   updated_at: string
   itens?: PlanoTratamentoItem[]
+  paciente?: {
+    id: string
+    nome_completo: string
+    telefone?: string | null
+    whatsapp?: string | null
+    email?: string | null
+  } | null
 }
 
 export interface PlanoTratamentoFilters {
   paciente_id?: string
   responsavel_profissional_id?: string
+  protocolo_pacote_id?: string
   status?: StatusPlanoTratamento
   search?: string
   page?: number
@@ -111,7 +119,7 @@ export const planosTratamentoService = {
 
     let query = supabase
       .from('planos_tratamento')
-      .select('*', { count: 'exact' })
+      .select('*, paciente:pacientes(id,nome_completo,telefone,whatsapp,email)', { count: 'exact' })
       .eq('admin_profile_id', adminProfileId)
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1)
@@ -122,6 +130,10 @@ export const planosTratamentoService = {
 
     if (filters.responsavel_profissional_id) {
       query = query.eq('responsavel_profissional_id', filters.responsavel_profissional_id)
+    }
+
+    if (filters.protocolo_pacote_id) {
+      query = query.eq('protocolo_pacote_id', filters.protocolo_pacote_id)
     }
 
     if (filters.status) {

@@ -6,6 +6,7 @@ import { Loader2, Plus, Search, Users, UserPlus, Activity, Ban, Trash2 } from 'l
 import { useQueryClient } from '@tanstack/react-query'
 
 import { Button } from '@/components/ui/button'
+import { FileUploadButton } from '@/components/ui/file-upload-button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
@@ -2003,36 +2004,26 @@ export function PacientesPage() {
                       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                         <div className="text-sm font-medium text-foreground">Fotos de Antes e Depois</div>
                         <div className="flex flex-wrap gap-2">
-                          <label className="inline-flex cursor-pointer items-center justify-center rounded-md bg-primary px-3 py-2 text-xs font-medium text-primary-foreground">
-                            {uploadingFotoTipo === 'antes' ? 'Enviando...' : 'Adicionar ANTES'}
-                            <input
-                              type="file"
-                              accept="image/*"
-                              className="hidden"
-                              disabled={uploadingFotoTipo !== null}
-                              onChange={(e) => {
-                                const file = e.target.files?.[0]
-                                e.target.value = ''
-                                if (!file) return
-                                void handleUploadPacienteFoto('antes', file)
-                              }}
-                            />
-                          </label>
-                          <label className="inline-flex cursor-pointer items-center justify-center rounded-md bg-primary px-3 py-2 text-xs font-medium text-primary-foreground">
-                            {uploadingFotoTipo === 'depois' ? 'Enviando...' : 'Adicionar DEPOIS'}
-                            <input
-                              type="file"
-                              accept="image/*"
-                              className="hidden"
-                              disabled={uploadingFotoTipo !== null}
-                              onChange={(e) => {
-                                const file = e.target.files?.[0]
-                                e.target.value = ''
-                                if (!file) return
-                                void handleUploadPacienteFoto('depois', file)
-                              }}
-                            />
-                          </label>
+                          <FileUploadButton
+                            label={uploadingFotoTipo === 'antes' ? 'Enviando...' : 'Adicionar ANTES'}
+                            accept="image/*"
+                            disabled={uploadingFotoTipo !== null}
+                            onFiles={(files) => {
+                              if (files[0]) {
+                                void handleUploadPacienteFoto('antes', files[0])
+                              }
+                            }}
+                          />
+                          <FileUploadButton
+                            label={uploadingFotoTipo === 'depois' ? 'Enviando...' : 'Adicionar DEPOIS'}
+                            accept="image/*"
+                            disabled={uploadingFotoTipo !== null}
+                            onFiles={(files) => {
+                              if (files[0]) {
+                                void handleUploadPacienteFoto('depois', files[0])
+                              }
+                            }}
+                          />
                         </div>
                       </div>
 

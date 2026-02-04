@@ -79,6 +79,26 @@ export const sessoesTratamentoService = {
     return (data as SessaoTratamento[]) ?? []
   },
 
+  async listByPlanoIds(planoIds: string[]): Promise<SessaoTratamento[]> {
+    if (!Array.isArray(planoIds) || planoIds.length === 0) return []
+    const { adminProfileId } = await getAdminContext()
+
+    const { data, error } = await supabase
+      .from('sessoes_tratamento')
+      .select('*')
+      .eq('admin_profile_id', adminProfileId)
+      .in('plano_tratamento_id', planoIds)
+      .order('inicio_previsto', { ascending: true, nullsFirst: false })
+      .order('created_at', { ascending: true })
+
+    if (error) {
+      console.error('Erro ao buscar sessões de tratamento (bulk):', error)
+      throw new Error(`Erro ao buscar sessões de tratamento: ${error.message}`)
+    }
+
+    return (data as SessaoTratamento[]) ?? []
+  },
+
   async createMany(payloads: SessaoTratamentoCreateData[]): Promise<SessaoTratamento[]> {
     if (!Array.isArray(payloads) || payloads.length === 0) return []
     const { adminProfileId } = await getAdminContext()

@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { ListEditor } from '@/components/ui/list-editor'
 import { Bot, Check, Loader2 } from 'lucide-react'
 import { useClinicaIAConfig, useUpdateClinicaIAConfig } from '@/hooks/useClinicaIAConfig'
 import { deleteMidia, getSignedMidiaUrl, uploadMidia } from '@/services/api/storage-midias'
@@ -74,6 +75,14 @@ export function ClinicaIAConfigPage() {
         return null
       })
       .filter(Boolean)
+  }
+
+  const reorder = <T,>(arr: T[], from: number, to: number) => {
+    if (from === to) return arr
+    const next = [...arr]
+    const [moved] = next.splice(from, 1)
+    next.splice(to, 0, moved)
+    return next
   }
 
   const [identidade, setIdentidade] = useState<Record<string, any>>({
@@ -503,18 +512,10 @@ export function ClinicaIAConfigPage() {
               </div>
               <div className="grid gap-2">
                 <Label>Redes sociais (uma por linha)</Label>
-                <Textarea
-                  value={(identidade.redes_sociais || []).join('\n')}
-                  onChange={(e) =>
-                    setIdentidade({
-                      ...identidade,
-                      redes_sociais: e.target.value
-                        .split('\n')
-                        .map((s: string) => s.trim())
-                        .filter(Boolean),
-                    })
-                  }
-                  rows={3}
+                <ListEditor
+                  placeholder="Adicione redes sociais"
+                  items={Array.isArray(identidade.redes_sociais) ? identidade.redes_sociais : []}
+                  onChange={(items) => setIdentidade({ ...identidade, redes_sociais: items })}
                 />
               </div>
             </div>
@@ -932,13 +933,36 @@ export function ClinicaIAConfigPage() {
             <div className="grid gap-4 md:grid-cols-2">
               <div className="grid gap-2">
                 <Label>Prêmios e reconhecimentos (um por linha)</Label>
-                <Textarea value={(provaSocial.premios_reconhecimentos || []).join('\n')} onChange={(e) => setProvaSocial({ ...provaSocial, premios_reconhecimentos: e.target.value.split('\n').map((s: string) => s.trim()).filter(Boolean) })} rows={3} />
+                <ListEditor
+                  placeholder="Adicione prêmios e reconhecimentos"
+                  items={Array.isArray(provaSocial.premios_reconhecimentos) ? provaSocial.premios_reconhecimentos : []}
+                  onChange={(items) => setProvaSocial({ ...provaSocial, premios_reconhecimentos: items })}
+                />
               </div>
               <div className="grid gap-2 md:col-span-2">
                 <Label>Depoimentos</Label>
                 <div className="space-y-2">
                   {(Array.isArray(provaSocial.depoimentos) ? provaSocial.depoimentos : []).map((d: any, idx: number) => (
-                    <div key={idx} className="border rounded-lg p-3 space-y-2">
+                    <div
+                      key={idx}
+                      className="border rounded-lg p-3 space-y-2"
+                      draggable
+                      onDragStart={() => {
+                        ;(window as any).__depoimento_drag_index__ = idx
+                      }}
+                      onDragOver={(e) => {
+                        e.preventDefault()
+                      }}
+                      onDrop={() => {
+                        const from = (window as any).__depoimento_drag_index__
+                        ;(window as any).__depoimento_drag_index__ = null
+                        if (typeof from !== 'number') return
+                        setProvaSocial((prev) => {
+                          const arr = Array.isArray(prev.depoimentos) ? [...prev.depoimentos] : []
+                          return { ...prev, depoimentos: reorder(arr, from, idx) }
+                        })
+                      }}
+                    >
                       <div className="grid gap-2 md:grid-cols-3">
                         <div className="grid gap-2">
                           <Label>Nome</Label>

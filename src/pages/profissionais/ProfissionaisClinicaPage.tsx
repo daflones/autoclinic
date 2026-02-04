@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
 import { Label } from '@/components/ui/label'
+import { ListEditor } from '@/components/ui/list-editor'
 import {
   Dialog,
   DialogContent,
@@ -34,6 +35,7 @@ import {
   useUpdateProfissionalClinica,
   useDeleteProfissionalClinica,
 } from '@/hooks/useProfissionaisClinica'
+import { useProcedimentos } from '@/hooks/useProcedimentos'
 import type {
   ProfissionalClinica,
   ProfissionalCreateData,
@@ -51,6 +53,7 @@ const STATUS_CONFIG: Record<StatusProfissional, { label: string; variant: 'defau
 export function ProfissionaisClinicaPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState<StatusProfissional | 'all'>('all')
+  const [procedimentosSearch, setProcedimentosSearch] = useState('')
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false)
@@ -72,6 +75,7 @@ export function ProfissionaisClinicaPage() {
     experiencia: '',
     certificacoes: '',
     procedimentos: '',
+    procedimentos_ids: [],
     bio: '',
     foto_url: '',
     percentual_comissao: undefined,
@@ -88,6 +92,7 @@ export function ProfissionaisClinicaPage() {
   )
 
   const { data: profissionais, isLoading } = useProfissionaisClinica(filters)
+  const { data: procedimentos = [] } = useProcedimentos({ limit: 1000 } as any)
 
   const createMutation = useCreateProfissionalClinica()
   const updateMutation = useUpdateProfissionalClinica()
@@ -211,6 +216,7 @@ export function ProfissionaisClinicaPage() {
         experiencia: '',
         certificacoes: '',
         procedimentos: '',
+        procedimentos_ids: [],
         bio: '',
         foto_url: '',
         percentual_comissao: undefined,
@@ -238,6 +244,7 @@ export function ProfissionaisClinicaPage() {
       experiencia: profissional.experiencia || '',
       certificacoes: profissional.certificacoes || '',
       procedimentos: profissional.procedimentos || '',
+      procedimentos_ids: (profissional as any).procedimentos_ids || [],
       bio: (profissional as any).bio || '',
       foto_url: profissional.foto_url || '',
       percentual_comissao: profissional.percentual_comissao || undefined,
@@ -260,6 +267,31 @@ export function ProfissionaisClinicaPage() {
     } catch (error) {
       console.error('Erro ao atualizar profissional:', error)
     }
+  }
+
+  const procedimentosFiltered = useMemo(() => {
+    const term = procedimentosSearch.trim().toLowerCase()
+    if (!term) return procedimentos
+    return procedimentos.filter((p: any) => String(p.nome || '').toLowerCase().includes(term))
+  }, [procedimentos, procedimentosSearch])
+
+  const normalizeStringList = (value: any): string[] => {
+    if (Array.isArray(value)) {
+      return value.map((x) => String(x ?? '').trim()).filter(Boolean)
+    }
+    if (typeof value === 'string') {
+      return value
+        .split(/\r?\n|,|;/g)
+        .map((s) => s.trim())
+        .filter(Boolean)
+    }
+    return []
+  }
+
+  const toggleProcedimento = (id: string) => {
+    const current = Array.isArray(formState.procedimentos_ids) ? formState.procedimentos_ids : []
+    const next = current.includes(id) ? current.filter((x) => x !== id) : [...current, id]
+    setFormState({ ...formState, procedimentos_ids: next })
   }
 
   const handleRequestDelete = (profissional: ProfissionalClinica) => {
@@ -566,19 +598,10 @@ export function ProfissionaisClinicaPage() {
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="create-especialidades">Especialidades (uma por linha)</Label>
-                <Textarea
-                  id="create-especialidades"
-                  value={(formState.especialidades || []).join('\n')}
-                  onChange={(e) =>
-                    setFormState({
-                      ...formState,
-                      especialidades: e.target.value
-                        .split('\n')
-                        .map((s) => s.trim())
-                        .filter(Boolean),
-                    })
-                  }
-                  rows={3}
+                <ListEditor
+                  placeholder="Adicione especialidades"
+                  items={normalizeStringList((formState as any).especialidades)}
+                  onChange={(items: string[]) => setFormState({ ...formState, especialidades: items as any })}
                 />
               </div>
               <div className="space-y-2">
@@ -603,13 +626,46 @@ export function ProfissionaisClinicaPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="create-procedimentos">Procedimentos</Label>
-                <Textarea
-                  id="create-procedimentos"
-                  value={formState.procedimentos || ''}
-                  onChange={(e) => setFormState({ ...formState, procedimentos: e.target.value })}
-                  rows={3}
+                <Label>Procedimentos que realiza</Label>
+                <Input
+                  placeholder="Buscar procedimento..."
+                  value={procedimentosSearch}
+                  onChange={(e) => setProcedimentosSearch(e.target.value)}
                 />
+                <div className="max-h-40 overflow-auto rounded-md border border-border/60 bg-background p-2">
+                  {procedimentosFiltered.length === 0 ? (
+                    <div className="p-2 text-sm text-muted-foreground">Nenhum procedimento encontrado</div>
+                  ) : (
+                    <div className="space-y-2">
+                      {procedimentosFiltered.map((p: any) => {
+                        const checked = (formState.procedimentos_ids || []).includes(p.id)
+                        return (
+                          <label key={p.id} className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1 hover:bg-accent">
+                            <input
+                              type="checkbox"
+                              className="h-4 w-4"
+                              checked={checked}
+                              onChange={() => toggleProcedimento(p.id)}
+                            />
+                            <span className="text-sm">{p.nome}</span>
+                          </label>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
+                {formState.procedimentos_ids && formState.procedimentos_ids.length > 0 ? (
+                  <div className="flex flex-wrap gap-1 pt-1">
+                    {formState.procedimentos_ids
+                      .map((id) => (procedimentos as any[]).find((p) => p.id === id))
+                      .filter(Boolean)
+                      .map((p: any) => (
+                        <Badge key={p.id} variant="secondary">
+                          {p.nome}
+                        </Badge>
+                      ))}
+                  </div>
+                ) : null}
               </div>
             </div>
 
@@ -820,19 +876,10 @@ export function ProfissionaisClinicaPage() {
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="edit-especialidades">Especialidades (uma por linha)</Label>
-                <Textarea
-                  id="edit-especialidades"
-                  value={(formState.especialidades || []).join('\n')}
-                  onChange={(e) =>
-                    setFormState({
-                      ...formState,
-                      especialidades: e.target.value
-                        .split('\n')
-                        .map((s) => s.trim())
-                        .filter(Boolean),
-                    })
-                  }
-                  rows={3}
+                <ListEditor
+                  placeholder="Adicione especialidades"
+                  items={normalizeStringList((formState as any).especialidades)}
+                  onChange={(items: string[]) => setFormState({ ...formState, especialidades: items as any })}
                 />
               </div>
               <div className="space-y-2">
@@ -857,13 +904,46 @@ export function ProfissionaisClinicaPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="edit-procedimentos">Procedimentos</Label>
-                <Textarea
-                  id="edit-procedimentos"
-                  value={formState.procedimentos || ''}
-                  onChange={(e) => setFormState({ ...formState, procedimentos: e.target.value })}
-                  rows={3}
+                <Label>Procedimentos que realiza</Label>
+                <Input
+                  placeholder="Buscar procedimento..."
+                  value={procedimentosSearch}
+                  onChange={(e) => setProcedimentosSearch(e.target.value)}
                 />
+                <div className="max-h-40 overflow-auto rounded-md border border-border/60 bg-background p-2">
+                  {procedimentosFiltered.length === 0 ? (
+                    <div className="p-2 text-sm text-muted-foreground">Nenhum procedimento encontrado</div>
+                  ) : (
+                    <div className="space-y-2">
+                      {procedimentosFiltered.map((p: any) => {
+                        const checked = (formState.procedimentos_ids || []).includes(p.id)
+                        return (
+                          <label key={p.id} className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1 hover:bg-accent">
+                            <input
+                              type="checkbox"
+                              className="h-4 w-4"
+                              checked={checked}
+                              onChange={() => toggleProcedimento(p.id)}
+                            />
+                            <span className="text-sm">{p.nome}</span>
+                          </label>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
+                {formState.procedimentos_ids && formState.procedimentos_ids.length > 0 ? (
+                  <div className="flex flex-wrap gap-1 pt-1">
+                    {formState.procedimentos_ids
+                      .map((id) => (procedimentos as any[]).find((p) => p.id === id))
+                      .filter(Boolean)
+                      .map((p: any) => (
+                        <Badge key={p.id} variant="secondary">
+                          {p.nome}
+                        </Badge>
+                      ))}
+                  </div>
+                ) : null}
               </div>
             </div>
 

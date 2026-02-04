@@ -4,6 +4,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Label } from '@/components/ui/label'
+import { ListEditor } from '@/components/ui/list-editor'
+import { PairsEditor, type PairItem } from '@/components/ui/pairs-editor'
 import { Textarea } from '@/components/ui/textarea'
 import { Switch } from '@/components/ui/switch'
 import {
@@ -218,11 +220,41 @@ export function ProcedimentosPage() {
   const getIA = (path: string, fallback: any = '') => {
     const parts = path.split('.')
     let cursor: any = iaConfig
-    for (const p of parts) {
+    for (const k of parts) {
       if (!cursor || typeof cursor !== 'object') return fallback
-      cursor = cursor[p]
+      cursor = cursor[k]
     }
-    return cursor ?? fallback
+    return typeof cursor === 'undefined' ? fallback : cursor
+  }
+
+  const normalizeStringList = (value: any): string[] => {
+    if (Array.isArray(value)) {
+      return value.map((x) => String(x ?? '').trim()).filter(Boolean)
+    }
+    if (typeof value === 'string') {
+      return value
+        .split(/\r?\n|,|;/g)
+        .map((s) => s.trim())
+        .filter(Boolean)
+    }
+    return []
+  }
+
+  const normalizePairs = (value: any, legacyStrings?: any): PairItem[] => {
+    const arr = Array.isArray(value) ? value : []
+    const mapped = arr
+      .map((it: any) => ({
+        left: typeof it?.left === 'string' ? it.left : typeof it?.pergunta === 'string' ? it.pergunta : typeof it?.titulo === 'string' ? it.titulo : '',
+        right: typeof it?.right === 'string' ? it.right : typeof it?.resposta === 'string' ? it.resposta : typeof it?.texto === 'string' ? it.texto : '',
+      }))
+
+    if (mapped.length > 0) return mapped
+
+    const legacy = Array.isArray(legacyStrings) ? legacyStrings : []
+    return legacy
+      .map((s: any) => String(s || '').trim())
+      .filter(Boolean)
+      .map((q: string) => ({ left: q, right: '' }))
   }
 
   const filters = useMemo(
@@ -289,6 +321,18 @@ export function ProcedimentosPage() {
   }
 
   const handleOpenEdit = (procedimento: Procedimento) => {
+    const toNumberOrUndefined = (v: any) => {
+      if (v === null || typeof v === 'undefined') return undefined
+      if (typeof v === 'number') return Number.isFinite(v) ? v : undefined
+      if (typeof v === 'string') {
+        const t = v.trim()
+        if (!t) return undefined
+        const n = Number(t.replace(',', '.'))
+        return Number.isFinite(n) ? n : undefined
+      }
+      return undefined
+    }
+
     setSelectedProcedimento(procedimento)
     setFormState({
       nome: procedimento.nome,
@@ -302,10 +346,10 @@ export function ProcedimentosPage() {
       ia_envia_imagens: (procedimento as any).ia_envia_imagens ?? false,
       codigo: procedimento.codigo || '',
       categoria_id: procedimento.categoria_id,
-      duracao_estimada: procedimento.duracao_estimada || undefined,
+      duracao_estimada: toNumberOrUndefined((procedimento as any).duracao_estimada),
       valor_base: procedimento.valor_base || undefined,
-      valor_minimo: procedimento.valor_minimo || undefined,
-      valor_maximo: procedimento.valor_maximo || undefined,
+      valor_minimo: toNumberOrUndefined((procedimento as any).valor_minimo),
+      valor_maximo: toNumberOrUndefined((procedimento as any).valor_maximo),
       requer_autorizacao: procedimento.requer_autorizacao,
       observacoes: procedimento.observacoes || '',
       status: procedimento.status,
@@ -359,10 +403,11 @@ export function ProcedimentosPage() {
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value)
   }
 
-  const formatDuration = (minutes?: number | null) => {
-    if (!minutes) return 'N/A'
-    const hours = Math.floor(minutes / 60)
-    const mins = minutes % 60
+  const formatDuration = (minutes?: number | string | null) => {
+    const n = typeof minutes === 'number' ? minutes : typeof minutes === 'string' ? Number(minutes) : null
+    if (!n) return 'N/A'
+    const hours = Math.floor(n / 60)
+    const mins = n % 60
     if (hours > 0) {
       return `${hours}h${mins > 0 ? ` ${mins}min` : ''}`
     }
@@ -641,13 +686,6 @@ export function ProcedimentosPage() {
                       </div>
                     ) : null}
 
-                    {(detailsProcedimento as any).quebra_objecoes ? (
-                      <div className="space-y-2">
-                        <Label>Quebra de objeções</Label>
-                        <div className="text-sm text-muted-foreground whitespace-pre-wrap">{(detailsProcedimento as any).quebra_objecoes}</div>
-                      </div>
-                    ) : null}
-
                     <div className="grid gap-4 md:grid-cols-2">
                       <div className="space-y-1">
                         <Label>IA informa preço?</Label>
@@ -723,7 +761,7 @@ export function ProcedimentosPage() {
                     const t = (ia?.tecnica || {}) as any
                     const descProf = t?.descricao_profissional
                     const comoFunciona = t?.como_funciona
-                    const equipamentos = t?.equipamentos
+                    const equipamentosArr = normalizeStringList(t?.equipamentos)
                     return (
                       <div className="space-y-4">
                         <div className="grid gap-4 md:grid-cols-2">
@@ -738,7 +776,9 @@ export function ProcedimentosPage() {
                         </div>
                         <div className="space-y-2">
                           <Label>Equipamentos usados</Label>
-                          <div className="text-sm text-muted-foreground whitespace-pre-wrap">{equipamentos || '—'}</div>
+                          <div className="text-sm text-muted-foreground whitespace-pre-wrap">
+                            {equipamentosArr.length > 0 ? equipamentosArr.join(', ') : '—'}
+                          </div>
                         </div>
                       </div>
                     )
@@ -1063,24 +1103,12 @@ export function ProcedimentosPage() {
               </div>
               <div className="space-y-2">
                 <Label>Equipamentos usados (opcional)</Label>
-                <Textarea
-                  value={getIA('tecnica.equipamentos', '')}
-                  onChange={(e) => setIA('tecnica.equipamentos', e.target.value)}
-                  rows={3}
-                  placeholder="Liste os equipamentos..."
+                <ListEditor
+                  placeholder="Adicione equipamentos"
+                  items={normalizeStringList(getIA('tecnica.equipamentos', []))}
+                  onChange={(items) => setIA('tecnica.equipamentos', items)}
                 />
               </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="create-quebra-objecoes">Quebra de objeções</Label>
-              <Textarea
-                id="create-quebra-objecoes"
-                value={formState.quebra_objecoes || ''}
-                onChange={(e) => setFormState({ ...formState, quebra_objecoes: e.target.value })}
-                placeholder="Principais objeções e respostas..."
-                rows={4}
-              />
             </div>
 
             <div className="pt-4 border-t space-y-4">
@@ -1128,16 +1156,28 @@ export function ProcedimentosPage() {
                     <Input value={getIA('tecnica.tecnologia', '')} onChange={(e) => setIA('tecnica.tecnologia', e.target.value)} />
                   </div>
                   <div className="grid gap-2">
-                    <Label>Indicações (um por linha)</Label>
-                    <Textarea value={(getIA('tecnica.indicacoes', []) as any[]).join('\n')} onChange={(e) => setIA('tecnica.indicacoes', e.target.value.split('\n').map((s) => s.trim()).filter(Boolean))} rows={3} />
+                    <ListEditor
+                      label="Indicações"
+                      placeholder="Adicione indicações"
+                      items={(getIA('tecnica.indicacoes', []) as any[]) as string[]}
+                      onChange={(items) => setIA('tecnica.indicacoes', items)}
+                    />
                   </div>
                   <div className="grid gap-2">
-                    <Label>Contraindicações (um por linha)</Label>
-                    <Textarea value={(getIA('tecnica.contraindicacoes', []) as any[]).join('\n')} onChange={(e) => setIA('tecnica.contraindicacoes', e.target.value.split('\n').map((s) => s.trim()).filter(Boolean))} rows={3} />
+                    <ListEditor
+                      label="Contraindicações"
+                      placeholder="Adicione contraindicações"
+                      items={(getIA('tecnica.contraindicacoes', []) as any[]) as string[]}
+                      onChange={(items) => setIA('tecnica.contraindicacoes', items)}
+                    />
                   </div>
                   <div className="grid gap-2">
-                    <Label>Riscos raros (um por linha)</Label>
-                    <Textarea value={(getIA('tecnica.riscos_raros', []) as any[]).join('\n')} onChange={(e) => setIA('tecnica.riscos_raros', e.target.value.split('\n').map((s) => s.trim()).filter(Boolean))} rows={3} />
+                    <ListEditor
+                      label="Riscos raros"
+                      placeholder="Adicione riscos raros"
+                      items={(getIA('tecnica.riscos_raros', []) as any[]) as string[]}
+                      onChange={(items) => setIA('tecnica.riscos_raros', items)}
+                    />
                   </div>
                   <div className="grid gap-2">
                     <Label>Tempo de recuperação</Label>
@@ -1158,16 +1198,28 @@ export function ProcedimentosPage() {
                 <Label className="text-base font-semibold">Benefícios</Label>
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="grid gap-2">
-                    <Label>Estéticos (um por linha)</Label>
-                    <Textarea value={(getIA('beneficios.esteticos', []) as any[]).join('\n')} onChange={(e) => setIA('beneficios.esteticos', e.target.value.split('\n').map((s) => s.trim()).filter(Boolean))} rows={4} />
+                    <ListEditor
+                      label="Estéticos"
+                      placeholder="Adicione benefícios estéticos"
+                      items={(getIA('beneficios.esteticos', []) as any[]) as string[]}
+                      onChange={(items) => setIA('beneficios.esteticos', items)}
+                    />
                   </div>
                   <div className="grid gap-2">
-                    <Label>Emocionais (um por linha)</Label>
-                    <Textarea value={(getIA('beneficios.emocionais', []) as any[]).join('\n')} onChange={(e) => setIA('beneficios.emocionais', e.target.value.split('\n').map((s) => s.trim()).filter(Boolean))} rows={4} />
+                    <ListEditor
+                      label="Emocionais"
+                      placeholder="Adicione benefícios emocionais"
+                      items={(getIA('beneficios.emocionais', []) as any[]) as string[]}
+                      onChange={(items) => setIA('beneficios.emocionais', items)}
+                    />
                   </div>
                   <div className="grid gap-2">
-                    <Label>Funcionais (um por linha)</Label>
-                    <Textarea value={(getIA('beneficios.funcionais', []) as any[]).join('\n')} onChange={(e) => setIA('beneficios.funcionais', e.target.value.split('\n').map((s) => s.trim()).filter(Boolean))} rows={4} />
+                    <ListEditor
+                      label="Funcionais"
+                      placeholder="Adicione benefícios funcionais"
+                      items={(getIA('beneficios.funcionais', []) as any[]) as string[]}
+                      onChange={(items) => setIA('beneficios.funcionais', items)}
+                    />
                   </div>
                 </div>
               </div>
@@ -1248,22 +1300,34 @@ export function ProcedimentosPage() {
 
               <div className="space-y-3 pt-4 border-t">
                 <Label className="text-base font-semibold">Perguntas frequentes</Label>
-                <div className="grid gap-2">
-                  <Label>FAQ (um por linha)</Label>
-                  <Textarea value={(getIA('faq.perguntas', []) as any[]).join('\n')} onChange={(e) => setIA('faq.perguntas', e.target.value.split('\n').map((s) => s.trim()).filter(Boolean))} rows={5} />
-                </div>
+                <PairsEditor
+                  title="FAQ"
+                  leftLabel="Pergunta"
+                  rightLabel="Resposta"
+                  addLabel="Adicionar pergunta"
+                  items={normalizePairs(getIA('faq.itens', []), getIA('faq.perguntas', []))}
+                  onChange={(items) => setIA('faq.itens', items)}
+                />
               </div>
 
               <div className="space-y-3 pt-4 border-t">
                 <Label className="text-base font-semibold">Cuidados pré e pós</Label>
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="grid gap-2">
-                    <Label>Antes (um por linha)</Label>
-                    <Textarea value={(getIA('cuidados.antes', []) as any[]).join('\n')} onChange={(e) => setIA('cuidados.antes', e.target.value.split('\n').map((s) => s.trim()).filter(Boolean))} rows={4} />
+                    <ListEditor
+                      label="Antes"
+                      placeholder="Adicione cuidados antes"
+                      items={(getIA('cuidados.antes', []) as any[]) as string[]}
+                      onChange={(items) => setIA('cuidados.antes', items)}
+                    />
                   </div>
                   <div className="grid gap-2">
-                    <Label>Depois (um por linha)</Label>
-                    <Textarea value={(getIA('cuidados.depois', []) as any[]).join('\n')} onChange={(e) => setIA('cuidados.depois', e.target.value.split('\n').map((s) => s.trim()).filter(Boolean))} rows={4} />
+                    <ListEditor
+                      label="Depois"
+                      placeholder="Adicione cuidados depois"
+                      items={(getIA('cuidados.depois', []) as any[]) as string[]}
+                      onChange={(items) => setIA('cuidados.depois', items)}
+                    />
                   </div>
                 </div>
               </div>
@@ -1271,10 +1335,6 @@ export function ProcedimentosPage() {
               <div className="space-y-3 pt-4 border-t">
                 <Label className="text-base font-semibold">Gatilhos de venda específicos</Label>
                 <div className="grid gap-4 md:grid-cols-2">
-                  <div className="grid gap-2">
-                    <Label>Gatilhos (texto)</Label>
-                    <Textarea value={getIA('vendas.gatilhos', '')} onChange={(e) => setIA('vendas.gatilhos', e.target.value)} rows={4} />
-                  </div>
                   <div className="grid gap-2">
                     <Label>O que torna esse procedimento superior a outros</Label>
                     <Textarea value={getIA('vendas.superioridade', '')} onChange={(e) => setIA('vendas.superioridade', e.target.value)} rows={4} />
@@ -1431,8 +1491,12 @@ export function ProcedimentosPage() {
                     </Select>
                   </div>
                   <div className="grid gap-2">
-                    <Label>Triggers (um por linha)</Label>
-                    <Textarea value={(getIA('upsell.triggers', []) as any[]).join('\n')} onChange={(e) => setIA('upsell.triggers', e.target.value.split('\n').map((s) => s.trim()).filter(Boolean))} rows={4} />
+                    <ListEditor
+                      label="Triggers"
+                      placeholder="Adicione triggers"
+                      items={(getIA('upsell.triggers', []) as any[]) as string[]}
+                      onChange={(items) => setIA('upsell.triggers', items)}
+                    />
                   </div>
                   <div className="grid gap-2">
                     <Label>Opções de pacote</Label>

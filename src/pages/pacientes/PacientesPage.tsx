@@ -120,6 +120,14 @@ const pacienteSchema = z.object({
     .string()
     .optional()
     .transform((value) => (value && value.trim() === '' ? undefined : value)),
+  analise_cliente: z
+    .string()
+    .optional()
+    .transform((value) => (value && value.trim() === '' ? undefined : value)),
+  produto_interesse: z
+    .string()
+    .optional()
+    .transform((value) => (value && value.trim() === '' ? undefined : value)),
   alergias: z
     .string()
     .optional()
@@ -479,6 +487,8 @@ export function PacientesPage() {
             }
           : undefined,
       observacoes: data.observacoes,
+      analise_cliente: data.analise_cliente,
+      produto_interesse: data.produto_interesse,
       alergias: data.alergias,
       restricoes: data.restricoes,
       consentimento_assinado: data.consentimento_assinado,
@@ -866,67 +876,94 @@ export function PacientesPage() {
           </DialogHeader>
 
           <form onSubmit={handleSubmit(handleCreatePaciente)} className="space-y-4">
-            <div className="grid gap-3">
-              <div className="space-y-2">
-                <Label htmlFor="nome_completo">Nome completo *</Label>
-                <Input id="nome_completo" placeholder="Nome do paciente" {...register('nome_completo')} />
-                {errors.nome_completo && (
-                  <p className="text-xs text-rose-500">{errors.nome_completo.message}</p>
-                )}
+            <div className="space-y-4">
+              <div className="rounded-xl border border-border/60 bg-background p-4">
+                <div className="text-sm font-medium text-foreground">Dados do paciente</div>
+                <div className="mt-3 grid gap-3">
+                  <div className="space-y-2">
+                    <Label htmlFor="nome_completo">Nome completo *</Label>
+                    <Input id="nome_completo" placeholder="Nome do paciente" {...register('nome_completo')} />
+                    {errors.nome_completo && <p className="text-xs text-rose-500">{errors.nome_completo.message}</p>}
+                  </div>
+
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="cpf">CPF</Label>
+                      <Input id="cpf" placeholder="Somente números" {...register('cpf')} />
+                      {errors.cpf && <p className="text-xs text-rose-500">{errors.cpf.message}</p>}
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="rg">RG</Label>
+                      <Input id="rg" placeholder="Somente números" {...register('rg')} />
+                    </div>
+                  </div>
+
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="genero">Gênero</Label>
+                      <select
+                        id="genero"
+                        className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+                        {...register('genero')}
+                      >
+                        <option value="nao_informado">Prefiro não informar</option>
+                        <option value="masculino">Homem</option>
+                        <option value="feminino">Mulher</option>
+                        <option value="outro">Outros</option>
+                      </select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="data_nascimento">Data de nascimento</Label>
+                      <Input id="data_nascimento" type="date" {...register('data_nascimento')} />
+                    </div>
+                  </div>
+
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="status">Status</Label>
+                      <select
+                        id="status"
+                        className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+                        {...register('status')}
+                      >
+                        <option value="ativo">Ativo</option>
+                        <option value="inativo">Inativo</option>
+                        <option value="arquivado">Arquivado</option>
+                      </select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="tags">Tags</Label>
+                      <Input id="tags" placeholder="Separadas por vírgula (ex: botox, vip)" {...register('tags')} />
+                    </div>
+                  </div>
+                </div>
               </div>
 
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="cpf">CPF</Label>
-                  <Input id="cpf" placeholder="Somente números" {...register('cpf')} />
-                  {errors.cpf && <p className="text-xs text-rose-500">{errors.cpf.message}</p>}
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="rg">RG</Label>
-                  <Input id="rg" placeholder="Somente números" {...register('rg')} />
-                </div>
-              </div>
+              <div className="rounded-xl border border-border/60 bg-background p-4">
+                <div className="text-sm font-medium text-foreground">Contato</div>
+                <div className="mt-3 grid gap-3">
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="email">E-mail</Label>
+                      <Input id="email" placeholder="email@paciente.com" {...register('email')} />
+                      {errors.email && <p className="text-xs text-rose-500">{errors.email.message}</p>}
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="telefone">Telefone</Label>
+                      <Input id="telefone" placeholder="(00) 00000-0000" {...register('telefone')} />
+                    </div>
+                  </div>
 
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="email">E-mail</Label>
-                  <Input id="email" placeholder="email@paciente.com" {...register('email')} />
-                  {errors.email && <p className="text-xs text-rose-500">{errors.email.message}</p>}
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="telefone">Telefone</Label>
-                  <Input id="telefone" placeholder="(00) 00000-0000" {...register('telefone')} />
-                </div>
-              </div>
-
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="genero">Gênero</Label>
-                  <select
-                    id="genero"
-                    className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
-                    {...register('genero')}
-                  >
-                    <option value="nao_informado">Prefiro não informar</option>
-                    <option value="masculino">Homem</option>
-                    <option value="feminino">Mulher</option>
-                    <option value="outro">Outros</option>
-                  </select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="data_nascimento">Data de nascimento</Label>
-                  <Input id="data_nascimento" type="date" {...register('data_nascimento')} />
-                </div>
-              </div>
-
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="whatsapp">Whatsapp</Label>
-                  <Input id="whatsapp" placeholder="(00) 00000-0000" {...register('whatsapp')} />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="fonte_captacao">Fonte de captação</Label>
-                  <Input id="fonte_captacao" placeholder="Indicação, Instagram, Evento..." {...register('fonte_captacao')} />
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="whatsapp">Whatsapp</Label>
+                      <Input id="whatsapp" placeholder="(00) 00000-0000" {...register('whatsapp')} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="fonte_captacao">Fonte de captação</Label>
+                      <Input id="fonte_captacao" placeholder="Indicação, Instagram, Evento..." {...register('fonte_captacao')} />
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -974,55 +1011,57 @@ export function PacientesPage() {
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="status">Status</Label>
-                <select
-                  id="status"
-                  className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
-                  {...register('status')}
-                >
-                  <option value="ativo">Ativo</option>
-                  <option value="inativo">Inativo</option>
-                  <option value="arquivado">Arquivado</option>
-                </select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="tags">Tags</Label>
-                <Input
-                  id="tags"
-                  placeholder="Separadas por vírgula (ex: botox, vip)"
-                  {...register('tags')}
-                />
-              </div>
-
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="alergias">Alergias</Label>
-                  <Textarea id="alergias" rows={2} placeholder="Informe alergias relevantes" {...register('alergias')} />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="restricoes">Restrições</Label>
-                  <Textarea
-                    id="restricoes"
-                    rows={2}
-                    placeholder="Restrições médicas importantes"
-                    {...register('restricoes')}
-                  />
+              <div className="rounded-xl border border-border/60 bg-background p-4">
+                <div className="text-sm font-medium text-foreground">Saúde</div>
+                <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="alergias">Alergias</Label>
+                    <Textarea id="alergias" rows={2} placeholder="Informe alergias relevantes" {...register('alergias')} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="restricoes">Restrições</Label>
+                    <Textarea id="restricoes" rows={2} placeholder="Restrições médicas importantes" {...register('restricoes')} />
+                  </div>
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="observacoes">Observações clínicas</Label>
-                <Textarea
-                  id="observacoes"
-                  rows={3}
-                  placeholder="Anote informações importantes sobre tratamentos e objetivos"
-                  {...register('observacoes')}
-                />
+              <div className="rounded-xl border border-border/60 bg-background p-4">
+                <div className="text-sm font-medium text-foreground">Informações clínicas</div>
+                <div className="mt-3 grid gap-3">
+                  <div className="space-y-2">
+                    <Label htmlFor="observacoes">Observações clínicas</Label>
+                    <Textarea
+                      id="observacoes"
+                      rows={3}
+                      placeholder="Anote informações importantes sobre tratamentos e objetivos"
+                      {...register('observacoes')}
+                    />
+                  </div>
+
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="analise_cliente">Análise do paciente</Label>
+                      <Textarea
+                        id="analise_cliente"
+                        rows={3}
+                        placeholder="Resumo/diagnóstico/observações sobre o paciente"
+                        {...register('analise_cliente')}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="produto_interesse">Procedimento de interesse</Label>
+                      <Textarea
+                        id="produto_interesse"
+                        rows={3}
+                        placeholder="Procedimento(s) de interesse do paciente"
+                        {...register('produto_interesse')}
+                      />
+                    </div>
+                  </div>
+                </div>
               </div>
 
-              <div className="flex items-center gap-2 rounded-md border border-border/70 bg-muted/20 p-3">
+              <div className="flex items-center gap-2 rounded-xl border border-border/70 bg-muted/20 p-4">
                 <input
                   id="consentimento_assinado"
                   type="checkbox"
@@ -1144,6 +1183,8 @@ export function PacientesPage() {
                                   telefone: editingPacienteDraft.telefone || null,
                                   whatsapp: editingPacienteDraft.whatsapp || null,
                                   endereco,
+                                  analise_cliente: editingPacienteDraft.analise_cliente || null,
+                                  produto_interesse: editingPacienteDraft.produto_interesse || null,
                                 },
                               })
                               setIsEditingPaciente(false)
@@ -1169,6 +1210,8 @@ export function PacientesPage() {
                             telefone: paciente.telefone ?? '',
                             whatsapp: paciente.whatsapp ?? '',
                             endereco: (paciente as any).endereco ?? {},
+                            analise_cliente: (paciente as any).analise_cliente ?? '',
+                            produto_interesse: (paciente as any).produto_interesse ?? '',
                           })
                         }}
                       >
@@ -1263,6 +1306,38 @@ export function PacientesPage() {
                             )}
                           </div>
                         </div>
+                      </div>
+                    </div>
+
+                    <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                      <div className="space-y-3 rounded-xl border border-border/60 bg-background p-4 text-sm">
+                        <div className="text-sm font-medium text-foreground">Análise do paciente</div>
+                        {isEditingPaciente ? (
+                          <Textarea
+                            rows={4}
+                            value={String(editingPacienteDraft?.analise_cliente ?? '')}
+                            onChange={(e) =>
+                              setEditingPacienteDraft((prev) => ({ ...(prev || {}), analise_cliente: e.target.value }))
+                            }
+                          />
+                        ) : (
+                          <div className="whitespace-pre-wrap text-foreground">{(paciente as any).analise_cliente || '—'}</div>
+                        )}
+                      </div>
+
+                      <div className="space-y-3 rounded-xl border border-border/60 bg-background p-4 text-sm">
+                        <div className="text-sm font-medium text-foreground">Procedimento de interesse</div>
+                        {isEditingPaciente ? (
+                          <Textarea
+                            rows={4}
+                            value={String(editingPacienteDraft?.produto_interesse ?? '')}
+                            onChange={(e) =>
+                              setEditingPacienteDraft((prev) => ({ ...(prev || {}), produto_interesse: e.target.value }))
+                            }
+                          />
+                        ) : (
+                          <div className="whitespace-pre-wrap text-foreground">{(paciente as any).produto_interesse || '—'}</div>
+                        )}
                       </div>
                     </div>
 

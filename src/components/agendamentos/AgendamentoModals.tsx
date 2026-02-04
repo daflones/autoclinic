@@ -158,6 +158,37 @@ export function AgendamentoModals({
             </div>
 
             <div className="grid gap-4 md:grid-cols-2">
+              <div className="flex items-center gap-2 rounded-md border border-border/70 bg-muted/20 p-3">
+                <input
+                  id="create-is-avaliacao"
+                  type="checkbox"
+                  className="h-4 w-4 rounded border-border"
+                  checked={Boolean(formState.is_avaliacao)}
+                  onChange={(e) => setFormState({ ...formState, is_avaliacao: e.target.checked })}
+                />
+                <Label htmlFor="create-is-avaliacao" className="text-sm">
+                  Agendamento é uma avaliação
+                </Label>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="create-valor">Valor</Label>
+                <Input
+                  id="create-valor"
+                  type="number"
+                  inputMode="decimal"
+                  value={formState.valor === null || typeof formState.valor === 'undefined' ? '' : String(formState.valor)}
+                  onChange={(e) => {
+                    const raw = e.target.value
+                    const next = raw === '' ? null : Number(raw)
+                    setFormState({ ...formState, valor: Number.isFinite(next as number) ? (next as number) : null })
+                  }}
+                  placeholder="0,00"
+                />
+              </div>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="create-paciente">Paciente</Label>
                 <Select
@@ -371,6 +402,21 @@ export function AgendamentoModals({
                   </div>
                 </div>
 
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div>
+                    <Label className="text-muted-foreground">Avaliação</Label>
+                    <p className="font-medium">{selectedAgendamento.is_avaliacao ? 'Sim' : 'Não'}</p>
+                  </div>
+                  <div>
+                    <Label className="text-muted-foreground">Valor</Label>
+                    <p className="font-medium">
+                      {typeof selectedAgendamento.valor === 'number'
+                        ? selectedAgendamento.valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+                        : '—'}
+                    </p>
+                  </div>
+                </div>
+
                 {selectedAgendamento.paciente && (
                   <div>
                     <Label className="text-muted-foreground">Paciente</Label>
@@ -461,6 +507,37 @@ export function AgendamentoModals({
                 value={editFormState.titulo}
                 onChange={(e) => setEditFormState({ ...editFormState, titulo: e.target.value })}
               />
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="flex items-center gap-2 rounded-md border border-border/70 bg-muted/20 p-3">
+                <input
+                  id="edit-is-avaliacao"
+                  type="checkbox"
+                  className="h-4 w-4 rounded border-border"
+                  checked={Boolean(editFormState.is_avaliacao)}
+                  onChange={(e) => setEditFormState({ ...editFormState, is_avaliacao: e.target.checked })}
+                />
+                <Label htmlFor="edit-is-avaliacao" className="text-sm">
+                  Agendamento é uma avaliação
+                </Label>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-valor">Valor</Label>
+                <Input
+                  id="edit-valor"
+                  type="number"
+                  inputMode="decimal"
+                  value={editFormState.valor === null || typeof editFormState.valor === 'undefined' ? '' : String(editFormState.valor)}
+                  onChange={(e) => {
+                    const raw = e.target.value
+                    const next = raw === '' ? null : Number(raw)
+                    setEditFormState({ ...editFormState, valor: Number.isFinite(next as number) ? (next as number) : null })
+                  }}
+                  placeholder="0,00"
+                />
+              </div>
             </div>
 
             <div className="grid gap-4 md:grid-cols-2">

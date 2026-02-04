@@ -12,6 +12,7 @@ export interface ProtocoloPacote {
   itens?: string | null
   imagem_path?: string | null
   conteudo?: Record<string, any> | null
+  ia_config?: Record<string, any> | null
   ativo: boolean
   created_at: string
   updated_at: string
@@ -30,6 +31,7 @@ export interface ProtocoloPacoteCreateData {
   itens?: string | null
   imagem_path?: string | null
   conteudo?: Record<string, any> | null
+  ia_config?: Record<string, any> | null
   ativo?: boolean
 }
 

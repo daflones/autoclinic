@@ -22,6 +22,8 @@ export interface AgendamentoClinica {
   procedimento_id?: string | null
   titulo: string
   descricao?: string | null
+  is_avaliacao?: boolean | null
+  valor?: number | null
   data_inicio: string
   data_fim: string
   data_inicio_anterior?: string | null
@@ -57,6 +59,7 @@ export interface AgendamentoClinicaFilters {
   plano_tratamento_id?: string
   procedimento_id?: string
   status?: StatusAgendamentoClinica
+  is_avaliacao?: boolean
   data_inicio?: string
   data_fim?: string
   search?: string
@@ -71,6 +74,8 @@ export interface AgendamentoClinicaCreateData {
   procedimento_id?: string | null
   titulo: string
   descricao?: string | null
+  is_avaliacao?: boolean
+  valor?: number | null
   data_inicio: string
   data_fim: string
   data_inicio_anterior?: string | null
@@ -177,12 +182,16 @@ export const agendamentosClinicaService = {
       query = query.eq('status', filters.status)
     }
 
+    if (typeof filters.is_avaliacao === 'boolean') {
+      query = query.eq('is_avaliacao', filters.is_avaliacao)
+    }
+
     if (filters.data_inicio) {
       query = query.gte('data_inicio', filters.data_inicio)
     }
 
     if (filters.data_fim) {
-      query = query.lte('data_fim', filters.data_fim)
+      query = query.lte('data_inicio', filters.data_fim)
     }
 
     if (filters.search) {
@@ -191,7 +200,9 @@ export const agendamentosClinicaService = {
         [
           `titulo.ilike.%${term}%`,
           `descricao.ilike.%${term}%`,
-          `sala.ilike.%${term}%`
+          `sala.ilike.%${term}%`,
+          `paciente.nome_completo.ilike.%${term}%`,
+          `profissional.nome.ilike.%${term}%`
         ].join(',')
       )
     }
@@ -287,6 +298,8 @@ export const agendamentosClinicaService = {
       procedimento_id: payload.procedimento_id ?? null,
       titulo: payload.titulo,
       descricao: payload.descricao ?? null,
+      is_avaliacao: payload.is_avaliacao ?? false,
+      valor: payload.valor ?? null,
       data_inicio: payload.data_inicio,
       data_fim: payload.data_fim,
       data_inicio_anterior: payload.data_inicio_anterior ?? null,

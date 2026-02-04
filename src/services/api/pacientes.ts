@@ -47,6 +47,8 @@ export interface Paciente {
   alergias?: string | null
   restricoes?: string | null
   observacoes?: string | null
+  analise_cliente?: string | null
+  produto_interesse?: string | null
   status: StatusPaciente
   status_detalhado?: StatusPacienteDetalhado | null
   tags?: string[] | null
@@ -85,6 +87,8 @@ export interface PacienteCreateData {
   alergias?: string | null
   restricoes?: string | null
   observacoes?: string | null
+  analise_cliente?: string | null
+  produto_interesse?: string | null
   status?: StatusPaciente
   status_detalhado?: StatusPacienteDetalhado | null
   tags?: string[] | null
@@ -224,6 +228,8 @@ export const pacientesService = {
       alergias: pacienteData.alergias ?? null,
       restricoes: pacienteData.restricoes ?? null,
       observacoes: pacienteData.observacoes ?? null,
+      analise_cliente: pacienteData.analise_cliente ?? null,
+      produto_interesse: pacienteData.produto_interesse ?? null,
       status: pacienteData.status ?? 'ativo',
       status_detalhado: pacienteData.status_detalhado ?? null,
       tags: pacienteData.tags ?? [],

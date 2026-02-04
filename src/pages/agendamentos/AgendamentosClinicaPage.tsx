@@ -91,7 +91,12 @@ export function AgendamentosClinicaPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState<StatusAgendamentoClinica | 'all'>('all')
   const [pacienteFilter, setPacienteFilter] = useState<string>('all')
+  const [pacienteSearch, setPacienteSearch] = useState('')
   const [profissionalFilter, setProfissionalFilter] = useState<string>('all')
+  const [procedimentoFilter, setProcedimentoFilter] = useState<string>('all')
+  const [avaliacaoFilter, setAvaliacaoFilter] = useState<'all' | 'true' | 'false'>('all')
+  const [dataInicioFilter, setDataInicioFilter] = useState<string>('')
+  const [dataFimFilter, setDataFimFilter] = useState<string>('')
   const [agendaView, setAgendaView] = useState<AgendaView>('lista')
   const [calendarView, setCalendarView] = useState<CalendarView>('timeGridWeek')
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
@@ -105,6 +110,8 @@ export function AgendamentosClinicaPage() {
   const [formState, setFormState] = useState<AgendamentoClinicaCreateData>({
     titulo: '',
     descricao: '',
+    is_avaliacao: false,
+    valor: null,
     data_inicio: '',
     data_fim: '',
     paciente_id: null,
@@ -118,6 +125,8 @@ export function AgendamentosClinicaPage() {
   const [editFormState, setEditFormState] = useState<AgendamentoClinicaCreateData>({
     titulo: '',
     descricao: '',
+    is_avaliacao: false,
+    valor: null,
     data_inicio: '',
     data_fim: '',
     paciente_id: null,
@@ -131,21 +140,44 @@ export function AgendamentosClinicaPage() {
   const [createProtocoloPacoteId, setCreateProtocoloPacoteId] = useState<string>('none')
   const [editProtocoloPacoteId, setEditProtocoloPacoteId] = useState<string>('none')
 
-  const filters = useMemo(
-    () => ({
-      search: searchTerm || undefined,
+  const filters = useMemo(() => {
+    const startIso = dataInicioFilter
+      ? new Date(`${dataInicioFilter}T00:00:00`).toISOString()
+      : undefined
+    const endIso = dataFimFilter
+      ? new Date(`${dataFimFilter}T23:59:59.999`).toISOString()
+      : undefined
+
+    const pacienteSearchActive = pacienteFilter === 'all' ? pacienteSearch : ''
+    const combinedSearch = [searchTerm, pacienteSearchActive]
+      .map((t) => t.trim())
+      .filter(Boolean)
+      .join(' ')
+
+    return {
+      search: combinedSearch || undefined,
       status: statusFilter !== 'all' ? statusFilter : undefined,
       paciente_id: pacienteFilter !== 'all' ? pacienteFilter : undefined,
       profissional_id: profissionalFilter !== 'all' ? profissionalFilter : undefined,
-    }),
-    [searchTerm, statusFilter, pacienteFilter, profissionalFilter]
-  )
+      procedimento_id: procedimentoFilter !== 'all' ? procedimentoFilter : undefined,
+      is_avaliacao:
+        avaliacaoFilter === 'all' ? undefined : avaliacaoFilter === 'true' ? true : false,
+      data_inicio: startIso,
+      data_fim: endIso,
+    }
+  }, [searchTerm, pacienteSearch, statusFilter, pacienteFilter, profissionalFilter, procedimentoFilter, avaliacaoFilter, dataInicioFilter, dataFimFilter])
 
   const { data: agendamentos, isLoading, count } = useAgendamentosClinica(filters)
   const { data: pacientes } = usePacientes({ limit: 1000 })
   const { data: profissionais } = useProfissionaisClinica({ limit: 1000 })
   const { data: procedimentos } = useProcedimentos({ limit: 1000 } as any)
   const { data: protocolosPacotes } = useProtocolosPacotes({ limit: 1000, status: 'ativo' } as any)
+
+  const pacientesFiltered = useMemo(() => {
+    const term = pacienteSearch.trim().toLowerCase()
+    if (!term) return pacientes
+    return (pacientes || []).filter((p) => String(p.nome_completo || '').toLowerCase().includes(term))
+  }, [pacientes, pacienteSearch])
 
   const createMutation = useCreateAgendamentoClinica()
   const rescheduleMutation = useRescheduleAgendamentoClinica()
@@ -316,6 +348,8 @@ export function AgendamentosClinicaPage() {
       setFormState({
         titulo: '',
         descricao: '',
+        is_avaliacao: false,
+        valor: null,
         data_inicio: '',
         data_fim: '',
         paciente_id: null,
@@ -363,6 +397,8 @@ export function AgendamentosClinicaPage() {
     setEditFormState({
       titulo: selectedAgendamento.titulo,
       descricao: selectedAgendamento.descricao || '',
+      is_avaliacao: Boolean((selectedAgendamento as any).is_avaliacao),
+      valor: typeof (selectedAgendamento as any).valor === 'number' ? (selectedAgendamento as any).valor : null,
       data_inicio: selectedAgendamento.data_inicio,
       data_fim: selectedAgendamento.data_fim,
       paciente_id: selectedAgendamento.paciente_id || null,
@@ -523,7 +559,7 @@ export function AgendamentosClinicaPage() {
       const room = a.sala ? ` • Sala ${a.sala}` : ''
       return {
         id: a.id,
-        title: `${a.titulo}${patient}${room}`,
+        title: `${a.is_avaliacao ? 'Avaliação • ' : ''}${a.titulo}${patient}${room}`,
         start: a.data_inicio,
         end: a.data_fim,
         backgroundColor: color.bg,
@@ -694,13 +730,19 @@ export function AgendamentosClinicaPage() {
 
             <div className="space-y-2">
               <Label htmlFor="paciente-filter">Paciente</Label>
+              <Input
+                id="paciente-filter-search"
+                placeholder="Digite para filtrar pacientes..."
+                value={pacienteSearch}
+                onChange={(e) => setPacienteSearch(e.target.value)}
+              />
               <Select value={pacienteFilter} onValueChange={setPacienteFilter}>
                 <SelectTrigger id="paciente-filter">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todos</SelectItem>
-                  {pacientes.map((p) => (
+                  {pacientesFiltered.map((p) => (
                     <SelectItem key={p.id} value={p.id}>
                       {p.nome_completo}
                     </SelectItem>
@@ -724,6 +766,59 @@ export function AgendamentosClinicaPage() {
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-4">
+            <div className="space-y-2">
+              <Label htmlFor="procedimento-filter">Procedimento</Label>
+              <Select value={procedimentoFilter} onValueChange={setProcedimentoFilter}>
+                <SelectTrigger id="procedimento-filter">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  {procedimentos.map((p: any) => (
+                    <SelectItem key={p.id} value={p.id}>
+                      {p.nome}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="avaliacao-filter">Avaliação</Label>
+              <Select value={avaliacaoFilter} onValueChange={(v) => setAvaliacaoFilter(v as any)}>
+                <SelectTrigger id="avaliacao-filter">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  <SelectItem value="true">Somente avaliações</SelectItem>
+                  <SelectItem value="false">Somente não-avaliações</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="data-inicio-filter">Data início</Label>
+              <Input
+                id="data-inicio-filter"
+                type="date"
+                value={dataInicioFilter}
+                onChange={(e) => setDataInicioFilter(e.target.value)}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="data-fim-filter">Data fim</Label>
+              <Input
+                id="data-fim-filter"
+                type="date"
+                value={dataFimFilter}
+                onChange={(e) => setDataFimFilter(e.target.value)}
+              />
             </div>
           </div>
         </CardContent>
@@ -851,6 +946,7 @@ export function AgendamentosClinicaPage() {
                             <StatusIcon className="mr-1 h-3 w-3" />
                             {statusConfig.label}
                           </Badge>
+                          {agendamento.is_avaliacao ? <Badge variant="secondary">Avaliação</Badge> : null}
                         </div>
                         <div className="flex items-center gap-4 text-sm text-muted-foreground">
                           <span className="flex items-center gap-1">

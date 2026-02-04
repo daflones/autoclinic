@@ -16,6 +16,7 @@ export interface ProfissionalClinica {
   experiencia?: string | null
   certificacoes?: string | null
   procedimentos?: string | null
+  procedimentos_ids?: string[]
   foto_url?: string | null
   especialidades?: string[] | null
   conselho?: string | null
@@ -45,6 +46,7 @@ export interface ProfissionalCreateData {
   experiencia?: string | null
   certificacoes?: string | null
   procedimentos?: string | null
+  procedimentos_ids?: string[]
   bio?: string | null
   foto_url?: string | null
   especialidades?: string[] | null
@@ -57,6 +59,63 @@ export interface ProfissionalCreateData {
 }
 
 export type ProfissionalUpdateData = Partial<ProfissionalCreateData>
+
+async function loadProcedimentosIdsByProfissionalIds(params: {
+  adminProfileId: string
+  profissionalIds: string[]
+}): Promise<Record<string, string[]>> {
+  const { data, error } = await supabase
+    .from('profissionais_clinica_procedimentos')
+    .select('profissional_id, procedimento_id')
+    .eq('admin_profile_id', params.adminProfileId)
+    .in('profissional_id', params.profissionalIds)
+
+  if (error) {
+    throw new Error(error.message || 'Erro ao carregar procedimentos do profissional')
+  }
+
+  const map: Record<string, string[]> = {}
+  for (const row of (data || []) as any[]) {
+    const pid = String(row.profissional_id)
+    const procId = String(row.procedimento_id)
+    if (!map[pid]) map[pid] = []
+    map[pid].push(procId)
+  }
+  return map
+}
+
+async function replaceProcedimentosForProfissional(params: {
+  adminProfileId: string
+  profissionalId: string
+  procedimentoIds: string[]
+}): Promise<void> {
+  const { error: delError } = await supabase
+    .from('profissionais_clinica_procedimentos')
+    .delete()
+    .eq('admin_profile_id', params.adminProfileId)
+    .eq('profissional_id', params.profissionalId)
+
+  if (delError) {
+    throw new Error(delError.message || 'Erro ao atualizar procedimentos do profissional')
+  }
+
+  const uniqueIds = Array.from(new Set((params.procedimentoIds || []).filter(Boolean)))
+  if (uniqueIds.length === 0) return
+
+  const rows = uniqueIds.map((procedimento_id) => ({
+    admin_profile_id: params.adminProfileId,
+    profissional_id: params.profissionalId,
+    procedimento_id,
+  }))
+
+  const { error: insError } = await supabase
+    .from('profissionais_clinica_procedimentos')
+    .insert(rows)
+
+  if (insError) {
+    throw new Error(insError.message || 'Erro ao salvar procedimentos do profissional')
+  }
+}
 
 export const profissionaisClinicaService = {
   async getAll(filters: ProfissionalFilters = {}): Promise<ProfissionalClinica[]> {
@@ -88,7 +147,18 @@ export const profissionaisClinicaService = {
       throw new Error(`Erro ao buscar profissionais: ${error.message}`)
     }
 
-    return (data as ProfissionalClinica[]) ?? []
+    const profissionais = (data as ProfissionalClinica[]) ?? []
+    if (profissionais.length === 0) return []
+
+    const map = await loadProcedimentosIdsByProfissionalIds({
+      adminProfileId,
+      profissionalIds: profissionais.map((p) => p.id),
+    })
+
+    return profissionais.map((p) => ({
+      ...p,
+      procedimentos_ids: map[p.id] ?? [],
+    }))
   },
 
   async getById(id: string): Promise<ProfissionalClinica | null> {
@@ -106,16 +176,29 @@ export const profissionaisClinicaService = {
       throw new Error(`Erro ao buscar profissional: ${error.message}`)
     }
 
-    return data as ProfissionalClinica | null
+    const profissional = data as ProfissionalClinica | null
+    if (!profissional) return null
+
+    const map = await loadProcedimentosIdsByProfissionalIds({
+      adminProfileId,
+      profissionalIds: [profissional.id],
+    })
+
+    return {
+      ...profissional,
+      procedimentos_ids: map[profissional.id] ?? [],
+    }
   },
 
   async create(payload: ProfissionalCreateData): Promise<ProfissionalClinica> {
     const { adminProfileId } = await getAdminContext()
 
+    const { procedimentos_ids, ...rest } = payload
+
     const { data, error } = await supabase
       .from('profissionais_clinica')
       .insert({
-        ...payload,
+        ...rest,
         admin_profile_id: adminProfileId,
         status: payload.status ?? 'ativo',
       })
@@ -127,15 +210,30 @@ export const profissionaisClinicaService = {
       throw new Error(error.message || 'Erro ao criar profissional')
     }
 
-    return data
+    if (Array.isArray(procedimentos_ids)) {
+      await replaceProcedimentosForProfissional({
+        adminProfileId,
+        profissionalId: data.id,
+        procedimentoIds: procedimentos_ids,
+      })
+    }
+
+    return {
+      ...(data as ProfissionalClinica),
+      procedimentos_ids: Array.isArray(procedimentos_ids) ? procedimentos_ids : [],
+    }
   },
 
   async update(id: string, payload: ProfissionalUpdateData): Promise<ProfissionalClinica> {
     const { adminProfileId } = await getAdminContext()
 
+    const { procedimentos_ids, ...rest } = payload as ProfissionalUpdateData & {
+      procedimentos_ids?: string[]
+    }
+
     const { data, error } = await supabase
       .from('profissionais_clinica')
-      .update(payload)
+      .update(rest)
       .eq('id', id)
       .eq('admin_profile_id', adminProfileId)
       .select()
@@ -146,7 +244,23 @@ export const profissionaisClinicaService = {
       throw new Error(error.message || 'Erro ao atualizar profissional')
     }
 
-    return data
+    if (Array.isArray(procedimentos_ids)) {
+      await replaceProcedimentosForProfissional({
+        adminProfileId,
+        profissionalId: data.id,
+        procedimentoIds: procedimentos_ids,
+      })
+    }
+
+    const map = await loadProcedimentosIdsByProfissionalIds({
+      adminProfileId,
+      profissionalIds: [data.id],
+    })
+
+    return {
+      ...(data as ProfissionalClinica),
+      procedimentos_ids: map[data.id] ?? [],
+    }
   },
 
   async delete(id: string): Promise<void> {

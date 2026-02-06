@@ -361,6 +361,12 @@ export function AgendamentoForm({ agendamento, clientes, vendedores, onSubmit, o
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
+      <div className="flex justify-end">
+        <Button type="submit">
+          {agendamento ? 'Atualizar' : 'Criar'} Agendamento
+        </Button>
+      </div>
+
       <Tabs defaultValue="basicas" className="w-full">
         <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="basicas">Básicas</TabsTrigger>

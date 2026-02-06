@@ -16,10 +16,1337 @@ const app = express();
 const PORT = Number(process.env.PORT) || 3000;
 
 dotenv.config()
-
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+
+// =====================================================
+// Evolution API Proxy (backend)
+// - Frontend deve chamar /api/evolution/... (Vite faz proxy para :3000)
+// - Nunca expor apikey no browser
+// =====================================================
+
+const EVOLUTION_API_URL = (process.env.EVOLUTION_API_URL || process.env.VITE_EVOLUTION_API_URL || '').replace(/\/+$/, '')
+const EVOLUTION_API_KEY = process.env.EVOLUTION_API_KEY || process.env.VITE_EVOLUTION_API_KEY || ''
+
+// Supabase (service role) para persistir cache do WhatsApp e resolver clínica/instância
+const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_SERVICE_ROLE_KEY
+
+// Map of resolved env vars (supports both VITE_ prefixed and non-prefixed)
+const RESOLVED_ENV = {
+  VITE_SUPABASE_URL: SUPABASE_URL,
+  SUPABASE_URL: SUPABASE_URL,
+  SUPABASE_SERVICE_ROLE_KEY: SUPABASE_SERVICE_ROLE_KEY,
+  VITE_SUPABASE_SERVICE_ROLE_KEY: SUPABASE_SERVICE_ROLE_KEY,
+  EVOLUTION_API_URL: EVOLUTION_API_URL,
+  EVOLUTION_API_KEY: EVOLUTION_API_KEY,
+}
+
+function requireBackendEnv(name) {
+  const v = RESOLVED_ENV[name] || process.env[name]
+  if (!v) {
+    const err = new Error(`Missing environment variable: ${name}`)
+    err.statusCode = 500
+    throw err
+  }
+  return v
+}
+
+async function supabaseAuthUser(accessToken) {
+  requireBackendEnv('VITE_SUPABASE_URL')
+  requireBackendEnv('SUPABASE_SERVICE_ROLE_KEY')
+
+  const url = `${SUPABASE_URL}/auth/v1/user`
+  const res = await axios.get(url, {
+    headers: {
+      apikey: SUPABASE_SERVICE_ROLE_KEY,
+      Authorization: `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+    },
+    timeout: 30_000,
+    validateStatus: () => true,
+  })
+
+  if (res.status >= 200 && res.status < 300) return res.data
+  throw new Error(res.data?.message || res.data?.error || 'Supabase user token invalid')
+}
+
+async function supabaseRest(endpoint, { method = 'GET', data, params } = {}) {
+  requireBackendEnv('VITE_SUPABASE_URL')
+  requireBackendEnv('SUPABASE_SERVICE_ROLE_KEY')
+
+  const url = `${SUPABASE_URL}/rest/v1/${endpoint.replace(/^\/+/, '')}`
+
+  // Build Prefer header: for upserts (POST with on_conflict), add resolution=merge-duplicates
+  let prefer = 'return=representation'
+  const queryParams = { ...params }
+  if (method === 'POST' && queryParams?.on_conflict) {
+    prefer = 'return=representation,resolution=merge-duplicates'
+  }
+
+  const res = await axios.request({
+    url,
+    method,
+    params: queryParams,
+    data,
+    headers: {
+      apikey: SUPABASE_SERVICE_ROLE_KEY,
+      Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+      'Content-Type': 'application/json',
+      Prefer: prefer,
+    },
+    timeout: 60_000,
+    validateStatus: () => true,
+  })
+
+  if (res.status === 204) return null
+  if (res.status >= 200 && res.status < 300) return res.data
+  const errMsg = typeof res.data === 'string' ? res.data : (res.data?.message || res.data?.error || res.data?.details || JSON.stringify(res.data))
+  console.error(`[supabaseRest] ${method} ${endpoint} -> ${res.status}:`, errMsg)
+  throw new Error(errMsg || 'Supabase REST error')
+}
+
+async function resolveClinicAdminAndInstance(accessToken) {
+  const authUser = await supabaseAuthUser(accessToken)
+  const authUserId = authUser?.id
+  if (!authUserId) return { clinicAdminId: null, instanceName: null }
+
+  // Perfil do usuário logado
+  const profiles = await supabaseRest(`profiles?select=id,role,admin_profile_id&id=eq.${authUserId}`, { method: 'GET' })
+  const userProfile = Array.isArray(profiles) ? profiles[0] : profiles
+  if (!userProfile?.id) return { clinicAdminId: null, instanceName: null }
+
+  const clinicAdminId = userProfile.role === 'admin' ? userProfile.id : (userProfile.admin_profile_id || null)
+  if (!clinicAdminId) return { clinicAdminId: null, instanceName: null }
+
+  let instanceName = null
+  try {
+    const admins = await supabaseRest(`profiles?select=instancia_whatsapp&id=eq.${clinicAdminId}`, { method: 'GET' })
+    const adminProfile = Array.isArray(admins) ? admins[0] : admins
+    instanceName = adminProfile?.instancia_whatsapp || null
+  } catch (e) {
+    console.warn('[resolveClinicAdminAndInstance] Could not read instancia_whatsapp from profiles:', e?.message)
+  }
+
+  // Fallback to env var if DB column not set or not yet created
+  if (!instanceName) {
+    instanceName = process.env.EVOLUTION_INSTANCE_NAME || process.env.VITE_EVOLUTION_INSTANCE_NAME || null
+  }
+
+  return { clinicAdminId, instanceName }
+}
+
+function getBearerToken(req) {
+  const authHeader = req.headers['authorization'] || req.headers['Authorization']
+  if (!authHeader || typeof authHeader !== 'string') return null
+  const match = authHeader.match(/^Bearer\s+(.+)$/i)
+  return match ? match[1] : null
+}
+
+app.use('/api/evolution', async (req, res) => {
+  try {
+    if (!EVOLUTION_API_URL || !EVOLUTION_API_KEY) {
+      return res.status(500).json({
+        error: 'Evolution API não configurada no backend (EVOLUTION_API_URL/EVOLUTION_API_KEY)',
+      })
+    }
+
+    // Proteção básica: exigir token do Supabase para não deixar o proxy público
+    const token = getBearerToken(req)
+    if (!token) {
+      return res.status(401).json({ error: 'Token de autenticação ausente' })
+    }
+
+    const upstreamPath = req.originalUrl.replace(/^\/api\/evolution/, '')
+    const upstreamUrl = `${EVOLUTION_API_URL}${upstreamPath}`
+    const method = String(req.method || 'GET').toUpperCase()
+
+    const upstreamResponse = await axios.request({
+      url: upstreamUrl,
+      method,
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        apikey: EVOLUTION_API_KEY,
+      },
+      data: ['GET', 'HEAD'].includes(method) ? undefined : (req.body ?? {}),
+      timeout: 60_000,
+      validateStatus: () => true,
+    })
+
+    return res.status(upstreamResponse.status).send(upstreamResponse.data)
+  } catch (error) {
+    console.error('Erro no proxy Evolution:', error?.message || error)
+    return res.status(500).json({ error: 'Erro interno do servidor', details: error?.message || String(error) })
+  }
+})
+
+// =====================================================
+// Endpoints WhatsApp Chat (backend enriched)
+// - Fonte da verdade: Evolution API
+// - Persistência/cache: Supabase (service role)
+// =====================================================
+
+async function evolutionRequest(pathname, { method = 'POST', body } = {}) {
+  if (!EVOLUTION_API_URL || !EVOLUTION_API_KEY) {
+    const err = new Error('Evolution API não configurada no backend (EVOLUTION_API_URL/EVOLUTION_API_KEY)')
+    err.statusCode = 500
+    throw err
+  }
+
+  const url = `${EVOLUTION_API_URL}${pathname}`
+  const res = await axios.request({
+    url,
+    method,
+    data: body ?? {},
+    headers: {
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+      apikey: EVOLUTION_API_KEY,
+    },
+    timeout: 60_000,
+    validateStatus: () => true,
+  })
+
+  if (res.status >= 200 && res.status < 300) return res.data
+  const err = new Error(typeof res.data === 'string' ? res.data : JSON.stringify(res.data))
+  err.statusCode = res.status
+  throw err
+}
+
+// Helper: Get the correct identifier to send messages via Evolution API
+// LID contacts need full remoteJid, phone contacts just the number
+function getNumberForEvolution(remoteJid) {
+  if (!remoteJid) return ''
+  // LID format: pass full remoteJid
+  if (remoteJid.endsWith('@lid')) return remoteJid
+  // Group: pass full remoteJid
+  if (remoteJid.endsWith('@g.us')) return remoteJid
+  // Phone: pass just the number part
+  return remoteJid.split('@')[0]
+}
+
+// Helper: Extract text content from any Evolution message object
+function extractMessageContent(msg) {
+  if (!msg) return null
+  // Direct conversation text
+  if (typeof msg.conversation === 'string' && msg.conversation) return msg.conversation
+  // Extended text
+  if (typeof msg.extendedTextMessage?.text === 'string') return msg.extendedTextMessage.text
+  // Image/video captions
+  if (typeof msg.imageMessage?.caption === 'string') return msg.imageMessage.caption
+  if (typeof msg.videoMessage?.caption === 'string') return msg.videoMessage.caption
+  // Document with caption (nested)
+  if (msg.documentWithCaptionMessage?.message?.documentMessage?.caption) return msg.documentWithCaptionMessage.message.documentMessage.caption
+  // Document caption
+  if (typeof msg.documentMessage?.caption === 'string') return msg.documentMessage.caption
+  // Location
+  if (msg.locationMessage) return msg.locationMessage.name || msg.locationMessage.address || '[Localização]'
+  // Contact
+  if (msg.contactMessage) return msg.contactMessage.displayName || '[Contato]'
+  if (msg.contactsArrayMessage) return '[Contatos]'
+  // Sticker
+  if (msg.stickerMessage) return '[Sticker]'
+  // Audio
+  if (msg.audioMessage) return '[Áudio]'
+  // Poll
+  if (msg.pollCreationMessage) return msg.pollCreationMessage.name || '[Enquete]'
+  // Buttons
+  if (msg.buttonsResponseMessage) return msg.buttonsResponseMessage.selectedDisplayText || '[Resposta]'
+  if (msg.listResponseMessage) return msg.listResponseMessage.title || '[Resposta Lista]'
+  // Template
+  if (msg.templateMessage) return msg.templateMessage.hydratedTemplate?.hydratedContentText || '[Template]'
+  // Ephemeral wrapper - recurse
+  if (msg.ephemeralMessage?.message) return extractMessageContent(msg.ephemeralMessage.message)
+  // ViewOnce wrapper - recurse  
+  if (msg.viewOnceMessage?.message) return extractMessageContent(msg.viewOnceMessage.message)
+  if (msg.viewOnceMessageV2?.message) return extractMessageContent(msg.viewOnceMessageV2.message)
+  return null
+}
+
+// Helper: Detect message type from Evolution message object
+function detectMessageType(msg) {
+  if (!msg) return 'unknown'
+  if (msg.conversation || msg.extendedTextMessage) return 'text'
+  if (msg.imageMessage) return 'image'
+  if (msg.videoMessage) return 'video'
+  if (msg.audioMessage) return 'audio'
+  if (msg.documentMessage || msg.documentWithCaptionMessage) return 'document'
+  if (msg.locationMessage || msg.liveLocationMessage) return 'location'
+  if (msg.stickerMessage) return 'sticker'
+  if (msg.contactMessage || msg.contactsArrayMessage) return 'contact'
+  if (msg.reactionMessage) return 'reaction'
+  if (msg.protocolMessage) return 'protocol'
+  if (msg.pollCreationMessage || msg.pollUpdateMessage) return 'poll'
+  if (msg.buttonsResponseMessage || msg.listResponseMessage) return 'buttons'
+  if (msg.ephemeralMessage?.message) return detectMessageType(msg.ephemeralMessage.message)
+  if (msg.viewOnceMessage?.message) return detectMessageType(msg.viewOnceMessage.message)
+  if (msg.viewOnceMessageV2?.message) return detectMessageType(msg.viewOnceMessageV2.message)
+  return 'unknown'
+}
+
+// Helper: Map Evolution status codes to readable strings
+function mapMessageStatus(rawStatus) {
+  if (rawStatus === 'READ' || rawStatus === 4 || rawStatus === 'PLAYED') return 'READ'
+  if (rawStatus === 'DELIVERY_ACK' || rawStatus === 3) return 'DELIVERED'
+  if (rawStatus === 'SERVER_ACK' || rawStatus === 2) return 'SENT'
+  if (rawStatus === 1) return 'SENT'
+  if (rawStatus === 0) return 'PENDING'
+  if (typeof rawStatus === 'string' && rawStatus.length > 0) return rawStatus
+  return 'PENDING'
+}
+
+function extractLastMessagePreview(lastMessage) {
+  try {
+    if (!lastMessage) return null
+    const msg = lastMessage?.message
+    if (!msg) return null
+    if (typeof msg?.conversation === 'string') return msg.conversation
+    if (typeof msg?.extendedTextMessage?.text === 'string') return msg.extendedTextMessage.text
+    if (typeof msg?.imageMessage?.caption === 'string') return msg.imageMessage.caption
+    if (typeof msg?.videoMessage?.caption === 'string') return msg.videoMessage.caption
+    return '[Mídia]'
+  } catch {
+    return null
+  }
+}
+
+// Rate limit caches
+const findChatsCache = new Map() // adminId -> { timestamp, result }
+const FIND_CHATS_COOLDOWN_MS = 30_000
+const findMessagesCache = new Map() // adminId+remoteJid -> timestamp
+const FIND_MESSAGES_COOLDOWN_MS = 8_000
+
+// =====================================================
+// LID ↔ PHONE MAPPING SYSTEM
+// Maps LID JIDs to their phone-based counterparts
+// =====================================================
+const lidToPhoneMap = new Map() // lid@lid -> phone@s.whatsapp.net
+const phoneToLidMap = new Map() // phone@s.whatsapp.net -> lid@lid
+
+function registerLidPhoneMapping(lidJid, phoneJid) {
+  if (!lidJid || !phoneJid || lidJid === phoneJid) return
+  if (!lidJid.endsWith('@lid') || !phoneJid.endsWith('@s.whatsapp.net')) return
+  lidToPhoneMap.set(lidJid, phoneJid)
+  phoneToLidMap.set(phoneJid, lidJid)
+  console.log(`[JID-MAP] Registered: ${lidJid} ↔ ${phoneJid}`)
+}
+
+function getCanonicalJid(jid) {
+  // If it's a LID and we have a phone mapping, return the phone JID
+  if (jid?.endsWith('@lid') && lidToPhoneMap.has(jid)) {
+    return lidToPhoneMap.get(jid)
+  }
+  return jid
+}
+
+function getLidForPhone(phoneJid) {
+  return phoneToLidMap.get(phoneJid) || null
+}
+
+// POST /api/chat/findChats
+// Busca chats na Evolution e faz upsert em whatsapp_conversas
+app.post('/api/chat/findChats', async (req, res) => {
+  try {
+    const token = getBearerToken(req)
+    if (!token) return res.status(401).json({ error: 'Token de autenticação ausente' })
+
+    const { clinicAdminId, instanceName } = await resolveClinicAdminAndInstance(token)
+    if (!clinicAdminId || !instanceName) {
+      return res.status(400).json({ error: 'Não foi possível resolver instância WhatsApp da clínica para o usuário' })
+    }
+
+    // Rate limit
+    const cached = findChatsCache.get(clinicAdminId)
+    if (cached && (Date.now() - cached.timestamp) < FIND_CHATS_COOLDOWN_MS) {
+      return res.json(cached.result)
+    }
+
+    console.log('[findChats] instance:', instanceName, 'admin:', clinicAdminId)
+
+    // 1. Fetch chats from Evolution
+    const chats = await evolutionRequest(`/chat/findChats/${encodeURIComponent(instanceName)}`, { method: 'POST', body: req.body ?? {} })
+    const list = Array.isArray(chats) ? chats : []
+
+    // 2. Fetch contacts for names
+    let contactsMap = {}
+    try {
+      const contacts = await evolutionRequest(`/chat/findContacts/${encodeURIComponent(instanceName)}`, { method: 'POST', body: {} })
+      const contactList = Array.isArray(contacts) ? contacts : []
+      for (const ct of contactList) {
+        const cid = ct?.id || ct?.remoteJid || ''
+        if (cid) contactsMap[cid] = ct
+      }
+    } catch (e) {
+      console.warn('[findChats] could not fetch contacts:', e?.message)
+    }
+
+    console.log(`[findChats] Evolution returned ${list.length} chats, ${Object.keys(contactsMap).length} contacts`)
+
+    // 3. Filter out groups, broadcasts, newsletters
+    const filteredList = list.filter(c => {
+      const jid = String(c?.remoteJid || c?.id || '')
+      return jid && !jid.endsWith('@g.us') && !jid.includes('status@broadcast') && !jid.includes('@newsletter')
+    })
+
+    // 4. Separate LID and phone chats, build mapping by profilePicUrl
+    const lidChats = []
+    const phoneChats = []
+    for (const c of filteredList) {
+      const jid = String(c?.remoteJid || c?.id || '').trim()
+      if (jid.endsWith('@lid')) lidChats.push(c)
+      else phoneChats.push(c)
+    }
+
+    // Build profilePicUrl → phone JID index for matching
+    const picToPhoneJid = {}
+    for (const c of phoneChats) {
+      const pic = c?.profilePicUrl
+      if (pic && typeof pic === 'string' && pic.length > 10) {
+        picToPhoneJid[pic] = String(c.remoteJid || c.id || '')
+      }
+    }
+
+    // Match LID → phone by profilePicUrl
+    for (const c of lidChats) {
+      const lidJid = String(c?.remoteJid || c?.id || '').trim()
+      if (lidToPhoneMap.has(lidJid)) continue // already mapped
+      const pic = c?.profilePicUrl
+      if (pic && picToPhoneJid[pic]) {
+        registerLidPhoneMapping(lidJid, picToPhoneJid[pic])
+      }
+    }
+
+    // Secondary matching: for unmatched LIDs, fetch profile picture via API
+    // Compare using base URL path (without query params) for robust matching
+    function picBasePath(url) {
+      if (!url || typeof url !== 'string') return null
+      try { return new URL(url).pathname } catch { return url.split('?')[0] }
+    }
+
+    for (const c of lidChats) {
+      const lidJid = String(c?.remoteJid || c?.id || '').trim()
+      if (lidToPhoneMap.has(lidJid)) continue
+      try {
+        const picRes = await evolutionRequest(`/chat/fetchProfilePictureUrl/${encodeURIComponent(instanceName)}`, {
+          method: 'POST',
+          body: { number: lidJid },
+        })
+        const lidPic = picRes?.profilePictureUrl
+        const lidPicBase = picBasePath(lidPic)
+        if (!lidPicBase) continue
+
+        // Match against phone chat pics (from findChats data first, then API)
+        for (const pc of phoneChats) {
+          const phoneJid = String(pc?.remoteJid || pc?.id || '').trim()
+          if (!phoneJid || phoneJid === '0@s.whatsapp.net') continue
+          // Skip phones already mapped to another LID
+          if (phoneToLidMap.has(phoneJid)) continue
+          // Compare with findChats profilePicUrl
+          const chatPicBase = picBasePath(pc?.profilePicUrl)
+          if (chatPicBase && lidPicBase === chatPicBase) {
+            registerLidPhoneMapping(lidJid, phoneJid)
+            break
+          }
+          // Fetch phone pic via API for more reliable comparison
+          try {
+            const phonePicRes = await evolutionRequest(`/chat/fetchProfilePictureUrl/${encodeURIComponent(instanceName)}`, {
+              method: 'POST',
+              body: { number: phoneJid },
+            })
+            const phonePicBase = picBasePath(phonePicRes?.profilePictureUrl)
+            if (phonePicBase && lidPicBase === phonePicBase) {
+              registerLidPhoneMapping(lidJid, phoneJid)
+              break
+            }
+          } catch (_) {}
+        }
+      } catch (e) {
+        console.warn('[findChats] secondary LID match error:', e?.message)
+      }
+    }
+
+    console.log(`[findChats] LID mappings: ${lidToPhoneMap.size} pairs`)
+
+    // 5. Upsert only phone-based conversations (canonical)
+    // For LID chats with no phone mapping, still create them
+    const upserted = []
+    const processedPhoneJids = new Set()
+
+    for (const c of phoneChats) {
+      const remoteJid = String(c?.remoteJid || c?.id || '').trim()
+      if (!remoteJid) continue
+      processedPhoneJids.add(remoteJid)
+
+      const lastTs = c?.lastMessage?.messageTimestamp
+      const lastTimestamp = lastTs ? Number(lastTs) : null
+
+      const contact = contactsMap[remoteJid]
+      let contactName = contact?.pushName || contact?.profileName || c?.pushName || c?.name || null
+      let profilePicUrl = contact?.profilePicUrl || c?.profilePicUrl || null
+
+      // Enrich from mapped LID chat (get name if phone doesn't have it)
+      const mappedLid = getLidForPhone(remoteJid)
+      if (mappedLid) {
+        const lidChat = lidChats.find(lc => String(lc?.remoteJid || lc?.id || '') === mappedLid)
+        const lidContact = contactsMap[mappedLid]
+        if (!contactName) contactName = lidContact?.pushName || lidContact?.profileName || lidChat?.pushName || lidChat?.name || null
+        if (!profilePicUrl) profilePicUrl = lidContact?.profilePicUrl || lidChat?.profilePicUrl || null
+
+        // Use the most recent lastMessage from either
+        const lidTs = lidChat?.lastMessage?.messageTimestamp ? Number(lidChat.lastMessage.messageTimestamp) : null
+        if (lidTs && (!lastTimestamp || lidTs > lastTimestamp)) {
+          // LID has newer message
+        }
+      }
+
+      // Only include nome_contato/foto_perfil_url if non-null to avoid overwriting good data
+      const payload = {
+        admin_profile_id: clinicAdminId,
+        remote_jid: remoteJid,
+        numero_telefone: remoteJid.split('@')[0] || null,
+        ultima_mensagem: extractLastMessagePreview(c?.lastMessage) || null,
+        ultima_mensagem_timestamp: Number.isFinite(lastTimestamp) ? lastTimestamp : null,
+        mensagens_nao_lidas: Number(c?.unreadCount || 0) || 0,
+        updated_at: new Date().toISOString(),
+      }
+      if (contactName) payload.nome_contato = contactName
+      if (profilePicUrl) payload.foto_perfil_url = profilePicUrl
+
+      try {
+        const row = await supabaseRest('whatsapp_conversas', {
+          method: 'POST',
+          data: payload,
+          params: { on_conflict: 'admin_profile_id,remote_jid' },
+        })
+        if (Array.isArray(row) && row[0]) upserted.push(row[0])
+        else if (row) upserted.push(row)
+      } catch (upsertErr) {
+        console.error('[findChats] upsert error for', remoteJid, upsertErr?.message)
+      }
+    }
+
+    // Process LID chats that have NO phone mapping (orphan LIDs - still need to show)
+    for (const c of lidChats) {
+      const lidJid = String(c?.remoteJid || c?.id || '').trim()
+      if (!lidJid) continue
+      if (lidToPhoneMap.has(lidJid)) continue
+
+      const lastTs = c?.lastMessage?.messageTimestamp
+      const lastTimestamp = lastTs ? Number(lastTs) : null
+      const contact = contactsMap[lidJid]
+      const contactName = contact?.pushName || contact?.profileName || c?.pushName || c?.name || null
+      const profilePicUrl = contact?.profilePicUrl || c?.profilePicUrl || null
+
+      const payload = {
+        admin_profile_id: clinicAdminId,
+        remote_jid: lidJid,
+        numero_telefone: null,
+        ultima_mensagem: extractLastMessagePreview(c?.lastMessage) || null,
+        ultima_mensagem_timestamp: Number.isFinite(lastTimestamp) ? lastTimestamp : null,
+        mensagens_nao_lidas: Number(c?.unreadCount || 0) || 0,
+        updated_at: new Date().toISOString(),
+      }
+      if (contactName) payload.nome_contato = contactName
+      if (profilePicUrl) payload.foto_perfil_url = profilePicUrl
+
+      try {
+        const row = await supabaseRest('whatsapp_conversas', {
+          method: 'POST',
+          data: payload,
+          params: { on_conflict: 'admin_profile_id,remote_jid' },
+        })
+        if (Array.isArray(row) && row[0]) upserted.push(row[0])
+        else if (row) upserted.push(row)
+      } catch (upsertErr) {
+        console.error('[findChats] upsert error for', lidJid, upsertErr?.message)
+      }
+    }
+
+    // 6. MERGE: Delete LID conversations that now have a phone mapping
+    //    Move their messages to the phone conversation and delete the LID conversa
+    for (const [lidJid, phoneJid] of lidToPhoneMap.entries()) {
+      try {
+        // Find both conversations
+        const lidConvRes = await supabaseRest(
+          `whatsapp_conversas?select=id,nome_contato,foto_perfil_url&admin_profile_id=eq.${clinicAdminId}&remote_jid=eq.${encodeURIComponent(lidJid)}`,
+          { method: 'GET' }
+        )
+        const lidConv = Array.isArray(lidConvRes) ? lidConvRes[0] : null
+        if (!lidConv) continue
+
+        const phoneConvRes = await supabaseRest(
+          `whatsapp_conversas?select=id,nome_contato,foto_perfil_url&admin_profile_id=eq.${clinicAdminId}&remote_jid=eq.${encodeURIComponent(phoneJid)}`,
+          { method: 'GET' }
+        )
+        const phoneConv = Array.isArray(phoneConvRes) ? phoneConvRes[0] : null
+        if (!phoneConv) continue
+
+        console.log(`[findChats] MERGING LID ${lidJid} → phone ${phoneJid}`)
+
+        // Copy name/pic from LID to phone if phone is missing them
+        // Skip nome_contato if it's just a number (LID number used as pushName)
+        const updates = {}
+        if (!phoneConv.nome_contato && lidConv.nome_contato && !/^\d+$/.test(lidConv.nome_contato.trim())) {
+          updates.nome_contato = lidConv.nome_contato
+        }
+        if (!phoneConv.foto_perfil_url && lidConv.foto_perfil_url) updates.foto_perfil_url = lidConv.foto_perfil_url
+        if (Object.keys(updates).length > 0) {
+          updates.updated_at = new Date().toISOString()
+          await supabaseRest(`whatsapp_conversas?id=eq.${phoneConv.id}`, { method: 'PATCH', data: updates })
+        }
+
+        // Move messages from LID conversa to phone conversa
+        await supabaseRest(
+          `whatsapp_mensagens?admin_profile_id=eq.${clinicAdminId}&conversa_id=eq.${lidConv.id}`,
+          { method: 'PATCH', data: { conversa_id: phoneConv.id, remote_jid: phoneJid, updated_at: new Date().toISOString() } }
+        )
+
+        // Delete the LID conversation
+        await supabaseRest(
+          `whatsapp_conversas?id=eq.${lidConv.id}`,
+          { method: 'DELETE' }
+        )
+
+        console.log(`[findChats] MERGED: LID conv ${lidConv.id} → phone conv ${phoneConv.id}`)
+      } catch (mergeErr) {
+        console.error('[findChats] merge error:', mergeErr?.message)
+      }
+    }
+
+    const result = { ok: true, instanceName, total: filteredList.length, upserted: upserted.length, mergedLids: lidToPhoneMap.size }
+    findChatsCache.set(clinicAdminId, { timestamp: Date.now(), result })
+    return res.json(result)
+  } catch (e) {
+    console.error('[findChats] error:', e?.message || e)
+    const status = e?.statusCode && Number.isFinite(e.statusCode) ? e.statusCode : 500
+    return res.status(status).json({ error: 'Falha ao buscar chats', details: e?.message || String(e) })
+  }
+})
+
+// POST /api/chat/findMessages
+// Body: { remoteJid }
+app.post('/api/chat/findMessages', async (req, res) => {
+  try {
+    const token = getBearerToken(req)
+    if (!token) return res.status(401).json({ error: 'Token de autenticação ausente' })
+
+    const { clinicAdminId, instanceName } = await resolveClinicAdminAndInstance(token)
+    if (!clinicAdminId || !instanceName) {
+      return res.status(400).json({ error: 'Não foi possível resolver instância WhatsApp da clínica para o usuário' })
+    }
+
+    let remoteJid = String(req.body?.remoteJid || '').trim()
+    if (!remoteJid) return res.status(400).json({ error: 'remoteJid é obrigatório' })
+
+    // If this is a LID with a known phone mapping, redirect to phone conversation
+    const canonical = getCanonicalJid(remoteJid)
+    if (canonical !== remoteJid) {
+      console.log(`[findMessages] Redirecting LID ${remoteJid} → phone ${canonical}`)
+      remoteJid = canonical
+    }
+
+    // Rate limit: skip if called too recently for same conversation
+    const msgCacheKey = `${clinicAdminId}:${remoteJid}`
+    const lastMsgSync = findMessagesCache.get(msgCacheKey)
+    if (lastMsgSync && (Date.now() - lastMsgSync) < FIND_MESSAGES_COOLDOWN_MS) {
+      return res.json({ ok: true, cached: true, remoteJid })
+    }
+    findMessagesCache.set(msgCacheKey, Date.now())
+
+    console.log('[findMessages] instance:', instanceName, 'remoteJid:', remoteJid)
+
+    // Garantir conversa existe — usar query params corretos
+    let conversaId = null
+    try {
+      const convUrl = `whatsapp_conversas?select=id&admin_profile_id=eq.${clinicAdminId}&remote_jid=eq.${encodeURIComponent(remoteJid)}`
+      const conv = await supabaseRest(convUrl, { method: 'GET' })
+      conversaId = Array.isArray(conv) && conv[0]?.id ? conv[0].id : null
+    } catch (lookupErr) {
+      console.error('[findMessages] conversa lookup error:', lookupErr?.message)
+    }
+
+    if (!conversaId) {
+      try {
+        const created = await supabaseRest('whatsapp_conversas', {
+          method: 'POST',
+          data: {
+            admin_profile_id: clinicAdminId,
+            remote_jid: remoteJid,
+            nome_contato: null,
+            numero_telefone: remoteJid.split('@')[0] || null,
+            mensagens_nao_lidas: 0,
+          },
+          params: { on_conflict: 'admin_profile_id,remote_jid' },
+        })
+        const row = Array.isArray(created) ? created[0] : created
+        conversaId = row?.id || null
+      } catch (createErr) {
+        console.error('[findMessages] conversa create error:', createErr?.message)
+      }
+    }
+
+    if (!conversaId) {
+      return res.status(500).json({ error: 'Não foi possível criar/encontrar conversa no banco' })
+    }
+
+    // Fetch messages from Evolution - for phone JIDs, also fetch from mapped LID
+    const jidsToFetch = [remoteJid]
+    const mappedLid = getLidForPhone(remoteJid)
+    if (mappedLid) jidsToFetch.push(mappedLid)
+    // If this IS a LID and has a phone mapping, redirect to phone
+    const canonicalJid = getCanonicalJid(remoteJid)
+    if (canonicalJid !== remoteJid && !jidsToFetch.includes(canonicalJid)) {
+      jidsToFetch.unshift(canonicalJid)
+    }
+
+    let list = []
+    for (const jid of jidsToFetch) {
+      try {
+        const rawMessages = await evolutionRequest(`/chat/findMessages/${encodeURIComponent(instanceName)}`, {
+          method: 'POST',
+          body: { where: { key: { remoteJid: jid } } },
+        })
+        let batch = []
+        if (Array.isArray(rawMessages)) batch = rawMessages
+        else if (rawMessages?.messages?.records && Array.isArray(rawMessages.messages.records)) batch = rawMessages.messages.records
+        else if (Array.isArray(rawMessages?.messages)) batch = rawMessages.messages
+        list.push(...batch)
+      } catch (fetchErr) {
+        console.warn(`[findMessages] fetch error for ${jid}:`, fetchErr?.message)
+      }
+    }
+
+    // Deduplicate by message ID
+    const seen = new Set()
+    list = list.filter(m => {
+      const mid = m?.key?.id
+      if (!mid || seen.has(mid)) return false
+      seen.add(mid)
+      return true
+    })
+
+    console.log(`[findMessages] Evolution returned ${list.length} messages for ${remoteJid}${mappedLid ? ' (+LID ' + mappedLid + ')' : ''}`)
+
+    // Also update contact name on the conversation from pushName in messages
+    let pushNameForConv = null
+
+    const upserted = []
+    for (const m of list) {
+      const messageId = String(m?.key?.id || '').trim()
+      // Always use canonical (phone) JID for storage, not LID
+      const rawRjid = String(m?.key?.remoteJid || remoteJid).trim()
+      const rjid = getCanonicalJid(rawRjid) || remoteJid
+      if (!messageId) continue
+
+      const ts = m?.messageTimestamp
+      const timestampMsg = Number(ts) || null
+      const msg = m?.message || {}
+
+      // Use improved helpers for content extraction and type detection
+      const text = extractMessageContent(msg)
+      let tipo = detectMessageType(msg)
+
+      // Also check messageType from Evolution if our detection fails
+      if (tipo === 'unknown' && m?.messageType) {
+        tipo = String(m.messageType).toLowerCase()
+      }
+
+      // Skip protocol and reaction messages (Evolution may return messageType as 'reactionMessage')
+      if (tipo === 'protocol' || tipo === 'reaction' || tipo === 'reactionmessage' || tipo === 'protocolmessage') continue
+
+      const statusStr = mapMessageStatus(m?.status)
+
+      // Capture pushName for contact name update (skip if it's just a number/LID)
+      if (m?.pushName && !m?.key?.fromMe && m.pushName !== 'Você') {
+        const pn = m.pushName.trim()
+        // Only use pushName if it looks like a real name (not a pure number)
+        if (pn && !/^\d+$/.test(pn)) {
+          pushNameForConv = pn
+        }
+      }
+
+      const payload = {
+        admin_profile_id: clinicAdminId,
+        conversa_id: conversaId,
+        message_id: messageId,
+        remote_jid: rjid,
+        conteudo: text,
+        tipo_mensagem: tipo,
+        from_me: Boolean(m?.key?.fromMe),
+        timestamp_msg: Number.isFinite(timestampMsg) ? timestampMsg : Math.floor(Date.now() / 1000),
+        status: statusStr,
+        caption: msg?.imageMessage?.caption || msg?.videoMessage?.caption || msg?.documentWithCaptionMessage?.message?.documentMessage?.caption || null,
+        latitude: msg?.locationMessage?.degreesLatitude || null,
+        longitude: msg?.locationMessage?.degreesLongitude || null,
+        location_name: msg?.locationMessage?.name || null,
+        location_address: msg?.locationMessage?.address || null,
+        metadata: {},
+        updated_at: new Date().toISOString(),
+      }
+
+      try {
+        const row = await supabaseRest('whatsapp_mensagens', {
+          method: 'POST',
+          data: payload,
+          params: { on_conflict: 'admin_profile_id,message_id' },
+        })
+        if (Array.isArray(row) && row[0]) upserted.push(row[0])
+        else if (row) upserted.push(row)
+      } catch (upsertErr) {
+        console.error('[findMessages] msg upsert error for', messageId, upsertErr?.message)
+      }
+    }
+
+    // Update conversation with pushName if found and conversation has no name
+    if (pushNameForConv && conversaId) {
+      try {
+        // Only update if name is currently null
+        const convCheck = await supabaseRest(`whatsapp_conversas?select=nome_contato&id=eq.${conversaId}`, { method: 'GET' })
+        const currentName = Array.isArray(convCheck) ? convCheck[0]?.nome_contato : convCheck?.nome_contato
+        if (!currentName) {
+          await supabaseRest(`whatsapp_conversas?id=eq.${conversaId}`, {
+            method: 'PATCH',
+            data: { nome_contato: pushNameForConv, updated_at: new Date().toISOString() },
+          })
+        }
+      } catch (_) {}
+    }
+
+    console.log(`[findMessages] upserted ${upserted.length} messages`)
+    return res.json({ ok: true, instanceName, remoteJid, total: list.length, upserted: upserted.length })
+  } catch (e) {
+    console.error('[findMessages] error:', e?.message || e)
+    const status = e?.statusCode && Number.isFinite(e.statusCode) ? e.statusCode : 500
+    return res.status(status).json({ error: 'Falha ao buscar mensagens', details: e?.message || String(e) })
+  }
+})
+
+// POST /api/chat/sendText
+// Body: { remoteJid, text, quotedMessageId?, profissionalId? }
+app.post('/api/chat/sendText', async (req, res) => {
+  try {
+    const token = getBearerToken(req)
+    if (!token) return res.status(401).json({ error: 'Token de autenticação ausente' })
+
+    const { clinicAdminId, instanceName } = await resolveClinicAdminAndInstance(token)
+    if (!clinicAdminId || !instanceName) {
+      return res.status(400).json({ error: 'Instância WhatsApp não encontrada' })
+    }
+
+    const remoteJid = String(req.body?.remoteJid || '').trim()
+    const text = String(req.body?.text || '').trim()
+    const quotedMessageId = req.body?.quotedMessageId || null
+    const profissionalId = req.body?.profissionalId || null
+
+    if (!remoteJid || !text) {
+      return res.status(400).json({ error: 'remoteJid e text são obrigatórios' })
+    }
+
+    const number = getNumberForEvolution(remoteJid)
+    const payload = {
+      number,
+      text,
+      delay: 500,
+      linkPreview: true,
+    }
+    if (quotedMessageId) {
+      payload.quoted = { key: { id: quotedMessageId }, message: { conversation: '' } }
+    }
+
+    console.log('[sendText] instance:', instanceName, 'to:', number)
+
+    const response = await evolutionRequest(`/message/sendText/${encodeURIComponent(instanceName)}`, {
+      method: 'POST',
+      body: payload,
+    })
+
+    // Persist sent message
+    const messageId = response?.key?.id
+    const responseJid = response?.key?.remoteJid || remoteJid
+    const ts = Number(response?.messageTimestamp) || Math.floor(Date.now() / 1000)
+
+    // Track LID↔phone mapping from response
+    if (responseJid !== remoteJid) {
+      if (responseJid.endsWith('@lid') && remoteJid.endsWith('@s.whatsapp.net')) {
+        registerLidPhoneMapping(responseJid, remoteJid)
+      } else if (remoteJid.endsWith('@lid') && responseJid.endsWith('@s.whatsapp.net')) {
+        registerLidPhoneMapping(remoteJid, responseJid)
+      }
+    }
+
+    // Always persist under the canonical (phone) JID
+    const canonicalJid = getCanonicalJid(remoteJid) || remoteJid
+    const storageJid = canonicalJid
+
+    // Find conversa by canonical JID
+    let conversaId = null
+    try {
+      const conv = await supabaseRest(`whatsapp_conversas?select=id&admin_profile_id=eq.${clinicAdminId}&remote_jid=eq.${encodeURIComponent(storageJid)}`, { method: 'GET' })
+      conversaId = Array.isArray(conv) && conv[0]?.id ? conv[0].id : null
+    } catch (_) {}
+
+    if (!conversaId) {
+      try {
+        const created = await supabaseRest('whatsapp_conversas', {
+          method: 'POST',
+          data: {
+            admin_profile_id: clinicAdminId,
+            remote_jid: storageJid,
+            numero_telefone: storageJid.endsWith('@lid') ? null : storageJid.split('@')[0],
+            mensagens_nao_lidas: 0,
+          },
+          params: { on_conflict: 'admin_profile_id,remote_jid' },
+        })
+        const row = Array.isArray(created) ? created[0] : created
+        conversaId = row?.id || null
+      } catch (_) {}
+    }
+
+    if (messageId && conversaId) {
+      try {
+        await supabaseRest('whatsapp_mensagens', {
+          method: 'POST',
+          data: {
+            admin_profile_id: clinicAdminId,
+            conversa_id: conversaId,
+            message_id: messageId,
+            remote_jid: storageJid,
+            conteudo: text,
+            tipo_mensagem: 'text',
+            from_me: true,
+            timestamp_msg: ts,
+            status: 'SENT',
+            profissional_id: profissionalId || null,
+            quoted_message_id: quotedMessageId || null,
+            metadata: {},
+          },
+          params: { on_conflict: 'admin_profile_id,message_id' },
+        })
+      } catch (e) {
+        console.error('[sendText] persist error:', e?.message)
+      }
+    }
+
+    // Update conversation preview
+    if (conversaId) {
+      try {
+        await supabaseRest(`whatsapp_conversas?id=eq.${conversaId}`, {
+          method: 'PATCH',
+          data: { ultima_mensagem: text, ultima_mensagem_timestamp: ts, updated_at: new Date().toISOString() },
+        })
+      } catch (_) {}
+    }
+
+    return res.json({ ok: true, response, conversaId })
+  } catch (e) {
+    console.error('[sendText] error:', e?.message || e)
+    const status = e?.statusCode && Number.isFinite(e.statusCode) ? e.statusCode : 500
+    return res.status(status).json({ error: 'Falha ao enviar mensagem', details: e?.message || String(e) })
+  }
+})
+
+// POST /api/chat/sendReaction
+// Body: { remoteJid, messageId, fromMe, emoji }
+app.post('/api/chat/sendReaction', async (req, res) => {
+  try {
+    const token = getBearerToken(req)
+    if (!token) return res.status(401).json({ error: 'Token de autenticação ausente' })
+
+    const { clinicAdminId, instanceName } = await resolveClinicAdminAndInstance(token)
+    if (!clinicAdminId || !instanceName) {
+      return res.status(400).json({ error: 'Instância WhatsApp não encontrada' })
+    }
+
+    const { remoteJid, messageId, fromMe, emoji } = req.body || {}
+    if (!remoteJid || !messageId || !emoji) {
+      return res.status(400).json({ error: 'remoteJid, messageId e emoji são obrigatórios' })
+    }
+
+    console.log('[sendReaction] instance:', instanceName, 'msg:', messageId, 'emoji:', emoji)
+
+    const response = await evolutionRequest(`/message/sendReaction/${encodeURIComponent(instanceName)}`, {
+      method: 'POST',
+      body: {
+        key: {
+          remoteJid,
+          fromMe: Boolean(fromMe),
+          id: messageId,
+        },
+        reaction: emoji,
+      },
+    })
+
+    // Update reaction in DB
+    try {
+      await supabaseRest(
+        `whatsapp_mensagens?admin_profile_id=eq.${clinicAdminId}&message_id=eq.${messageId}`,
+        {
+          method: 'PATCH',
+          data: { reacao: emoji, updated_at: new Date().toISOString() },
+        }
+      )
+    } catch (e) {
+      console.error('[sendReaction] db update error:', e?.message)
+    }
+
+    return res.json({ ok: true, response })
+  } catch (e) {
+    console.error('[sendReaction] error:', e?.message || e)
+    const status = e?.statusCode && Number.isFinite(e.statusCode) ? e.statusCode : 500
+    return res.status(status).json({ error: 'Falha ao enviar reação', details: e?.message || String(e) })
+  }
+})
+
+// POST /api/chat/markAsRead
+// Body: { remoteJid, messages: [{ id, fromMe }] }
+app.post('/api/chat/markAsRead', async (req, res) => {
+  try {
+    const token = getBearerToken(req)
+    if (!token) return res.status(401).json({ error: 'Token de autenticação ausente' })
+
+    const { clinicAdminId, instanceName } = await resolveClinicAdminAndInstance(token)
+    if (!clinicAdminId || !instanceName) {
+      return res.status(400).json({ error: 'Instância WhatsApp não encontrada' })
+    }
+
+    const { remoteJid, messages, conversaId } = req.body || {}
+    if (!remoteJid) {
+      return res.status(400).json({ error: 'remoteJid é obrigatório' })
+    }
+
+    const readMessages = (Array.isArray(messages) ? messages : [])
+      .filter(m => !m.fromMe)
+      .map(m => ({
+        remoteJid,
+        fromMe: false,
+        id: m.id || m.messageId,
+      }))
+
+    if (readMessages.length > 0) {
+      try {
+        await evolutionRequest(`/chat/markMessageAsRead/${encodeURIComponent(instanceName)}`, {
+          method: 'POST',
+          body: { readMessages },
+        })
+      } catch (e) {
+        console.error('[markAsRead] Evolution error:', e?.message)
+      }
+    }
+
+    // Reset unread count in DB
+    if (conversaId) {
+      try {
+        await supabaseRest(
+          `whatsapp_conversas?id=eq.${conversaId}`,
+          {
+            method: 'PATCH',
+            data: { mensagens_nao_lidas: 0, updated_at: new Date().toISOString() },
+          }
+        )
+      } catch (e) {
+        console.error('[markAsRead] db error:', e?.message)
+      }
+    }
+
+    return res.json({ ok: true, read: readMessages.length })
+  } catch (e) {
+    console.error('[markAsRead] error:', e?.message || e)
+    const status = e?.statusCode && Number.isFinite(e.statusCode) ? e.statusCode : 500
+    return res.status(status).json({ error: 'Falha ao marcar como lido', details: e?.message || String(e) })
+  }
+})
+
+// POST /api/chat/updateMessage
+// Body: { remoteJid, messageId, text }
+app.post('/api/chat/updateMessage', async (req, res) => {
+  try {
+    const token = getBearerToken(req)
+    if (!token) return res.status(401).json({ error: 'Token de autenticação ausente' })
+
+    const { clinicAdminId, instanceName } = await resolveClinicAdminAndInstance(token)
+    if (!clinicAdminId || !instanceName) {
+      return res.status(400).json({ error: 'Instância WhatsApp não encontrada' })
+    }
+
+    const { remoteJid, messageId, text } = req.body || {}
+    if (!remoteJid || !messageId || !text) {
+      return res.status(400).json({ error: 'remoteJid, messageId e text são obrigatórios' })
+    }
+
+    const number = getNumberForEvolution(remoteJid)
+
+    console.log('[updateMessage] instance:', instanceName, 'msg:', messageId)
+
+    const response = await evolutionRequest(`/chat/updateMessage/${encodeURIComponent(instanceName)}`, {
+      method: 'POST',
+      body: {
+        number,
+        text,
+        key: {
+          remoteJid,
+          fromMe: true,
+          id: messageId,
+        },
+      },
+    })
+
+    // Update in DB
+    try {
+      await supabaseRest(
+        `whatsapp_mensagens?admin_profile_id=eq.${clinicAdminId}&message_id=eq.${messageId}`,
+        {
+          method: 'PATCH',
+          data: {
+            conteudo: text,
+            editado: true,
+            editado_em: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          },
+        }
+      )
+    } catch (e) {
+      console.error('[updateMessage] db error:', e?.message)
+    }
+
+    return res.json({ ok: true, response })
+  } catch (e) {
+    console.error('[updateMessage] error:', e?.message || e)
+    const status = e?.statusCode && Number.isFinite(e.statusCode) ? e.statusCode : 500
+    return res.status(status).json({ error: 'Falha ao editar mensagem', details: e?.message || String(e) })
+  }
+})
+
+// POST /api/chat/sendMedia
+// Body: { remoteJid, mediatype, mimetype, media, caption?, fileName?, profissionalId? }
+app.post('/api/chat/sendMedia', async (req, res) => {
+  try {
+    const token = getBearerToken(req)
+    if (!token) return res.status(401).json({ error: 'Token de autenticação ausente' })
+
+    const { clinicAdminId, instanceName } = await resolveClinicAdminAndInstance(token)
+    if (!clinicAdminId || !instanceName) {
+      return res.status(400).json({ error: 'Instância WhatsApp não encontrada' })
+    }
+
+    const { remoteJid, mediatype, mimetype, media, caption, fileName, profissionalId } = req.body || {}
+    if (!remoteJid || !mediatype || !media) {
+      return res.status(400).json({ error: 'remoteJid, mediatype e media são obrigatórios' })
+    }
+
+    const number = getNumberForEvolution(remoteJid)
+
+    const response = await evolutionRequest(`/message/sendMedia/${encodeURIComponent(instanceName)}`, {
+      method: 'POST',
+      body: { number, mediatype, mimetype, media, caption, fileName, delay: 500 },
+    })
+
+    // Persist
+    const messageId = response?.key?.id
+    const responseJid = response?.key?.remoteJid || remoteJid
+    const ts = Number(response?.messageTimestamp) || Math.floor(Date.now() / 1000)
+
+    // Track LID mapping
+    if (responseJid !== remoteJid) {
+      if (responseJid.endsWith('@lid') && remoteJid.endsWith('@s.whatsapp.net')) registerLidPhoneMapping(responseJid, remoteJid)
+      else if (remoteJid.endsWith('@lid') && responseJid.endsWith('@s.whatsapp.net')) registerLidPhoneMapping(remoteJid, responseJid)
+    }
+    const storageJid = getCanonicalJid(remoteJid) || remoteJid
+
+    let conversaId = null
+    try {
+      const conv = await supabaseRest(`whatsapp_conversas?select=id&admin_profile_id=eq.${clinicAdminId}&remote_jid=eq.${encodeURIComponent(storageJid)}`, { method: 'GET' })
+      conversaId = Array.isArray(conv) && conv[0]?.id ? conv[0].id : null
+    } catch (_) {}
+
+    if (messageId && conversaId) {
+      try {
+        await supabaseRest('whatsapp_mensagens', {
+          method: 'POST',
+          data: {
+            admin_profile_id: clinicAdminId,
+            conversa_id: conversaId,
+            message_id: messageId,
+            remote_jid: storageJid,
+            conteudo: null,
+            tipo_mensagem: mediatype,
+            from_me: true,
+            timestamp_msg: ts,
+            status: 'SENT',
+            media_url: media,
+            media_mimetype: mimetype || null,
+            media_filename: fileName || null,
+            caption: caption || null,
+            profissional_id: profissionalId || null,
+            metadata: {},
+          },
+          params: { on_conflict: 'admin_profile_id,message_id' },
+        })
+      } catch (e) {
+        console.error('[sendMedia] persist error:', e?.message)
+      }
+    }
+
+    return res.json({ ok: true, response, conversaId })
+  } catch (e) {
+    console.error('[sendMedia] error:', e?.message || e)
+    const status = e?.statusCode && Number.isFinite(e.statusCode) ? e.statusCode : 500
+    return res.status(status).json({ error: 'Falha ao enviar mídia', details: e?.message || String(e) })
+  }
+})
+
+// POST /api/chat/sendAudio
+// Body: { remoteJid, audio, profissionalId? }
+app.post('/api/chat/sendAudio', async (req, res) => {
+  try {
+    const token = getBearerToken(req)
+    if (!token) return res.status(401).json({ error: 'Token de autenticação ausente' })
+
+    const { clinicAdminId, instanceName } = await resolveClinicAdminAndInstance(token)
+    if (!clinicAdminId || !instanceName) {
+      return res.status(400).json({ error: 'Instância WhatsApp não encontrada' })
+    }
+
+    const { remoteJid, audio, profissionalId } = req.body || {}
+    if (!remoteJid || !audio) {
+      return res.status(400).json({ error: 'remoteJid e audio são obrigatórios' })
+    }
+
+    const number = getNumberForEvolution(remoteJid)
+
+    const response = await evolutionRequest(`/message/sendWhatsAppAudio/${encodeURIComponent(instanceName)}`, {
+      method: 'POST',
+      body: { number, audio, delay: 500 },
+    })
+
+    const messageId = response?.key?.id
+    const responseJid = response?.key?.remoteJid || remoteJid
+    const ts = Number(response?.messageTimestamp) || Math.floor(Date.now() / 1000)
+
+    // Track LID mapping
+    if (responseJid !== remoteJid) {
+      if (responseJid.endsWith('@lid') && remoteJid.endsWith('@s.whatsapp.net')) registerLidPhoneMapping(responseJid, remoteJid)
+      else if (remoteJid.endsWith('@lid') && responseJid.endsWith('@s.whatsapp.net')) registerLidPhoneMapping(remoteJid, responseJid)
+    }
+    const storageJid = getCanonicalJid(remoteJid) || remoteJid
+
+    let conversaId = null
+    try {
+      const conv = await supabaseRest(`whatsapp_conversas?select=id&admin_profile_id=eq.${clinicAdminId}&remote_jid=eq.${encodeURIComponent(storageJid)}`, { method: 'GET' })
+      conversaId = Array.isArray(conv) && conv[0]?.id ? conv[0].id : null
+    } catch (_) {}
+
+    if (messageId && conversaId) {
+      try {
+        await supabaseRest('whatsapp_mensagens', {
+          method: 'POST',
+          data: {
+            admin_profile_id: clinicAdminId,
+            conversa_id: conversaId,
+            message_id: messageId,
+            remote_jid: storageJid,
+            conteudo: null,
+            tipo_mensagem: 'audio',
+            from_me: true,
+            timestamp_msg: ts,
+            status: 'SENT',
+            media_url: audio,
+            media_mimetype: 'audio/ogg',
+            profissional_id: profissionalId || null,
+            metadata: {},
+          },
+          params: { on_conflict: 'admin_profile_id,message_id' },
+        })
+      } catch (e) {
+        console.error('[sendAudio] persist error:', e?.message)
+      }
+    }
+
+    return res.json({ ok: true, response, conversaId })
+  } catch (e) {
+    console.error('[sendAudio] error:', e?.message || e)
+    const status = e?.statusCode && Number.isFinite(e.statusCode) ? e.statusCode : 500
+    return res.status(status).json({ error: 'Falha ao enviar áudio', details: e?.message || String(e) })
+  }
+})
+
+// POST /api/chat/sendLocation
+// Body: { remoteJid, latitude, longitude, name, address, profissionalId? }
+app.post('/api/chat/sendLocation', async (req, res) => {
+  try {
+    const token = getBearerToken(req)
+    if (!token) return res.status(401).json({ error: 'Token de autenticação ausente' })
+
+    const { clinicAdminId, instanceName } = await resolveClinicAdminAndInstance(token)
+    if (!clinicAdminId || !instanceName) {
+      return res.status(400).json({ error: 'Instância WhatsApp não encontrada' })
+    }
+
+    const { remoteJid, latitude, longitude, name, address, profissionalId } = req.body || {}
+    if (!remoteJid || latitude == null || longitude == null) {
+      return res.status(400).json({ error: 'remoteJid, latitude e longitude são obrigatórios' })
+    }
+
+    const number = getNumberForEvolution(remoteJid)
+
+    const response = await evolutionRequest(`/message/sendLocation/${encodeURIComponent(instanceName)}`, {
+      method: 'POST',
+      body: { number, latitude, longitude, name: name || '', address: address || '', delay: 500 },
+    })
+
+    const messageId = response?.key?.id
+    const responseJid = response?.key?.remoteJid || remoteJid
+    const ts = Number(response?.messageTimestamp) || Math.floor(Date.now() / 1000)
+
+    // Track LID mapping
+    if (responseJid !== remoteJid) {
+      if (responseJid.endsWith('@lid') && remoteJid.endsWith('@s.whatsapp.net')) registerLidPhoneMapping(responseJid, remoteJid)
+      else if (remoteJid.endsWith('@lid') && responseJid.endsWith('@s.whatsapp.net')) registerLidPhoneMapping(remoteJid, responseJid)
+    }
+    const storageJid = getCanonicalJid(remoteJid) || remoteJid
+
+    let conversaId = null
+    try {
+      const conv = await supabaseRest(`whatsapp_conversas?select=id&admin_profile_id=eq.${clinicAdminId}&remote_jid=eq.${encodeURIComponent(storageJid)}`, { method: 'GET' })
+      conversaId = Array.isArray(conv) && conv[0]?.id ? conv[0].id : null
+    } catch (_) {}
+
+    if (messageId && conversaId) {
+      try {
+        await supabaseRest('whatsapp_mensagens', {
+          method: 'POST',
+          data: {
+            admin_profile_id: clinicAdminId,
+            conversa_id: conversaId,
+            message_id: messageId,
+            remote_jid: storageJid,
+            conteudo: null,
+            tipo_mensagem: 'location',
+            from_me: true,
+            timestamp_msg: ts,
+            status: 'SENT',
+            latitude,
+            longitude,
+            location_name: name || null,
+            location_address: address || null,
+            profissional_id: profissionalId || null,
+            metadata: {},
+          },
+          params: { on_conflict: 'admin_profile_id,message_id' },
+        })
+      } catch (e) {
+        console.error('[sendLocation] persist error:', e?.message)
+      }
+    }
+
+    return res.json({ ok: true, response, conversaId })
+  } catch (e) {
+    console.error('[sendLocation] error:', e?.message || e)
+    const status = e?.statusCode && Number.isFinite(e.statusCode) ? e.statusCode : 500
+    return res.status(status).json({ error: 'Falha ao enviar localização', details: e?.message || String(e) })
+  }
+})
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)

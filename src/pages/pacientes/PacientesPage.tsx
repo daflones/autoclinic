@@ -877,6 +877,13 @@ export function PacientesPage() {
           </DialogHeader>
 
           <form onSubmit={handleSubmit(handleCreatePaciente)} className="space-y-4">
+            <div className="flex justify-end">
+              <Button type="submit" disabled={isSubmitting || createPaciente.isPending} className="gap-2">
+                {createPaciente.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+                Cadastrar paciente
+              </Button>
+            </div>
+
             <div className="space-y-4">
               <div className="rounded-xl border border-border/60 bg-background p-4">
                 <div className="text-sm font-medium text-foreground">Dados do paciente</div>

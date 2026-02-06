@@ -111,6 +111,13 @@ const menuItems: MenuItem[] = [
     color: 'from-primary-400 to-secondary-400'
   },
   {
+    label: 'Chat WhatsApp',
+    description: 'Conversas e atendimento em tempo real',
+    icon: MessageCircle,
+    href: '/app/chat',
+    color: 'from-green-400 to-green-600'
+  },
+  {
     label: 'Configurações da Clínica',
     icon: Settings2,
     href: '/app/configuracoes',

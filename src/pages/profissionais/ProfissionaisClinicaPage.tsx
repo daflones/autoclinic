@@ -486,8 +486,14 @@ export function ProfissionaisClinicaPage() {
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Novo Profissional</DialogTitle>
-            <DialogDescription>Cadastre um novo profissional da clínica</DialogDescription>
+            <DialogDescription>Cadastre um novo profissional na clínica</DialogDescription>
           </DialogHeader>
+
+          <div className="flex justify-end">
+            <Button onClick={handleCreateProfissional} disabled={createMutation.isPending}>
+              {createMutation.isPending ? 'Criando...' : 'Criar Profissional'}
+            </Button>
+          </div>
 
           <div className="space-y-4">
             <div className="grid gap-4 md:grid-cols-2">
@@ -766,6 +772,12 @@ export function ProfissionaisClinicaPage() {
             <DialogTitle>Editar Profissional</DialogTitle>
             <DialogDescription>Atualize as informações do profissional</DialogDescription>
           </DialogHeader>
+
+          <div className="flex justify-end">
+            <Button onClick={handleSaveEdit} disabled={updateMutation.isPending}>
+              {updateMutation.isPending ? 'Salvando...' : 'Salvar Alterações'}
+            </Button>
+          </div>
 
           <div className="space-y-4">
             <div className="grid gap-4 md:grid-cols-2">

@@ -79,10 +79,6 @@ interface AgendamentoModalsProps {
   profissionais: ProfissionalClinica[]
   procedimentos: Procedimento[]
   protocolosPacotes: ProtocoloPacote[]
-  createProtocoloPacoteId: string
-  setCreateProtocoloPacoteId: (value: string) => void
-  editProtocoloPacoteId: string
-  setEditProtocoloPacoteId: (value: string) => void
   onCreateAgendamento: () => void
   onSaveEdit: () => void
   onRequestDelete: () => void
@@ -113,10 +109,6 @@ export function AgendamentoModals({
   profissionais,
   procedimentos,
   protocolosPacotes,
-  createProtocoloPacoteId,
-  setCreateProtocoloPacoteId,
-  editProtocoloPacoteId,
-  setEditProtocoloPacoteId,
   onCreateAgendamento,
   onSaveEdit,
   onRequestDelete,
@@ -136,6 +128,87 @@ export function AgendamentoModals({
     }
   }
 
+  const normalizeIdArray = (v: any): string[] => {
+    if (Array.isArray(v)) return v.filter(Boolean)
+    return []
+  }
+
+  const calcValor = (procedimentoIds: string[], pacoteIds: string[]) => {
+    const procedimentosTotal = procedimentoIds.reduce((acc, id) => {
+      const p: any = (procedimentos as any[]).find((x) => x.id === id)
+      const v =
+        typeof p?.valor_promocional === 'number'
+          ? p.valor_promocional
+          : typeof p?.valor_base === 'number'
+            ? p.valor_base
+            : 0
+      return acc + (Number.isFinite(v) ? v : 0)
+    }, 0)
+
+    const pacotesTotal = pacoteIds.reduce((acc, id) => {
+      const p: any = (protocolosPacotes as any[]).find((x) => x.id === id)
+      const v = typeof p?.preco === 'number' ? p.preco : 0
+      return acc + (Number.isFinite(v) ? v : 0)
+    }, 0)
+
+    const total = procedimentosTotal + pacotesTotal
+    return Number.isFinite(total) ? total : 0
+  }
+
+  const toggleCreateProcedimento = (id: string) => {
+    const current = normalizeIdArray((formState as any).procedimentos_ids)
+    const next = current.includes(id) ? current.filter((x) => x !== id) : [...current, id]
+    const pacoteIds = normalizeIdArray((formState as any).protocolos_pacotes_ids)
+    const valor = calcValor(next, pacoteIds)
+    setFormState({
+      ...formState,
+      procedimentos_ids: next,
+      procedimento_id: next[0] ?? null,
+      valor,
+      plano_tratamento_id: null,
+    } as any)
+  }
+
+  const toggleCreatePacote = (id: string) => {
+    const current = normalizeIdArray((formState as any).protocolos_pacotes_ids)
+    const next = current.includes(id) ? current.filter((x) => x !== id) : [...current, id]
+    const procedimentoIds = normalizeIdArray((formState as any).procedimentos_ids)
+    const valor = calcValor(procedimentoIds, next)
+    setFormState({
+      ...formState,
+      protocolos_pacotes_ids: next,
+      valor,
+      plano_tratamento_id: null,
+    } as any)
+  }
+
+  const toggleEditProcedimento = (id: string) => {
+    const current = normalizeIdArray((editFormState as any).procedimentos_ids)
+    const next = current.includes(id) ? current.filter((x) => x !== id) : [...current, id]
+    const pacoteIds = normalizeIdArray((editFormState as any).protocolos_pacotes_ids)
+    const valor = calcValor(next, pacoteIds)
+    setEditFormState({
+      ...editFormState,
+      procedimentos_ids: next,
+      procedimento_id: next[0] ?? null,
+      valor,
+      plano_tratamento_id: null,
+    } as any)
+  }
+
+  const toggleEditPacote = (id: string) => {
+    const current = normalizeIdArray((editFormState as any).protocolos_pacotes_ids)
+    const next = current.includes(id) ? current.filter((x) => x !== id) : [...current, id]
+    const procedimentoIds = normalizeIdArray((editFormState as any).procedimentos_ids)
+    const valor = calcValor(procedimentoIds, next)
+    setEditFormState({
+      ...editFormState,
+      protocolos_pacotes_ids: next,
+      valor,
+      plano_tratamento_id: null,
+    } as any)
+  }
+
   return (
     <>
       {/* Modal de Criação */}
@@ -145,6 +218,12 @@ export function AgendamentoModals({
             <DialogTitle>Novo Agendamento</DialogTitle>
             <DialogDescription>Crie um novo agendamento clínico</DialogDescription>
           </DialogHeader>
+
+          <div className="flex justify-end">
+            <Button onClick={onCreateAgendamento} disabled={createPending}>
+              {createPending ? 'Criando...' : 'Criar Agendamento'}
+            </Button>
+          </div>
 
           <div className="space-y-4">
             <div className="space-y-2">
@@ -178,11 +257,7 @@ export function AgendamentoModals({
                   type="number"
                   inputMode="decimal"
                   value={formState.valor === null || typeof formState.valor === 'undefined' ? '' : String(formState.valor)}
-                  onChange={(e) => {
-                    const raw = e.target.value
-                    const next = raw === '' ? null : Number(raw)
-                    setFormState({ ...formState, valor: Number.isFinite(next as number) ? (next as number) : null })
-                  }}
+                  disabled
                   placeholder="0,00"
                 />
               </div>
@@ -236,61 +311,45 @@ export function AgendamentoModals({
 
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="create-procedimento">Procedimento</Label>
-                <Select
-                  value={formState.procedimento_id || 'none'}
-                  onValueChange={(v) => {
-                    const nextId = v === 'none' ? null : v
-                    setCreateProtocoloPacoteId('none')
-                    setFormState({
-                      ...formState,
-                      procedimento_id: nextId,
-                      plano_tratamento_id: null,
-                    })
-                  }}
-                >
-                  <SelectTrigger id="create-procedimento">
-                    <SelectValue placeholder="Selecione o procedimento" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Nenhum</SelectItem>
-                    {procedimentos.map((p) => (
-                      <SelectItem key={p.id} value={p.id}>
-                        {p.nome}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Label htmlFor="create-procedimento">Procedimentos</Label>
+                <div className="rounded-md border border-border/70 bg-muted/10 p-2 max-h-48 overflow-y-auto space-y-2">
+                  {procedimentos.map((p: any) => {
+                    const checked = normalizeIdArray((formState as any).procedimentos_ids).includes(p.id)
+                    return (
+                      <label key={p.id} className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1 hover:bg-accent">
+                        <input
+                          type="checkbox"
+                          className="h-4 w-4"
+                          checked={checked}
+                          onChange={() => toggleCreateProcedimento(p.id)}
+                        />
+                        <span className="text-sm">{p.nome}</span>
+                      </label>
+                    )
+                  })}
+                </div>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="create-pacote">Pacote</Label>
-                <Select
-                  value={createProtocoloPacoteId || 'none'}
-                  onValueChange={(v) => {
-                    const nextId = v === 'none' ? 'none' : v
-                    setCreateProtocoloPacoteId(nextId)
-                    setFormState({
-                      ...formState,
-                      procedimento_id: null,
-                      plano_tratamento_id: null,
-                    })
-                  }}
-                >
-                  <SelectTrigger id="create-pacote">
-                    <SelectValue placeholder="Selecione o pacote" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Nenhum</SelectItem>
-                    {protocolosPacotes.map((p) => (
-                      <SelectItem key={p.id} value={p.id}>
-                        {p.nome}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {createProtocoloPacoteId && createProtocoloPacoteId !== 'none' && !formState.paciente_id && (
-                  <p className="text-xs text-muted-foreground">Selecione um paciente para vincular o pacote.</p>
+                <Label htmlFor="create-pacote">Protocolos/Pacotes</Label>
+                <div className="rounded-md border border-border/70 bg-muted/10 p-2 max-h-48 overflow-y-auto space-y-2">
+                  {protocolosPacotes.map((p: any) => {
+                    const checked = normalizeIdArray((formState as any).protocolos_pacotes_ids).includes(p.id)
+                    return (
+                      <label key={p.id} className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1 hover:bg-accent">
+                        <input
+                          type="checkbox"
+                          className="h-4 w-4"
+                          checked={checked}
+                          onChange={() => toggleCreatePacote(p.id)}
+                        />
+                        <span className="text-sm">{p.nome}</span>
+                      </label>
+                    )
+                  })}
+                </div>
+                {normalizeIdArray((formState as any).protocolos_pacotes_ids).length > 0 && !formState.paciente_id && (
+                  <p className="text-xs text-muted-foreground">Selecione um paciente para vincular os pacotes.</p>
                 )}
               </div>
             </div>
@@ -499,6 +558,12 @@ export function AgendamentoModals({
             <DialogDescription>Atualize as informações do agendamento</DialogDescription>
           </DialogHeader>
 
+          <div className="flex justify-end">
+            <Button onClick={onSaveEdit} disabled={updatePending}>
+              {updatePending ? 'Salvando...' : 'Salvar Alterações'}
+            </Button>
+          </div>
+
           <div className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="edit-titulo">Título *</Label>
@@ -530,11 +595,7 @@ export function AgendamentoModals({
                   type="number"
                   inputMode="decimal"
                   value={editFormState.valor === null || typeof editFormState.valor === 'undefined' ? '' : String(editFormState.valor)}
-                  onChange={(e) => {
-                    const raw = e.target.value
-                    const next = raw === '' ? null : Number(raw)
-                    setEditFormState({ ...editFormState, valor: Number.isFinite(next as number) ? (next as number) : null })
-                  }}
+                  disabled
                   placeholder="0,00"
                 />
               </div>
@@ -588,61 +649,45 @@ export function AgendamentoModals({
 
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="edit-procedimento">Procedimento</Label>
-                <Select
-                  value={editFormState.procedimento_id || 'none'}
-                  onValueChange={(v) => {
-                    const nextId = v === 'none' ? null : v
-                    setEditProtocoloPacoteId('none')
-                    setEditFormState({
-                      ...editFormState,
-                      procedimento_id: nextId,
-                      plano_tratamento_id: null,
-                    })
-                  }}
-                >
-                  <SelectTrigger id="edit-procedimento">
-                    <SelectValue placeholder="Selecione o procedimento" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Nenhum</SelectItem>
-                    {procedimentos.map((p) => (
-                      <SelectItem key={p.id} value={p.id}>
-                        {p.nome}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Label htmlFor="edit-procedimento">Procedimentos</Label>
+                <div className="rounded-md border border-border/70 bg-muted/10 p-2 max-h-48 overflow-y-auto space-y-2">
+                  {procedimentos.map((p: any) => {
+                    const checked = normalizeIdArray((editFormState as any).procedimentos_ids).includes(p.id)
+                    return (
+                      <label key={p.id} className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1 hover:bg-accent">
+                        <input
+                          type="checkbox"
+                          className="h-4 w-4"
+                          checked={checked}
+                          onChange={() => toggleEditProcedimento(p.id)}
+                        />
+                        <span className="text-sm">{p.nome}</span>
+                      </label>
+                    )
+                  })}
+                </div>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="edit-pacote">Pacote</Label>
-                <Select
-                  value={editProtocoloPacoteId || 'none'}
-                  onValueChange={(v) => {
-                    const nextId = v === 'none' ? 'none' : v
-                    setEditProtocoloPacoteId(nextId)
-                    setEditFormState({
-                      ...editFormState,
-                      procedimento_id: null,
-                      plano_tratamento_id: editFormState.plano_tratamento_id ?? null,
-                    })
-                  }}
-                >
-                  <SelectTrigger id="edit-pacote">
-                    <SelectValue placeholder="Selecione o pacote" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Nenhum</SelectItem>
-                    {protocolosPacotes.map((p) => (
-                      <SelectItem key={p.id} value={p.id}>
-                        {p.nome}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {editProtocoloPacoteId && editProtocoloPacoteId !== 'none' && !editFormState.paciente_id && (
-                  <p className="text-xs text-muted-foreground">Selecione um paciente para vincular o pacote.</p>
+                <Label htmlFor="edit-pacote">Protocolos/Pacotes</Label>
+                <div className="rounded-md border border-border/70 bg-muted/10 p-2 max-h-48 overflow-y-auto space-y-2">
+                  {protocolosPacotes.map((p: any) => {
+                    const checked = normalizeIdArray((editFormState as any).protocolos_pacotes_ids).includes(p.id)
+                    return (
+                      <label key={p.id} className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1 hover:bg-accent">
+                        <input
+                          type="checkbox"
+                          className="h-4 w-4"
+                          checked={checked}
+                          onChange={() => toggleEditPacote(p.id)}
+                        />
+                        <span className="text-sm">{p.nome}</span>
+                      </label>
+                    )
+                  })}
+                </div>
+                {normalizeIdArray((editFormState as any).protocolos_pacotes_ids).length > 0 && !editFormState.paciente_id && (
+                  <p className="text-xs text-muted-foreground">Selecione um paciente para vincular os pacotes.</p>
                 )}
               </div>
             </div>

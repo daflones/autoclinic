@@ -170,7 +170,7 @@ export function ProcedimentosPage() {
           file,
           prefix: `procedimentos/${procedimentoId}/${category}`,
         })
-        uploaded.push(up)
+        uploaded.push({ bucket: 'clinica-midias', path: up.path })
       }
 
       const prevArr = (getIA(`midias.${category}`, []) as any[]) || []
@@ -938,6 +938,18 @@ export function ProcedimentosPage() {
                 {selectedProcedimento ? 'Atualize as informações do procedimento' : 'Cadastre um novo procedimento ou tratamento'}
               </DialogDescription>
             </DialogHeader>
+
+            <div className="flex justify-end">
+              {selectedProcedimento ? (
+                <Button onClick={handleSaveEdit} disabled={updateMutation.isPending}>
+                  {updateMutation.isPending ? 'Salvando...' : 'Salvar Alterações'}
+                </Button>
+              ) : (
+                <Button onClick={handleCreateProcedimento} disabled={createMutation.isPending}>
+                  {createMutation.isPending ? 'Criando...' : 'Criar'}
+                </Button>
+              )}
+            </div>
 
             <div className="space-y-4">
               <div className="grid gap-4 md:grid-cols-3">

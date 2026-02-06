@@ -24,6 +24,7 @@ const ConfiguracoesPage = lazy(() => import('./pages/configuracoes/Configuracoes
 const ClinicaIAConfigPage = lazy(() => import('./pages/configuracoes/ClinicaIAConfigPage').then(m => ({ default: m.ClinicaIAConfigPage })))
 const WhatsAppPage = lazy(() => import('./pages/WhatsAppPage'))
 const WhatsAppWebPage = lazy(() => import('./pages/whatsapp-web/WhatsAppWebPage'))
+const ChatPage = lazy(() => import('./pages/chat/ChatPage').then(m => ({ default: m.ChatPage })))
 const LandingPage = lazy(() => import('./pages/landing/LandingPage').then(m => ({ default: m.LandingPage })))
 const PlanosPage = lazy(() => import('./pages/Planos'))
 
@@ -175,6 +176,10 @@ export const router = createBrowserRouter([
       {
         path: 'whatsapp-web',
         element: withSuspense(WhatsAppWebPage),
+      },
+      {
+        path: 'chat',
+        element: withSuspense(ChatPage),
       },
       {
         path: 'prospeccao',

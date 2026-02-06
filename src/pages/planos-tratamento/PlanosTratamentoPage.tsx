@@ -541,6 +541,22 @@ export function PlanosTratamentoPage() {
             </DialogDescription>
           </DialogHeader>
 
+          <div className="flex justify-end">
+            <Button onClick={handleCreatePlano} disabled={createPlano.isPending}>
+              {createPlano.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Salvando
+                </>
+              ) : (
+                <>
+                  <CheckCircle2 className="mr-2 h-4 w-4" />
+                  Criar plano
+                </>
+              )}
+            </Button>
+          </div>
+
           <div className="grid gap-6 py-4">
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
@@ -1111,6 +1127,22 @@ export function PlanosTratamentoPage() {
               Atualize as informações principais do plano de tratamento.
             </DialogDescription>
           </DialogHeader>
+
+          <div className="flex justify-end">
+            <Button type="button" onClick={handleSaveEditPlano} disabled={updatePlano.isPending || !editFormState}>
+              {updatePlano.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Salvando
+                </>
+              ) : (
+                <>
+                  <CheckCircle2 className="mr-2 h-4 w-4" />
+                  Salvar alterações
+                </>
+              )}
+            </Button>
+          </div>
 
           {editFormState && (
             <div className="grid gap-6 py-4">

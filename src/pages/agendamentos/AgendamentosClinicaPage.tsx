@@ -58,7 +58,6 @@ import { usePacientes } from '@/hooks/usePacientes'
 import { useProfissionaisClinica } from '@/hooks/useProfissionaisClinica'
 import { useProcedimentos } from '@/hooks/useProcedimentos'
 import { useProtocolosPacotes } from '@/hooks/useProtocolosPacotes'
-import { useCreatePlanoTratamento, useUpdatePlanoTratamento } from '@/hooks/usePlanosTratamento'
 import { AgendamentoModals } from '@/components/agendamentos/AgendamentoModals'
 import type {
   AgendamentoClinica,
@@ -118,6 +117,8 @@ export function AgendamentosClinicaPage() {
     profissional_id: null,
     plano_tratamento_id: null,
     procedimento_id: null,
+    procedimentos_ids: [],
+    protocolos_pacotes_ids: [],
     sala: '',
     status: 'agendado',
   })
@@ -133,12 +134,11 @@ export function AgendamentosClinicaPage() {
     profissional_id: null,
     plano_tratamento_id: null,
     procedimento_id: null,
+    procedimentos_ids: [],
+    protocolos_pacotes_ids: [],
     sala: '',
     status: 'agendado',
   })
-
-  const [createProtocoloPacoteId, setCreateProtocoloPacoteId] = useState<string>('none')
-  const [editProtocoloPacoteId, setEditProtocoloPacoteId] = useState<string>('none')
 
   const filters = useMemo(() => {
     const startIso = dataInicioFilter
@@ -173,6 +173,28 @@ export function AgendamentosClinicaPage() {
   const { data: procedimentos } = useProcedimentos({ limit: 1000 } as any)
   const { data: protocolosPacotes } = useProtocolosPacotes({ limit: 1000, status: 'ativo' } as any)
 
+  const calcValorAgendamento = (procedimentoIds: string[], pacoteIds: string[]) => {
+    const procedimentosTotal = (procedimentoIds || []).reduce((acc, id) => {
+      const p: any = (procedimentos as any[]).find((x) => x.id === id)
+      const v =
+        typeof p?.valor_promocional === 'number'
+          ? p.valor_promocional
+          : typeof p?.valor_base === 'number'
+            ? p.valor_base
+            : 0
+      return acc + (Number.isFinite(v) ? v : 0)
+    }, 0)
+
+    const pacotesTotal = (pacoteIds || []).reduce((acc, id) => {
+      const p: any = (protocolosPacotes as any[]).find((x) => x.id === id)
+      const v = typeof p?.preco === 'number' ? p.preco : 0
+      return acc + (Number.isFinite(v) ? v : 0)
+    }, 0)
+
+    const total = procedimentosTotal + pacotesTotal
+    return Number.isFinite(total) ? total : 0
+  }
+
   const pacientesFiltered = useMemo(() => {
     const term = pacienteSearch.trim().toLowerCase()
     if (!term) return pacientes
@@ -184,8 +206,6 @@ export function AgendamentosClinicaPage() {
   const updateMutation = useUpdateAgendamentoClinica()
   const deleteMutation = useDeleteAgendamentoClinica()
   const updateStatusMutation = useUpdateAgendamentoClinicaStatus()
-  const createPlanoMutation = useCreatePlanoTratamento()
-  const updatePlanoMutation = useUpdatePlanoTratamento()
 
   const { data: waitlistQuery } = useListaEsperaAgendamentos({ limit: 200 })
   const createWaitlistMutation = useCreateListaEsperaAgendamento()
@@ -317,33 +337,22 @@ export function AgendamentosClinicaPage() {
       return
     }
 
-    const hasPacote = createProtocoloPacoteId && createProtocoloPacoteId !== 'none'
-    if (hasPacote && !formState.paciente_id) {
-      toast.error('Selecione o paciente para vincular o pacote')
+    const pacoteIds = Array.isArray((formState as any).protocolos_pacotes_ids)
+      ? ((formState as any).protocolos_pacotes_ids as string[])
+      : []
+
+    if (pacoteIds.length > 0 && !formState.paciente_id) {
+      toast.error('Selecione o paciente para vincular os pacotes')
       return
     }
 
     try {
-      let payload: AgendamentoClinicaCreateData = { ...formState }
-
-      if (hasPacote) {
-        const pacote = (protocolosPacotes ?? []).find((p) => p.id === createProtocoloPacoteId)
-        const plano = await createPlanoMutation.mutateAsync({
-          paciente_id: payload.paciente_id as string,
-          titulo: pacote?.nome || payload.titulo,
-          descricao: pacote?.descricao ?? null,
-          protocolo_pacote_id: createProtocoloPacoteId,
-          status: 'aprovado',
-        } as any)
-
-        payload = {
-          ...payload,
-          plano_tratamento_id: plano?.id ?? null,
-          procedimento_id: null,
-        }
-      }
-
-      await createMutation.mutateAsync(payload)
+      await createMutation.mutateAsync({
+        ...formState,
+        procedimentos_ids: (formState as any).procedimentos_ids ?? [],
+        protocolos_pacotes_ids: pacoteIds,
+        plano_tratamento_id: null,
+      } as any)
       setIsCreateModalOpen(false)
       setFormState({
         titulo: '',
@@ -356,10 +365,11 @@ export function AgendamentosClinicaPage() {
         profissional_id: null,
         plano_tratamento_id: null,
         procedimento_id: null,
+        procedimentos_ids: [],
+        protocolos_pacotes_ids: [],
         sala: '',
         status: 'agendado',
       })
-      setCreateProtocoloPacoteId('none')
     } catch (error) {
       console.error('Erro ao criar agendamento:', error)
     }
@@ -394,22 +404,35 @@ export function AgendamentosClinicaPage() {
   const handleOpenEditModal = () => {
     if (!selectedAgendamento) return
 
+    const procedimentosIds =
+      Array.isArray((selectedAgendamento as any).procedimentos_ids)
+        ? ((selectedAgendamento as any).procedimentos_ids as string[])
+        : selectedAgendamento.procedimento_id
+          ? [selectedAgendamento.procedimento_id]
+          : []
+
+    const pacotesIds = Array.isArray((selectedAgendamento as any).protocolos_pacotes_ids)
+      ? ((selectedAgendamento as any).protocolos_pacotes_ids as string[])
+      : []
+
+    const valorCalculado = calcValorAgendamento(procedimentosIds, pacotesIds)
+
     setEditFormState({
       titulo: selectedAgendamento.titulo,
       descricao: selectedAgendamento.descricao || '',
       is_avaliacao: Boolean((selectedAgendamento as any).is_avaliacao),
-      valor: typeof (selectedAgendamento as any).valor === 'number' ? (selectedAgendamento as any).valor : null,
+      valor: valorCalculado,
       data_inicio: selectedAgendamento.data_inicio,
       data_fim: selectedAgendamento.data_fim,
       paciente_id: selectedAgendamento.paciente_id || null,
       profissional_id: selectedAgendamento.profissional_id || null,
       plano_tratamento_id: selectedAgendamento.plano_tratamento_id ?? null,
       procedimento_id: selectedAgendamento.procedimento_id ?? null,
+      procedimentos_ids: procedimentosIds,
+      protocolos_pacotes_ids: pacotesIds,
       sala: selectedAgendamento.sala || '',
       status: selectedAgendamento.status,
     })
-
-    setEditProtocoloPacoteId('none')
     setIsEditModalOpen(true)
   }
 
@@ -417,56 +440,26 @@ export function AgendamentosClinicaPage() {
     if (!selectedAgendamento) return
 
     try {
-      const hasPacote = editProtocoloPacoteId && editProtocoloPacoteId !== 'none'
-      if (hasPacote && !editFormState.paciente_id) {
-        toast.error('Selecione o paciente para vincular o pacote')
+      const pacoteIds = Array.isArray((editFormState as any).protocolos_pacotes_ids)
+        ? ((editFormState as any).protocolos_pacotes_ids as string[])
+        : []
+
+      if (pacoteIds.length > 0 && !editFormState.paciente_id) {
+        toast.error('Selecione o paciente para vincular os pacotes')
         return
-      }
-
-      let payload: AgendamentoClinicaCreateData = { ...editFormState }
-
-      if (hasPacote) {
-        const pacote = (protocolosPacotes ?? []).find((p) => p.id === editProtocoloPacoteId)
-        const existingPlanoId = payload.plano_tratamento_id
-
-        if (existingPlanoId) {
-          await updatePlanoMutation.mutateAsync({
-            id: existingPlanoId,
-            data: {
-              paciente_id: payload.paciente_id as string,
-              titulo: pacote?.nome || payload.titulo,
-              descricao: pacote?.descricao ?? null,
-              protocolo_pacote_id: editProtocoloPacoteId,
-            } as any,
-          })
-        } else {
-          const plano = await createPlanoMutation.mutateAsync({
-            paciente_id: payload.paciente_id as string,
-            titulo: pacote?.nome || payload.titulo,
-            descricao: pacote?.descricao ?? null,
-            protocolo_pacote_id: editProtocoloPacoteId,
-            status: 'aprovado',
-          } as any)
-
-          payload = {
-            ...payload,
-            plano_tratamento_id: plano?.id ?? null,
-          }
-        }
-
-        payload = {
-          ...payload,
-          procedimento_id: null,
-        }
       }
 
       await updateMutation.mutateAsync({
         id: selectedAgendamento.id,
-        data: payload,
+        data: {
+          ...editFormState,
+          procedimentos_ids: (editFormState as any).procedimentos_ids ?? [],
+          protocolos_pacotes_ids: pacoteIds,
+          plano_tratamento_id: null,
+        } as any,
       })
       setIsEditModalOpen(false)
       setSelectedAgendamento(null)
-      setEditProtocoloPacoteId('none')
     } catch (error) {
       console.error('Erro ao salvar alterações:', error)
     }
@@ -1359,10 +1352,6 @@ export function AgendamentosClinicaPage() {
         profissionais={profissionais}
         procedimentos={procedimentos}
         protocolosPacotes={protocolosPacotes}
-        createProtocoloPacoteId={createProtocoloPacoteId}
-        setCreateProtocoloPacoteId={setCreateProtocoloPacoteId}
-        editProtocoloPacoteId={editProtocoloPacoteId}
-        setEditProtocoloPacoteId={setEditProtocoloPacoteId}
         onCreateAgendamento={handleCreateAgendamento}
         onSaveEdit={handleSaveEdit}
         onRequestDelete={handleRequestDelete}

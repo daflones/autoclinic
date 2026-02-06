@@ -292,6 +292,43 @@ export function ProtocolosPacotesPage() {
 
   const setEstruturaItens = (items: any[]) => setC('estrutura.itens', items)
 
+  const getProcedimentoValor = (procedimentoId?: string | null) => {
+    if (!procedimentoId) return null
+    const procedimento: any = (procedimentos || []).find((p: any) => p.id === procedimentoId)
+    if (!procedimento) return null
+    const raw =
+      typeof procedimento.valor_promocional === 'number'
+        ? procedimento.valor_promocional
+        : typeof procedimento.valor_base === 'number'
+          ? procedimento.valor_base
+          : null
+    return typeof raw === 'number' && Number.isFinite(raw) ? raw : null
+  }
+
+  const getValorSugeridoItem = (item: any) => {
+    if (!item || item.tipo !== 'procedimento') return null
+    return getProcedimentoValor(item.procedimento_id)
+  }
+
+  const getValorTotalSugerido = (items: any[]) => {
+    return (items || []).reduce((acc, item) => {
+      const valorManual = typeof item?.valor_individual === 'number' && Number.isFinite(item.valor_individual)
+        ? item.valor_individual
+        : null
+      if (typeof valorManual === 'number') return acc + valorManual
+
+      if (item?.tipo === 'procedimento') {
+        const valorProc = getProcedimentoValor(item?.procedimento_id)
+        return acc + (typeof valorProc === 'number' ? valorProc : 0)
+      }
+
+      return acc
+    }, 0)
+  }
+
+  const formatCurrency = (value: number) =>
+    value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+
   useEffect(() => {
     let cancelled = false
     async function hydrateUrls() {
@@ -1173,6 +1210,23 @@ export function ProtocolosPacotesPage() {
                   value={formState.preco ?? ''}
                   onChange={(e) => setFormState({ ...formState, preco: e.target.value === '' ? null : Number(e.target.value) })}
                 />
+                {(() => {
+                  const sugestao = getValorTotalSugerido(getEstruturaItens())
+                  if (!Number.isFinite(sugestao) || sugestao <= 0 || formState.preco === sugestao) return null
+                  return (
+                    <div className="flex items-center justify-between rounded-md border border-dashed px-3 py-2 text-xs text-muted-foreground">
+                      <span>Sugestão: {formatCurrency(sugestao)}</span>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setFormState({ ...formState, preco: sugestao })}
+                      >
+                        Aplicar sugestão
+                      </Button>
+                    </div>
+                  )
+                })()}
               </div>
             </div>
 
@@ -1357,6 +1411,27 @@ export function ProtocolosPacotesPage() {
                                   setEstruturaItens(items)
                                 }}
                               />
+                              {(() => {
+                                const sugestao = getValorSugeridoItem(it)
+                                if (!Number.isFinite(sugestao) || sugestao <= 0 || it.valor_individual === sugestao) return null
+                                return (
+                                  <div className="flex items-center justify-between rounded-md border border-dashed px-3 py-2 text-xs text-muted-foreground">
+                                    <span>Sugestão: {formatCurrency(sugestao)}</span>
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => {
+                                        const items = getEstruturaItens()
+                                        items[idx] = { ...items[idx], valor_individual: sugestao }
+                                        setEstruturaItens(items)
+                                      }}
+                                    >
+                                      Aplicar sugestão
+                                    </Button>
+                                  </div>
+                                )
+                              })()}
                             </div>
                           </div>
 
@@ -2025,6 +2100,23 @@ export function ProtocolosPacotesPage() {
                   value={formState.preco ?? ''}
                   onChange={(e) => setFormState({ ...formState, preco: e.target.value === '' ? null : Number(e.target.value) })}
                 />
+                {(() => {
+                  const sugestao = getValorTotalSugerido(getEstruturaItens())
+                  if (!Number.isFinite(sugestao) || sugestao <= 0 || formState.preco === sugestao) return null
+                  return (
+                    <div className="flex items-center justify-between rounded-md border border-dashed px-3 py-2 text-xs text-muted-foreground">
+                      <span>Sugestão: {formatCurrency(sugestao)}</span>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setFormState({ ...formState, preco: sugestao })}
+                      >
+                        Aplicar sugestão
+                      </Button>
+                    </div>
+                  )
+                })()}
               </div>
             </div>
 
@@ -2209,6 +2301,27 @@ export function ProtocolosPacotesPage() {
                                   setEstruturaItens(items)
                                 }}
                               />
+                              {(() => {
+                                const sugestao = getValorSugeridoItem(it)
+                                if (!Number.isFinite(sugestao) || sugestao <= 0 || it.valor_individual === sugestao) return null
+                                return (
+                                  <div className="flex items-center justify-between rounded-md border border-dashed px-3 py-2 text-xs text-muted-foreground">
+                                    <span>Sugestão: {formatCurrency(sugestao)}</span>
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => {
+                                        const items = getEstruturaItens()
+                                        items[idx] = { ...items[idx], valor_individual: sugestao }
+                                        setEstruturaItens(items)
+                                      }}
+                                    >
+                                      Aplicar sugestão
+                                    </Button>
+                                  </div>
+                                )
+                              })()}
                             </div>
                           </div>
 

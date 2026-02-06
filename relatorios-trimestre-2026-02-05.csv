@@ -1,0 +1,28 @@
+﻿Período;trimestre
+Início;2025-11-07T16:40:32.429Z
+Fim;2026-02-06T02:59:59.999Z
+
+Métricas
+Faturamento;1025
+Ticket médio;1025
+Conversão (%);10
+Novos clientes;2
+Agendamentos (total);10
+Agendamentos (concluídos);1
+
+Procedimentos mais vendidos
+Posição;Procedimento;Agendamentos;Concluídos;Conversão (%);Faturamento
+1;Preenchimento Labial;2;1;50;512.5
+2;Teste;1;1;100;512.5
+
+Protocolos/Pacotes mais vendidos
+Posição;Pacote;Agendamentos;Concluídos;Conversão (%);Faturamento
+1;aaa;1;1;100;1025
+
+Performance dos profissionais
+Profissional;Agendamentos;Concluídos;Conversão (%);Faturamento
+Eduardo Daflon;1;1;100;1025
+
+Top clientes (por faturamento)
+Cliente;Agendamentos;Concluídos;Faturamento
+Ramario Braga;1;1;1025

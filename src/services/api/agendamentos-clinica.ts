@@ -20,6 +20,8 @@ export interface AgendamentoClinica {
   profissional_id?: string | null
   plano_tratamento_id?: string | null
   procedimento_id?: string | null
+  procedimentos_ids?: string[] | null
+  protocolos_pacotes_ids?: string[] | null
   titulo: string
   descricao?: string | null
   is_avaliacao?: boolean | null
@@ -58,6 +60,7 @@ export interface AgendamentoClinicaFilters {
   profissional_id?: string
   plano_tratamento_id?: string
   procedimento_id?: string
+  procedimento_ids_contains?: string
   status?: StatusAgendamentoClinica
   is_avaliacao?: boolean
   data_inicio?: string
@@ -72,6 +75,8 @@ export interface AgendamentoClinicaCreateData {
   profissional_id?: string | null
   plano_tratamento_id?: string | null
   procedimento_id?: string | null
+  procedimentos_ids?: string[] | null
+  protocolos_pacotes_ids?: string[] | null
   titulo: string
   descricao?: string | null
   is_avaliacao?: boolean
@@ -93,6 +98,32 @@ export interface AgendamentoClinicaCreateData {
 }
 
 export type AgendamentoClinicaUpdateData = Partial<AgendamentoClinicaCreateData>
+
+function normalizeAgendamentoPayload(payload: AgendamentoClinicaCreateData | AgendamentoClinicaUpdateData) {
+  const copy: Record<string, any> = { ...(payload as any) }
+
+  const procIds = Array.isArray(copy.procedimentos_ids)
+    ? (copy.procedimentos_ids as any[]).filter(Boolean)
+    : null
+
+  if ((!procIds || procIds.length === 0) && copy.procedimento_id) {
+    copy.procedimentos_ids = [copy.procedimento_id]
+  }
+
+  if (!copy.procedimento_id && Array.isArray(copy.procedimentos_ids) && copy.procedimentos_ids[0]) {
+    copy.procedimento_id = copy.procedimentos_ids[0]
+  }
+
+  if (!Array.isArray(copy.protocolos_pacotes_ids)) {
+    if (copy.protocolos_pacotes_ids == null) {
+      // keep null/undefined
+    } else {
+      copy.protocolos_pacotes_ids = []
+    }
+  }
+
+  return copy
+}
 
 function mapAgendamentoStatusToPacienteKanban(status: StatusAgendamentoClinica | null | undefined): StatusPacienteDetalhado | null {
   if (!status) return null
@@ -176,6 +207,10 @@ export const agendamentosClinicaService = {
 
     if (filters.procedimento_id) {
       query = query.eq('procedimento_id', filters.procedimento_id)
+    }
+
+    if (filters.procedimento_ids_contains) {
+      query = query.contains('procedimentos_ids', [filters.procedimento_ids_contains])
     }
 
     if (filters.status) {
@@ -290,30 +325,34 @@ export const agendamentosClinicaService = {
       throw new Error('Título do agendamento é obrigatório')
     }
 
+    const normalizedPayload = normalizeAgendamentoPayload(payload)
+
     const baseData = {
       admin_profile_id: adminProfileId,
-      paciente_id: payload.paciente_id ?? null,
-      profissional_id: payload.profissional_id ?? null,
-      plano_tratamento_id: payload.plano_tratamento_id ?? null,
-      procedimento_id: payload.procedimento_id ?? null,
-      titulo: payload.titulo,
-      descricao: payload.descricao ?? null,
-      is_avaliacao: payload.is_avaliacao ?? false,
-      valor: payload.valor ?? null,
-      data_inicio: payload.data_inicio,
-      data_fim: payload.data_fim,
-      data_inicio_anterior: payload.data_inicio_anterior ?? null,
-      data_fim_anterior: payload.data_fim_anterior ?? null,
-      remarcado_em: payload.remarcado_em ?? null,
-      remarcado_motivo: payload.remarcado_motivo ?? null,
-      sala: payload.sala ?? null,
-      status: payload.status ?? 'agendado',
-      origem: payload.origem ?? null,
-      lembrete_enviado: payload.lembrete_enviado ?? false,
-      confirmar_paciente: payload.confirmar_paciente ?? false,
-      confirmar_profissional: payload.confirmar_profissional ?? false,
-      notas_pos_atendimento: payload.notas_pos_atendimento ?? null,
-      follow_up_em: payload.follow_up_em ?? null,
+      paciente_id: normalizedPayload.paciente_id ?? null,
+      profissional_id: normalizedPayload.profissional_id ?? null,
+      plano_tratamento_id: normalizedPayload.plano_tratamento_id ?? null,
+      procedimento_id: normalizedPayload.procedimento_id ?? null,
+      procedimentos_ids: normalizedPayload.procedimentos_ids ?? [],
+      protocolos_pacotes_ids: normalizedPayload.protocolos_pacotes_ids ?? [],
+      titulo: normalizedPayload.titulo,
+      descricao: normalizedPayload.descricao ?? null,
+      is_avaliacao: normalizedPayload.is_avaliacao ?? false,
+      valor: normalizedPayload.valor ?? null,
+      data_inicio: normalizedPayload.data_inicio,
+      data_fim: normalizedPayload.data_fim,
+      data_inicio_anterior: normalizedPayload.data_inicio_anterior ?? null,
+      data_fim_anterior: normalizedPayload.data_fim_anterior ?? null,
+      remarcado_em: normalizedPayload.remarcado_em ?? null,
+      remarcado_motivo: normalizedPayload.remarcado_motivo ?? null,
+      sala: normalizedPayload.sala ?? null,
+      status: normalizedPayload.status ?? 'agendado',
+      origem: normalizedPayload.origem ?? null,
+      lembrete_enviado: normalizedPayload.lembrete_enviado ?? false,
+      confirmar_paciente: normalizedPayload.confirmar_paciente ?? false,
+      confirmar_profissional: normalizedPayload.confirmar_profissional ?? false,
+      notas_pos_atendimento: normalizedPayload.notas_pos_atendimento ?? null,
+      follow_up_em: normalizedPayload.follow_up_em ?? null,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     }
@@ -357,8 +396,10 @@ export const agendamentosClinicaService = {
       throw new Error('Agendamento não encontrado')
     }
 
+    const normalizedUpdates = normalizeAgendamentoPayload(updates)
+
     const updateData = {
-      ...updates,
+      ...normalizedUpdates,
       updated_at: new Date().toISOString()
     }
 

@@ -9,7 +9,11 @@ import { createServer } from 'http';
 import dotenv from 'dotenv'
 import axios from 'axios'
 import path from 'path'
+import fs from 'fs'
 import { fileURLToPath } from 'url'
+
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
 
 // Configuração do servidor
 const app = express();
@@ -110,15 +114,16 @@ async function supabaseRest(endpoint, { method = 'GET', data, params } = {}) {
 async function resolveClinicAdminAndInstance(accessToken) {
   const authUser = await supabaseAuthUser(accessToken)
   const authUserId = authUser?.id
-  if (!authUserId) return { clinicAdminId: null, instanceName: null }
+  if (!authUserId) return { clinicAdminId: null, instanceName: null, profissionalClinicaId: null }
 
   // Perfil do usuário logado
-  const profiles = await supabaseRest(`profiles?select=id,role,admin_profile_id&id=eq.${authUserId}`, { method: 'GET' })
+  const profiles = await supabaseRest(`profiles?select=id,email,role,admin_profile_id&id=eq.${authUserId}`, { method: 'GET' })
   const userProfile = Array.isArray(profiles) ? profiles[0] : profiles
-  if (!userProfile?.id) return { clinicAdminId: null, instanceName: null }
+  if (!userProfile?.id) return { clinicAdminId: null, instanceName: null, profissionalClinicaId: null }
 
-  const clinicAdminId = userProfile.role === 'admin' ? userProfile.id : (userProfile.admin_profile_id || null)
-  if (!clinicAdminId) return { clinicAdminId: null, instanceName: null }
+  const isClinicAdmin = userProfile.role === 'clinica' || (userProfile.role === 'admin' && (!userProfile.admin_profile_id || userProfile.admin_profile_id === userProfile.id))
+  const clinicAdminId = isClinicAdmin ? userProfile.id : (userProfile.admin_profile_id || null)
+  if (!clinicAdminId) return { clinicAdminId: null, instanceName: null, profissionalClinicaId: null }
 
   let instanceName = null
   try {
@@ -129,12 +134,26 @@ async function resolveClinicAdminAndInstance(accessToken) {
     console.warn('[resolveClinicAdminAndInstance] Could not read instancia_whatsapp from profiles:', e?.message)
   }
 
-  // Fallback to env var if DB column not set or not yet created
   if (!instanceName) {
-    instanceName = process.env.EVOLUTION_INSTANCE_NAME || process.env.VITE_EVOLUTION_INSTANCE_NAME || null
+    console.warn(`[resolveClinicAdminAndInstance] Clínica ${clinicAdminId} não tem instancia_whatsapp configurada`)
   }
 
-  return { clinicAdminId, instanceName }
+  // Resolver profissional_clinica_id pelo email do usuário
+  let profissionalClinicaId = null
+  if (!isClinicAdmin && userProfile.email) {
+    try {
+      const profs = await supabaseRest(
+        `profissionais_clinica?select=id&admin_profile_id=eq.${clinicAdminId}&email=eq.${encodeURIComponent(userProfile.email)}&limit=1`,
+        { method: 'GET' }
+      )
+      const prof = Array.isArray(profs) ? profs[0] : profs
+      profissionalClinicaId = prof?.id || null
+    } catch (e) {
+      console.warn('[resolveClinicAdminAndInstance] Could not resolve profissional_clinica_id:', e?.message)
+    }
+  }
+
+  return { clinicAdminId, instanceName, profissionalClinicaId }
 }
 
 function getBearerToken(req) {
@@ -286,6 +305,56 @@ function detectMessageType(msg) {
   return 'unknown'
 }
 
+// Helper: Extract media info (url, mimetype, filename) from Evolution message
+function extractMediaInfo(m, msg) {
+  let media_url = null, media_mimetype = null, media_filename = null
+
+  // Evolution may provide a top-level mediaUrl (cached/downloaded)
+  if (m?.mediaUrl) media_url = m.mediaUrl
+
+  // Check each media message type for inner URLs and metadata
+  const mediaTypes = [
+    { key: 'imageMessage', fallbackMime: 'image/jpeg' },
+    { key: 'videoMessage', fallbackMime: 'video/mp4' },
+    { key: 'audioMessage', fallbackMime: 'audio/ogg' },
+    { key: 'stickerMessage', fallbackMime: 'image/webp' },
+    { key: 'documentMessage', fallbackMime: 'application/octet-stream' },
+  ]
+
+  for (const { key, fallbackMime } of mediaTypes) {
+    const inner = msg?.[key]
+    if (!inner) continue
+    if (!media_url && inner.url) media_url = inner.url
+    media_mimetype = inner.mimetype || fallbackMime
+    if (inner.fileName) media_filename = inner.fileName
+    break
+  }
+
+  // DocumentWithCaption wrapper
+  const docCaption = msg?.documentWithCaptionMessage?.message?.documentMessage
+  if (docCaption) {
+    if (!media_url && docCaption.url) media_url = docCaption.url
+    if (!media_mimetype) media_mimetype = docCaption.mimetype || 'application/octet-stream'
+    if (!media_filename && docCaption.fileName) media_filename = docCaption.fileName
+  }
+
+  // Ephemeral/viewOnce wrappers - recurse
+  if (!media_url && msg?.ephemeralMessage?.message) {
+    return extractMediaInfo(m, msg.ephemeralMessage.message)
+  }
+  if (!media_url && msg?.viewOnceMessage?.message) {
+    return extractMediaInfo(m, msg.viewOnceMessage.message)
+  }
+  if (!media_url && msg?.viewOnceMessageV2?.message) {
+    return extractMediaInfo(m, msg.viewOnceMessageV2.message)
+  }
+
+  return { media_url, media_mimetype, media_filename }
+}
+
+// Status priority for preventing downgrade
+const STATUS_PRIORITY = { PENDING: 0, SENT: 1, DELIVERED: 2, READ: 3 }
+
 // Helper: Map Evolution status codes to readable strings
 function mapMessageStatus(rawStatus) {
   if (rawStatus === 'READ' || rawStatus === 4 || rawStatus === 'PLAYED') return 'READ'
@@ -324,13 +393,41 @@ const FIND_MESSAGES_COOLDOWN_MS = 8_000
 // =====================================================
 const lidToPhoneMap = new Map() // lid@lid -> phone@s.whatsapp.net
 const phoneToLidMap = new Map() // phone@s.whatsapp.net -> lid@lid
+const LID_MAPPINGS_FILE = path.join(__dirname, '.lid-mappings.json')
+
+// Load persisted mappings on startup
+try {
+  const raw = fs.readFileSync(LID_MAPPINGS_FILE, 'utf-8')
+  const data = JSON.parse(raw)
+  for (const [lid, phone] of Object.entries(data)) {
+    if (lid && phone) {
+      lidToPhoneMap.set(lid, phone)
+      phoneToLidMap.set(phone, lid)
+    }
+  }
+  console.log(`[JID-MAP] Loaded ${Object.keys(data).length} persisted mappings from file`)
+} catch (_) { /* first run or file missing */ }
+
+function persistLidMappings() {
+  try {
+    const data = {}
+    for (const [lid, phone] of lidToPhoneMap.entries()) data[lid] = phone
+    fs.writeFileSync(LID_MAPPINGS_FILE, JSON.stringify(data, null, 2))
+  } catch (e) {
+    console.warn('[JID-MAP] Failed to persist mappings:', e?.message)
+  }
+}
 
 function registerLidPhoneMapping(lidJid, phoneJid) {
   if (!lidJid || !phoneJid || lidJid === phoneJid) return
   if (!lidJid.endsWith('@lid') || !phoneJid.endsWith('@s.whatsapp.net')) return
+  const isNew = !lidToPhoneMap.has(lidJid)
   lidToPhoneMap.set(lidJid, phoneJid)
   phoneToLidMap.set(phoneJid, lidJid)
-  console.log(`[JID-MAP] Registered: ${lidJid} ↔ ${phoneJid}`)
+  if (isNew) {
+    console.log(`[JID-MAP] Registered: ${lidJid} ↔ ${phoneJid}`)
+    persistLidMappings()
+  }
 }
 
 function getCanonicalJid(jid) {
@@ -732,6 +829,23 @@ app.post('/api/chat/findMessages', async (req, res) => {
     // Also update contact name on the conversation from pushName in messages
     let pushNameForConv = null
 
+    // Batch-fetch existing message statuses to prevent downgrade
+    const existingStatusMap = new Map()
+    try {
+      const msgIds = list.map(m => String(m?.key?.id || '').trim()).filter(Boolean)
+      if (msgIds.length > 0) {
+        const existingMsgs = await supabaseRest(
+          `whatsapp_mensagens?select=message_id,status,media_url&admin_profile_id=eq.${clinicAdminId}&message_id=in.(${msgIds.map(encodeURIComponent).join(',')})`,
+          { method: 'GET' }
+        )
+        if (Array.isArray(existingMsgs)) {
+          for (const em of existingMsgs) {
+            existingStatusMap.set(em.message_id, { status: em.status, media_url: em.media_url })
+          }
+        }
+      }
+    } catch (_) {}
+
     const upserted = []
     for (const m of list) {
       const messageId = String(m?.key?.id || '').trim()
@@ -756,15 +870,24 @@ app.post('/api/chat/findMessages', async (req, res) => {
       // Skip protocol and reaction messages (Evolution may return messageType as 'reactionMessage')
       if (tipo === 'protocol' || tipo === 'reaction' || tipo === 'reactionmessage' || tipo === 'protocolmessage') continue
 
-      const statusStr = mapMessageStatus(m?.status)
+      const newStatusStr = mapMessageStatus(m?.status)
 
       // Capture pushName for contact name update (skip if it's just a number/LID)
       if (m?.pushName && !m?.key?.fromMe && m.pushName !== 'Você') {
         const pn = m.pushName.trim()
-        // Only use pushName if it looks like a real name (not a pure number)
         if (pn && !/^\d+$/.test(pn)) {
           pushNameForConv = pn
         }
+      }
+
+      // Extract media info
+      const mediaInfo = extractMediaInfo(m, msg)
+
+      // Prevent status downgrade using batch-fetched data
+      let statusStr = newStatusStr
+      const existingData = existingStatusMap.get(messageId)
+      if (existingData?.status && (STATUS_PRIORITY[existingData.status] || 0) > (STATUS_PRIORITY[newStatusStr] || 0)) {
+        statusStr = existingData.status
       }
 
       const payload = {
@@ -785,6 +908,12 @@ app.post('/api/chat/findMessages', async (req, res) => {
         metadata: {},
         updated_at: new Date().toISOString(),
       }
+      // Only include media fields if non-null, and never overwrite a cached data: URI with an encrypted URL
+      const existingMediaUrl = existingData?.media_url || ''
+      const hasValidCache = existingMediaUrl.startsWith('data:')
+      if (mediaInfo.media_url && !hasValidCache) payload.media_url = mediaInfo.media_url
+      if (mediaInfo.media_mimetype) payload.media_mimetype = mediaInfo.media_mimetype
+      if (mediaInfo.media_filename) payload.media_filename = mediaInfo.media_filename
 
       try {
         const row = await supabaseRest('whatsapp_mensagens', {
@@ -830,7 +959,7 @@ app.post('/api/chat/sendText', async (req, res) => {
     const token = getBearerToken(req)
     if (!token) return res.status(401).json({ error: 'Token de autenticação ausente' })
 
-    const { clinicAdminId, instanceName } = await resolveClinicAdminAndInstance(token)
+    const { clinicAdminId, instanceName, profissionalClinicaId } = await resolveClinicAdminAndInstance(token)
     if (!clinicAdminId || !instanceName) {
       return res.status(400).json({ error: 'Instância WhatsApp não encontrada' })
     }
@@ -838,7 +967,8 @@ app.post('/api/chat/sendText', async (req, res) => {
     const remoteJid = String(req.body?.remoteJid || '').trim()
     const text = String(req.body?.text || '').trim()
     const quotedMessageId = req.body?.quotedMessageId || null
-    const profissionalId = req.body?.profissionalId || null
+    // Priorizar o profissionalId resolvido pelo backend (via token), fallback para o enviado pelo frontend
+    const profissionalId = profissionalClinicaId || req.body?.profissionalId || null
 
     if (!remoteJid || !text) {
       return res.status(400).json({ error: 'remoteJid e text são obrigatórios' })
@@ -1058,6 +1188,101 @@ app.post('/api/chat/markAsRead', async (req, res) => {
   }
 })
 
+// POST /api/chat/getMediaBase64
+// Body: { messageId } - Downloads media from Evolution and returns base64
+app.post('/api/chat/getMediaBase64', async (req, res) => {
+  try {
+    const token = getBearerToken(req)
+    if (!token) return res.status(401).json({ error: 'Token de autenticação ausente' })
+
+    const { clinicAdminId, instanceName } = await resolveClinicAdminAndInstance(token)
+    if (!clinicAdminId || !instanceName) {
+      return res.status(400).json({ error: 'Instância WhatsApp não encontrada' })
+    }
+
+    const { messageId } = req.body || {}
+    if (!messageId) {
+      return res.status(400).json({ error: 'messageId é obrigatório' })
+    }
+
+    // Look up message in DB to get full key (remoteJid, fromMe)
+    let remoteJid = null
+    let fromMe = false
+    try {
+      const msgs = await supabaseRest(
+        `whatsapp_mensagens?select=remote_jid,from_me&admin_profile_id=eq.${clinicAdminId}&message_id=eq.${encodeURIComponent(messageId)}&limit=1`,
+        { method: 'GET' }
+      )
+      if (Array.isArray(msgs) && msgs[0]) {
+        remoteJid = msgs[0].remote_jid
+        fromMe = msgs[0].from_me === true
+      }
+    } catch (_) {}
+
+    // Build full key for Evolution — include remoteJid (try LID variant too) and fromMe
+    const keyRemoteJid = remoteJid ? (phoneToLidMap.get(remoteJid) || remoteJid) : undefined
+    const messageKey = { id: messageId }
+    if (keyRemoteJid) messageKey.remoteJid = keyRemoteJid
+    messageKey.fromMe = fromMe
+
+    console.log('[getMediaBase64] messageId:', messageId, 'key:', JSON.stringify(messageKey))
+
+    // Use AbortController for 30s timeout
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 30000)
+
+    let response
+    try {
+      response = await evolutionRequest(`/chat/getBase64FromMediaMessage/${encodeURIComponent(instanceName)}`, {
+        method: 'POST',
+        body: { message: { key: messageKey }, convertToMp4: false },
+      })
+    } finally {
+      clearTimeout(timeout)
+    }
+
+    if (response?.base64) {
+      // Evolution sometimes returns string "false" or boolean false for mimetype
+      let mimetype = response?.mimetype
+      if (!mimetype || mimetype === 'false' || mimetype === false) {
+        // Try to get mimetype from DB
+        try {
+          const dbMsg = await supabaseRest(
+            `whatsapp_mensagens?select=media_mimetype&admin_profile_id=eq.${clinicAdminId}&message_id=eq.${encodeURIComponent(messageId)}&limit=1`,
+            { method: 'GET' }
+          )
+          if (Array.isArray(dbMsg) && dbMsg[0]?.media_mimetype) mimetype = dbMsg[0].media_mimetype
+        } catch (_) {}
+      }
+      if (!mimetype || mimetype === 'false' || mimetype === false) mimetype = 'application/octet-stream'
+
+      const dataUri = `data:${mimetype};base64,${response.base64}`
+      console.log('[getMediaBase64] SUCCESS messageId:', messageId, 'mimetype:', mimetype, 'size:', response.base64.length)
+
+      // Cache in DB only if not too large (< 500KB base64 ≈ ~375KB file)
+      if (response.base64.length < 500000) {
+        try {
+          await supabaseRest(
+            `whatsapp_mensagens?admin_profile_id=eq.${clinicAdminId}&message_id=eq.${encodeURIComponent(messageId)}`,
+            {
+              method: 'PATCH',
+              data: { media_url: dataUri, media_mimetype: mimetype, updated_at: new Date().toISOString() },
+            }
+          )
+        } catch (_) {}
+      }
+
+      return res.json({ ok: true, base64: response.base64, mimetype, dataUri })
+    }
+
+    return res.status(404).json({ error: 'Mídia não encontrada' })
+  } catch (e) {
+    console.error('[getMediaBase64] error:', e?.message || e)
+    const status = e?.statusCode && Number.isFinite(e.statusCode) ? e.statusCode : 500
+    return res.status(status).json({ error: 'Falha ao baixar mídia', details: e?.message || String(e) })
+  }
+})
+
 // POST /api/chat/updateMessage
 // Body: { remoteJid, messageId, text }
 app.post('/api/chat/updateMessage', async (req, res) => {
@@ -1118,9 +1343,10 @@ app.post('/api/chat/updateMessage', async (req, res) => {
   }
 })
 
-// POST /api/chat/sendMedia
-// Body: { remoteJid, mediatype, mimetype, media, caption?, fileName?, profissionalId? }
-app.post('/api/chat/sendMedia', async (req, res) => {
+// DELETE /api/chat/deleteMessage
+// Body: { remoteJid, messageId }
+// Deletes a message for everyone (only from_me messages)
+app.post('/api/chat/deleteMessage', async (req, res) => {
   try {
     const token = getBearerToken(req)
     if (!token) return res.status(401).json({ error: 'Token de autenticação ausente' })
@@ -1130,16 +1356,75 @@ app.post('/api/chat/sendMedia', async (req, res) => {
       return res.status(400).json({ error: 'Instância WhatsApp não encontrada' })
     }
 
-    const { remoteJid, mediatype, mimetype, media, caption, fileName, profissionalId } = req.body || {}
+    const { remoteJid, messageId } = req.body || {}
+    if (!remoteJid || !messageId) {
+      return res.status(400).json({ error: 'remoteJid e messageId são obrigatórios' })
+    }
+
+    // Resolve LID for the remoteJid
+    const keyRemoteJid = phoneToLidMap.get(remoteJid) || remoteJid
+
+    console.log('[deleteMessage] instance:', instanceName, 'msg:', messageId, 'remoteJid:', keyRemoteJid)
+
+    const response = await evolutionRequest(`/chat/deleteMessageForEveryone/${encodeURIComponent(instanceName)}`, {
+      method: 'DELETE',
+      body: {
+        id: messageId,
+        remoteJid: keyRemoteJid,
+        fromMe: true,
+      },
+    })
+
+    // Remove from DB
+    try {
+      await supabaseRest(
+        `whatsapp_mensagens?admin_profile_id=eq.${clinicAdminId}&message_id=eq.${encodeURIComponent(messageId)}`,
+        { method: 'DELETE' }
+      )
+    } catch (e) {
+      console.error('[deleteMessage] db error:', e?.message)
+    }
+
+    return res.json({ ok: true, response })
+  } catch (e) {
+    console.error('[deleteMessage] error:', e?.message || e)
+    const status = e?.statusCode && Number.isFinite(e.statusCode) ? e.statusCode : 500
+    return res.status(status).json({ error: 'Falha ao deletar mensagem', details: e?.message || String(e) })
+  }
+})
+
+// POST /api/chat/sendMedia
+// Body: { remoteJid, mediatype, mimetype, media, caption?, fileName?, profissionalId? }
+app.post('/api/chat/sendMedia', async (req, res) => {
+  try {
+    const token = getBearerToken(req)
+    if (!token) return res.status(401).json({ error: 'Token de autenticação ausente' })
+
+    const { clinicAdminId, instanceName, profissionalClinicaId } = await resolveClinicAdminAndInstance(token)
+    if (!clinicAdminId || !instanceName) {
+      return res.status(400).json({ error: 'Instância WhatsApp não encontrada' })
+    }
+
+    const { remoteJid, mediatype, mimetype, media, caption, fileName, profissionalId: frontendProfId } = req.body || {}
+    const profissionalId = profissionalClinicaId || frontendProfId || null
     if (!remoteJid || !mediatype || !media) {
       return res.status(400).json({ error: 'remoteJid, mediatype e media são obrigatórios' })
     }
 
     const number = getNumberForEvolution(remoteJid)
 
+    // Strip data URI prefix if present — Evolution expects raw base64
+    let mediaPayload = media
+    if (typeof media === 'string' && media.startsWith('data:')) {
+      const commaIdx = media.indexOf(',')
+      if (commaIdx > -1) mediaPayload = media.substring(commaIdx + 1)
+    }
+
+    console.log('[sendMedia] instance:', instanceName, 'to:', number, 'type:', mediatype)
+
     const response = await evolutionRequest(`/message/sendMedia/${encodeURIComponent(instanceName)}`, {
       method: 'POST',
-      body: { number, mediatype, mimetype, media, caption, fileName, delay: 500 },
+      body: { number, mediatype, mimetype, media: mediaPayload, caption: caption || '', fileName: fileName || '', delay: 500 },
     })
 
     // Persist
@@ -1203,21 +1488,31 @@ app.post('/api/chat/sendAudio', async (req, res) => {
     const token = getBearerToken(req)
     if (!token) return res.status(401).json({ error: 'Token de autenticação ausente' })
 
-    const { clinicAdminId, instanceName } = await resolveClinicAdminAndInstance(token)
+    const { clinicAdminId, instanceName, profissionalClinicaId } = await resolveClinicAdminAndInstance(token)
     if (!clinicAdminId || !instanceName) {
       return res.status(400).json({ error: 'Instância WhatsApp não encontrada' })
     }
 
-    const { remoteJid, audio, profissionalId } = req.body || {}
+    const { remoteJid, audio, profissionalId: frontendProfId } = req.body || {}
+    const profissionalId = profissionalClinicaId || frontendProfId || null
     if (!remoteJid || !audio) {
       return res.status(400).json({ error: 'remoteJid e audio são obrigatórios' })
     }
 
     const number = getNumberForEvolution(remoteJid)
 
+    // Strip data URI prefix if present — Evolution expects raw base64
+    let audioPayload = audio
+    if (typeof audio === 'string' && audio.startsWith('data:')) {
+      const commaIdx = audio.indexOf(',')
+      if (commaIdx > -1) audioPayload = audio.substring(commaIdx + 1)
+    }
+
+    console.log('[sendAudio] instance:', instanceName, 'to:', number)
+
     const response = await evolutionRequest(`/message/sendWhatsAppAudio/${encodeURIComponent(instanceName)}`, {
       method: 'POST',
-      body: { number, audio, delay: 500 },
+      body: { number, audio: audioPayload, delay: 500 },
     })
 
     const messageId = response?.key?.id
@@ -1278,12 +1573,13 @@ app.post('/api/chat/sendLocation', async (req, res) => {
     const token = getBearerToken(req)
     if (!token) return res.status(401).json({ error: 'Token de autenticação ausente' })
 
-    const { clinicAdminId, instanceName } = await resolveClinicAdminAndInstance(token)
+    const { clinicAdminId, instanceName, profissionalClinicaId } = await resolveClinicAdminAndInstance(token)
     if (!clinicAdminId || !instanceName) {
       return res.status(400).json({ error: 'Instância WhatsApp não encontrada' })
     }
 
-    const { remoteJid, latitude, longitude, name, address, profissionalId } = req.body || {}
+    const { remoteJid, latitude, longitude, name, address, profissionalId: frontendProfId } = req.body || {}
+    const profissionalId = profissionalClinicaId || frontendProfId || null
     if (!remoteJid || latitude == null || longitude == null) {
       return res.status(400).json({ error: 'remoteJid, latitude e longitude são obrigatórios' })
     }
@@ -1348,8 +1644,6 @@ app.post('/api/chat/sendLocation', async (req, res) => {
   }
 })
 
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = path.dirname(__filename)
 const distDir = path.resolve(__dirname, 'dist')
 
 // Criar servidor HTTP
@@ -2878,6 +3172,122 @@ app.post('/api/disparos/:batchId/cancel', (req, res) => {
 
   disparosBatches.set(batchId, { ...batch, status: 'canceled' })
   return res.json({ ok: true })
+})
+
+// POST /api/admin/createUser
+// Cria um usuário Auth + row em profiles (para cadastro de profissionais pela clínica)
+// Body: { email, password, fullName, role, adminProfileId }
+app.post('/api/admin/createUser', async (req, res) => {
+  try {
+    const token = getBearerToken(req)
+    if (!token) return res.status(401).json({ error: 'Token não fornecido' })
+
+    // Verificar se quem está chamando é admin/clinica
+    const authUser = await supabaseAuthUser(token)
+    if (!authUser?.id) return res.status(401).json({ error: 'Token inválido' })
+
+    const callerProfiles = await supabaseRest(`profiles?select=id,role,admin_profile_id&id=eq.${authUser.id}`, { method: 'GET' })
+    const callerProfile = Array.isArray(callerProfiles) ? callerProfiles[0] : callerProfiles
+    if (!callerProfile) return res.status(403).json({ error: 'Perfil não encontrado' })
+
+    const callerRole = callerProfile.role
+    if (callerRole !== 'clinica' && callerRole !== 'admin') {
+      return res.status(403).json({ error: 'Apenas administradores podem criar usuários' })
+    }
+
+    const clinicAdminId = callerProfile.admin_profile_id || callerProfile.id
+
+    // Buscar perfil completo da clínica para copiar campos
+    const clinicProfiles = await supabaseRest(
+      `profiles?select=instancia_whatsapp,status,plano_ativo,plano_expira_em,whatsapp_status,whatsapp_instance_id,whatsapp_connected_at,total_tokens,tokens_count&id=eq.${clinicAdminId}`,
+      { method: 'GET' }
+    )
+    const clinicProfile = Array.isArray(clinicProfiles) ? clinicProfiles[0] : clinicProfiles
+
+    const { email, password, fullName, role } = req.body || {}
+    if (!email || !password || !fullName || !role) {
+      return res.status(400).json({ error: 'email, password, fullName e role são obrigatórios' })
+    }
+
+    const allowedRoles = ['admin', 'profissional', 'recepcao', 'gestor']
+    if (!allowedRoles.includes(role)) {
+      return res.status(400).json({ error: `Role inválida. Permitidas: ${allowedRoles.join(', ')}` })
+    }
+
+    // 1. Criar usuário no Supabase Auth (service role — não muda sessão do admin)
+    // app_metadata vai no JWT → app_admin_profile_id() do RLS funciona para o profissional
+    const authRes = await axios.post(`${SUPABASE_URL}/auth/v1/admin/users`, {
+      email,
+      password,
+      email_confirm: true,
+      user_metadata: { full_name: fullName, role },
+      app_metadata: { admin_profile_id: clinicAdminId },
+    }, {
+      headers: {
+        apikey: SUPABASE_SERVICE_ROLE_KEY,
+        Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      timeout: 30_000,
+      validateStatus: () => true,
+    })
+
+    if (authRes.status >= 300) {
+      const errMsg = authRes.data?.msg || authRes.data?.message || authRes.data?.error || JSON.stringify(authRes.data)
+      console.error('[createUser] Auth error:', errMsg)
+      return res.status(400).json({ error: `Erro ao criar usuário: ${errMsg}` })
+    }
+
+    const newUserId = authRes.data?.id
+    if (!newUserId) {
+      return res.status(500).json({ error: 'Usuário criado mas ID não retornado' })
+    }
+
+    // 2. Criar row em profiles copiando campos da clínica
+    const profileData = {
+      id: newUserId,
+      email,
+      full_name: fullName,
+      role,
+      admin_profile_id: clinicAdminId,
+      status: clinicProfile?.status || 'ativo',
+      instancia_whatsapp: clinicProfile?.instancia_whatsapp || null,
+      plano_ativo: clinicProfile?.plano_ativo || null,
+      plano_expira_em: clinicProfile?.plano_expira_em || null,
+      whatsapp_status: clinicProfile?.whatsapp_status || null,
+      whatsapp_instance_id: clinicProfile?.whatsapp_instance_id || null,
+      whatsapp_connected_at: clinicProfile?.whatsapp_connected_at || null,
+      total_tokens: clinicProfile?.total_tokens || null,
+      tokens_count: clinicProfile?.tokens_count || null,
+    }
+
+    try {
+      await supabaseRest('profiles', {
+        method: 'POST',
+        data: profileData,
+        params: { on_conflict: 'id' },
+      })
+    } catch (profileErr) {
+      console.error('[createUser] Profile upsert error:', profileErr?.message)
+      // Profile pode já existir via trigger — tentar update
+      try {
+        const { id, ...patchData } = profileData
+        await supabaseRest(`profiles?id=eq.${newUserId}`, {
+          method: 'PATCH',
+          data: patchData,
+        })
+      } catch (patchErr) {
+        console.error('[createUser] Profile patch error:', patchErr?.message)
+      }
+    }
+
+    console.log(`[createUser] Usuário ${email} criado com role=${role} para clínica ${clinicAdminId}`)
+
+    res.json({ ok: true, userId: newUserId, clinicAdminId })
+  } catch (err) {
+    console.error('[createUser] Error:', err?.message || err)
+    res.status(500).json({ error: err?.message || 'Erro interno' })
+  }
 })
 
 app.get('/health', (req, res) => {

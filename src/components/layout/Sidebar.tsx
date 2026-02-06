@@ -19,6 +19,8 @@ import {
   BarChart3
 } from 'lucide-react'
 
+type AppRole = 'clinica' | 'admin' | 'profissional' | 'recepcao' | 'gestor'
+
 interface MenuItem {
   label: string
   description?: string
@@ -26,6 +28,7 @@ interface MenuItem {
   href: string
   color: string
   adminOnly?: boolean
+  allowedRoles?: AppRole[]
   subItems?: MenuItem[]
 }
 import { useAuthStore } from '@/stores/authStore'
@@ -34,13 +37,18 @@ import { useIAConfig } from '@/hooks/useIAConfig'
 import { SubscriptionStatusBanner } from '@/components/SubscriptionNotifications'
 import { Button } from '@/components/ui/button'
 
+const ALL_ROLES: AppRole[] = ['clinica', 'admin', 'profissional', 'recepcao', 'gestor']
+const ADMIN_ROLES: AppRole[] = ['clinica', 'admin']
+const ADMIN_GESTOR: AppRole[] = ['clinica', 'admin', 'gestor']
+
 const menuItems: MenuItem[] = [
   {
     label: 'Dashboard Inteligente',
     description: 'Indicadores clínicos em tempo real',
     icon: LayoutDashboard,
     href: '/app/dashboard',
-    color: 'from-primary-400 to-primary-600'
+    color: 'from-primary-400 to-primary-600',
+    allowedRoles: ALL_ROLES,
   },
   {
     label: 'Pacientes',
@@ -48,6 +56,7 @@ const menuItems: MenuItem[] = [
     icon: Users,
     href: '/app/pacientes',
     color: 'from-secondary-400 to-secondary-600',
+    allowedRoles: ['clinica', 'admin', 'profissional', 'recepcao', 'gestor'],
     subItems: []
   },
   {
@@ -55,92 +64,106 @@ const menuItems: MenuItem[] = [
     description: 'Equipe clínica, agendas e metas',
     icon: UserSquare,
     href: '/app/profissionais',
-    color: 'from-primary-500 to-primary-700'
+    color: 'from-primary-500 to-primary-700',
+    allowedRoles: ADMIN_GESTOR,
   },
   {
     label: 'Procedimentos',
     description: 'Catálogo de tratamentos e protocolos',
     icon: Sparkles,
     href: '/app/procedimentos',
-    color: 'from-secondary-300 to-secondary-500'
+    color: 'from-secondary-300 to-secondary-500',
+    allowedRoles: ADMIN_GESTOR,
   },
   {
     label: 'Categorias de Tratamento',
     icon: Palette,
     href: '/app/categorias',
-    color: 'from-primary-300 to-primary-500'
+    color: 'from-primary-300 to-primary-500',
+    allowedRoles: ADMIN_GESTOR,
   },
   {
     label: 'Protocolos/Pacotes',
     description: 'Biblioteca de pacotes e protocolos',
     icon: Package,
     href: '/app/protocolos-pacotes',
-    color: 'from-secondary-300 to-primary-300'
+    color: 'from-secondary-300 to-primary-300',
+    allowedRoles: ADMIN_GESTOR,
   },
   {
     label: 'Agenda Inteligente',
     description: 'Agendamentos e salas simultâneas',
     icon: CalendarDays,
     href: '/app/agendamentos',
-    color: 'from-primary-400 to-secondary-400'
+    color: 'from-primary-400 to-secondary-400',
+    allowedRoles: ALL_ROLES,
   },
   {
     label: 'Planos de Tratamento',
     description: 'Protocolos clínicos e acompanhamento',
     icon: ScrollText,
     href: '/app/planos-tratamento',
-    color: 'from-tertiary-300 to-primary-400'
+    color: 'from-tertiary-300 to-primary-400',
+    allowedRoles: ['clinica', 'admin', 'profissional', 'gestor'],
   },
   {
     label: 'Arquivos Clínicos',
     icon: FolderOpen,
     href: '/app/arquivos',
-    color: 'from-primary-200 to-primary-400'
+    color: 'from-primary-200 to-primary-400',
+    allowedRoles: ['clinica', 'admin', 'profissional', 'gestor'],
   },
   {
     label: 'Biblioteca IA',
     icon: Bot,
     href: '/app/arquivos-ia',
-    color: 'from-secondary-300 to-secondary-500'
+    color: 'from-secondary-300 to-secondary-500',
+    allowedRoles: ADMIN_ROLES,
   },
   {
     label: 'Automação & Disparos',
     description: 'Disparador e evolução omnichannel',
     icon: MessageCircle,
     href: '/app/whatsapp',
-    color: 'from-primary-400 to-secondary-400'
+    color: 'from-primary-400 to-secondary-400',
+    allowedRoles: ADMIN_ROLES,
   },
   {
     label: 'Chat WhatsApp',
     description: 'Conversas e atendimento em tempo real',
     icon: MessageCircle,
     href: '/app/chat',
-    color: 'from-green-400 to-green-600'
+    color: 'from-green-400 to-green-600',
+    allowedRoles: ALL_ROLES,
   },
   {
     label: 'Configurações da Clínica',
     icon: Settings2,
     href: '/app/configuracoes',
-    color: 'from-neutral-200 to-neutral-400'
+    color: 'from-neutral-200 to-neutral-400',
+    allowedRoles: ADMIN_ROLES,
   },
   {
     label: 'Configurações de IA',
     icon: QrCode,
     href: '/app/configuracoes-ia',
-    color: 'from-primary-500 to-secondary-500'
+    color: 'from-primary-500 to-secondary-500',
+    allowedRoles: ADMIN_ROLES,
   },
   {
     label: 'Relatórios',
     description: 'Análises e métricas da clínica',
     icon: BarChart3,
     href: '/app/relatorios',
-    color: 'from-purple-400 to-pink-500'
+    color: 'from-purple-400 to-pink-500',
+    allowedRoles: ADMIN_GESTOR,
   },
   {
     label: 'Planos & Assinaturas',
     icon: CreditCard,
     href: '/planos',
-    color: 'from-tertiary-400 to-secondary-400'
+    color: 'from-tertiary-400 to-secondary-400',
+    allowedRoles: ADMIN_ROLES,
   }
 ]
 
@@ -156,13 +179,14 @@ export function Sidebar() {
     navigate('/app/dashboard')
   }
 
-  const isAdmin = user?.role === 'admin'
+  const userRole = (user?.role || 'profissional') as AppRole
+  const isAdmin = userRole === 'admin' || userRole === 'clinica'
 
   const filteredMenuItems = menuItems.filter(item => {
     if (item.adminOnly && !isAdmin) return false
     
-    // Ocultar página Planos para vendedores (só admins podem ver)
-    if (item.href === '/planos' && user?.role === 'vendedor') return false
+    // Filtrar por role
+    if (item.allowedRoles && !item.allowedRoles.includes(userRole)) return false
     
     // Ocultar página Planos se o usuário já tem plano ativo
     if (item.href === '/planos' && planoAtivo) return false
@@ -307,7 +331,16 @@ export function Sidebar() {
               {user?.full_name}
             </p>
             <p className="text-xs text-neutral-500 dark:text-neutral-300">
-              {user?.cargo ? `${user.cargo} • ${user?.role === 'admin' ? 'Administrador' : 'Profissional'}` : (user?.role === 'admin' ? 'Administrador' : 'Profissional')}
+              {(() => {
+                const roleLabels: Record<string, string> = {
+                  clinica: 'Clínica',
+                  admin: 'Administrador',
+                  profissional: 'Profissional',
+                  recepcao: 'Recepção',
+                  gestor: 'Gestor',
+                }
+                return roleLabels[user?.role || ''] || user?.role || 'Usuário'
+              })()}
             </p>
             <div className="mt-2 inline-flex items-center gap-2 rounded-full bg-green-500/10 px-3 py-1 text-[11px] font-medium text-green-600 dark:text-green-400">
               <span className="flex h-2 w-2 rounded-full bg-green-500" />

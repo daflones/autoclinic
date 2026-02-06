@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { FileUploadButton } from '@/components/ui/file-upload-button'
@@ -78,6 +79,8 @@ function getWhatsAppServerBaseUrl() {
 }
 
 export default function WhatsAppPage() {
+  const [searchParams, setSearchParams] = useSearchParams()
+
   const [instanceName, setInstanceName] = useState('')
   const [phoneNumber, setPhoneNumber] = useState('')
   const [showCreateForm, setShowCreateForm] = useState(false)
@@ -125,6 +128,15 @@ export default function WhatsAppPage() {
   
   const { data: status, isLoading: statusLoading } = useWhatsAppStatus(instance?.instanceName || undefined, shouldPoll)
   const { data: qrCode, isLoading: qrLoading } = useWhatsAppQRCode(instance?.instanceName || undefined, status?.status)
+
+  useEffect(() => {
+    if (searchParams.get('autoConfigure') !== '1') return
+    setShowCreateForm(true)
+
+    const next = new URLSearchParams(searchParams)
+    next.delete('autoConfigure')
+    setSearchParams(next, { replace: true })
+  }, [searchParams, setSearchParams])
 
   useEffect(() => {
     const saved = (clinicaIAConfig as any)?.extra?.disparos_ai_options

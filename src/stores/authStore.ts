@@ -21,12 +21,12 @@ interface AuthState {
   clearError: () => void
 }
 
-// Simplified user with only admin and vendedor roles
 export interface StoreUser extends Profile {
   vendedor_id?: string | null
   is_company_admin?: boolean
   company_profile_id?: string | null
   is_vendedor?: boolean
+  profissional_clinica_id?: string | null
 }
 
 // Global flag to prevent concurrent refreshUser calls
@@ -87,6 +87,7 @@ export const useAuthStore = create<AuthState>()(persist(
         options: {
           data: {
             full_name: fullName,
+            role: 'clinica',
           },
         },
       })
@@ -242,43 +243,49 @@ export const useAuthStore = create<AuthState>()(persist(
   }
 ))
 
-// Helper to compute derived user fields - simplified for admin/vendedor only
 async function buildStoreUser(profile: Profile): Promise<StoreUser> {
   try {
-    // Only support admin and vendedor roles
     const role = profile.role
     
     let vendedor_id: string | null = null
-    if (role === 'vendedor') {
-      const { data: vendedor } = await supabase
-        .from('vendedores')
+    let profissional_clinica_id: string | null = null
+
+    // Buscar profissional_clinica pelo email do usuário dentro da clínica
+    // (profile_id em profissionais_clinica = ID da clínica, não do usuário)
+    if (role === 'profissional' || role === 'recepcao' || role === 'gestor') {
+      const adminId = (profile as any).admin_profile_id || profile.id
+      const { data: prof } = await supabase
+        .from('profissionais_clinica')
         .select('id')
-        .eq('user_id', profile.id)
-        .single()
-      vendedor_id = vendedor?.id || null
+        .eq('admin_profile_id', adminId)
+        .eq('email', profile.email)
+        .maybeSingle()
+      profissional_clinica_id = prof?.id || null
     }
 
-    const isCompanyAdmin = (profile as any).admin_profile_id === profile.id && role === 'admin'
+    const isCompanyAdmin = (role === 'clinica' || role === 'admin') && 
+      ((profile as any).admin_profile_id === profile.id || !(profile as any).admin_profile_id)
     const companyProfileId = isCompanyAdmin ? profile.id : (profile as any).admin_profile_id || null
 
     return {
       ...profile,
-      role: role as 'admin' | 'vendedor',
+      role,
       vendedor_id,
       is_company_admin: isCompanyAdmin,
       company_profile_id: companyProfileId,
-      is_vendedor: role === 'vendedor',
+      is_vendedor: false,
+      profissional_clinica_id,
     }
   } catch (error) {
     console.error('Error building store user:', error)
-    const role = profile.role
     return {
       ...profile,
-      role: role as 'admin' | 'vendedor',
+      role: profile.role,
       vendedor_id: null,
       is_company_admin: false,
       company_profile_id: (profile as any).admin_profile_id || null,
-      is_vendedor: role === 'vendedor',
+      is_vendedor: false,
+      profissional_clinica_id: null,
     }
   }
 }

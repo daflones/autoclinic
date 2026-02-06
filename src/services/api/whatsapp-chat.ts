@@ -78,6 +78,27 @@ export interface WhatsAppContato {
 }
 
 // =====================================================
+// VERIFICAÇÃO DE INSTÂNCIA
+// =====================================================
+
+export async function checkWhatsAppInstance(): Promise<{ configured: boolean; instanceName: string | null }> {
+  // Ler do próprio perfil do usuário (campos copiados da clínica ao cadastrar)
+  // RLS de profiles só permite id = auth.uid()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Usuário não autenticado')
+
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('instancia_whatsapp')
+    .eq('id', user.id)
+    .single()
+
+  if (error) throw error
+  const instanceName = data?.instancia_whatsapp || null
+  return { configured: !!instanceName, instanceName }
+}
+
+// =====================================================
 // SERVIÇO DE CONVERSAS
 // =====================================================
 
@@ -418,8 +439,8 @@ export async function sendMediaMessage(
     mediatype: mediaType,
     mimetype,
     media: mediaUrl,
-    caption: caption || null,
-    fileName: fileName || null,
+    caption: caption || '',
+    fileName: fileName || '',
     profissionalId: profissionalId || null,
   })
 }
@@ -456,6 +477,16 @@ export async function sendLocationMessage(
   })
 }
 
+export async function getMediaBase64(messageId: string): Promise<{ dataUri: string; mimetype: string } | null> {
+  try {
+    const result = await backendPost<{ ok: boolean; dataUri: string; mimetype: string }>('/api/chat/getMediaBase64', { messageId })
+    if (result?.dataUri) return { dataUri: result.dataUri, mimetype: result.mimetype }
+    return null
+  } catch {
+    return null
+  }
+}
+
 export async function sendReaction(
   remoteJid: string,
   messageId: string,
@@ -479,6 +510,16 @@ export async function editMessage(
     remoteJid,
     messageId,
     text: newText,
+  })
+}
+
+export async function deleteMessageForEveryone(
+  remoteJid: string,
+  messageId: string
+): Promise<void> {
+  await backendPost('/api/chat/deleteMessage', {
+    remoteJid,
+    messageId,
   })
 }
 

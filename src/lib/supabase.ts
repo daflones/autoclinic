@@ -33,7 +33,7 @@ export interface Profile {
   email: string
   full_name: string
   avatar_url?: string
-  role: 'admin' | 'vendedor'
+  role: 'clinica' | 'admin' | 'profissional' | 'recepcao' | 'gestor'
   status: 'ativo' | 'inativo' | 'suspenso'
   cargo?: string
   phone?: string

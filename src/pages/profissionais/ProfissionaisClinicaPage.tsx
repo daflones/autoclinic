@@ -66,6 +66,7 @@ export function ProfissionaisClinicaPage() {
   const [formState, setFormState] = useState<ProfissionalCreateData>({
     nome: '',
     cargo: '',
+    senha: '',
     documento: '',
     email: '',
     telefone: '',
@@ -197,6 +198,18 @@ export function ProfissionaisClinicaPage() {
       toast.error('Preencha o nome do profissional')
       return
     }
+    if (!formState.cargo) {
+      toast.error('Selecione o cargo do profissional')
+      return
+    }
+    if (!formState.email) {
+      toast.error('Preencha o e-mail do profissional')
+      return
+    }
+    if (!formState.senha || (formState.senha as string).length < 6) {
+      toast.error('A senha deve ter pelo menos 6 caracteres')
+      return
+    }
 
     try {
       const created = await createMutation.mutateAsync({ ...formState, foto_url: null })
@@ -207,6 +220,7 @@ export function ProfissionaisClinicaPage() {
       setFormState({
         nome: '',
         cargo: '',
+        senha: '',
         documento: '',
         email: '',
         telefone: '',
@@ -508,13 +522,21 @@ export function ProfissionaisClinicaPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="create-cargo">Cargo</Label>
-                <Input
-                  id="create-cargo"
+                <Label htmlFor="create-cargo">Cargo / Função *</Label>
+                <Select
                   value={formState.cargo || ''}
-                  onChange={(e) => setFormState({ ...formState, cargo: e.target.value })}
-                  placeholder="Ex: Biomédico, Esteticista, Fisioterapeuta"
-                />
+                  onValueChange={(v) => setFormState({ ...formState, cargo: v })}
+                >
+                  <SelectTrigger id="create-cargo">
+                    <SelectValue placeholder="Selecione o cargo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="admin">Administrador</SelectItem>
+                    <SelectItem value="profissional">Profissional</SelectItem>
+                    <SelectItem value="recepcao">Recepção</SelectItem>
+                    <SelectItem value="gestor">Gestor</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="space-y-2">
@@ -530,7 +552,7 @@ export function ProfissionaisClinicaPage() {
 
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="create-email">E-mail</Label>
+                <Label htmlFor="create-email">E-mail *</Label>
                 <Input
                   id="create-email"
                   type="email"
@@ -541,6 +563,19 @@ export function ProfissionaisClinicaPage() {
               </div>
 
               <div className="space-y-2">
+                <Label htmlFor="create-senha">Senha de Acesso *</Label>
+                <Input
+                  id="create-senha"
+                  type="password"
+                  value={formState.senha || ''}
+                  onChange={(e) => setFormState({ ...formState, senha: e.target.value })}
+                  placeholder="Mínimo 6 caracteres"
+                />
+              </div>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
                 <Label htmlFor="create-telefone">Telefone</Label>
                 <Input
                   id="create-telefone"
@@ -549,9 +584,7 @@ export function ProfissionaisClinicaPage() {
                   placeholder="(00) 00000-0000"
                 />
               </div>
-            </div>
 
-            <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
                 <Label>Foto</Label>
                 <FileUploadButton
@@ -791,12 +824,21 @@ export function ProfissionaisClinicaPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="edit-cargo">Cargo</Label>
-                <Input
-                  id="edit-cargo"
+                <Label htmlFor="edit-cargo">Cargo / Função *</Label>
+                <Select
                   value={formState.cargo || ''}
-                  onChange={(e) => setFormState({ ...formState, cargo: e.target.value })}
-                />
+                  onValueChange={(v) => setFormState({ ...formState, cargo: v })}
+                >
+                  <SelectTrigger id="edit-cargo">
+                    <SelectValue placeholder="Selecione o cargo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="admin">Administrador</SelectItem>
+                    <SelectItem value="profissional">Profissional</SelectItem>
+                    <SelectItem value="recepcao">Recepção</SelectItem>
+                    <SelectItem value="gestor">Gestor</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="space-y-2">

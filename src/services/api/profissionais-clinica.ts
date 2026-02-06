@@ -39,6 +39,7 @@ export interface ProfissionalCreateData {
   profile_id?: string | null
   nome: string
   cargo?: string | null
+  senha?: string | null
   documento?: string | null
   email?: string | null
   telefone?: string | null
@@ -56,6 +57,36 @@ export interface ProfissionalCreateData {
   meta_mensal?: number | null
   horario_atendimento?: Record<string, unknown> | null
   status?: StatusProfissional
+}
+
+function getWhatsAppServerBaseUrl() {
+  const raw = String((import.meta as any)?.env?.VITE_WHATSAPP_SERVER_URL ?? '').trim()
+  return raw ? raw.replace(/\/+$/, '') : ''
+}
+
+async function backendCreateUser(payload: {
+  email: string
+  password: string
+  fullName: string
+  role: string
+}): Promise<{ userId: string; clinicAdminId: string }> {
+  const { data: sessionData } = await supabase.auth.getSession()
+  const token = sessionData.session?.access_token
+  if (!token) throw new Error('Sess\u00e3o n\u00e3o encontrada')
+
+  const baseUrl = getWhatsAppServerBaseUrl()
+  const res = await fetch(`${baseUrl}/api/admin/createUser`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  })
+
+  const body = await res.json()
+  if (!res.ok) throw new Error(body?.error || 'Erro ao criar usu\u00e1rio')
+  return body
 }
 
 export type ProfissionalUpdateData = Partial<ProfissionalCreateData>
@@ -193,15 +224,28 @@ export const profissionaisClinicaService = {
   async create(payload: ProfissionalCreateData): Promise<ProfissionalClinica> {
     const { adminProfileId } = await getAdminContext()
 
-    const { procedimentos_ids, ...rest } = payload
+    const { procedimentos_ids, senha, ...rest } = payload as ProfissionalCreateData & { senha?: string }
+
+    // Se tem email e senha, criar conta de usuário (auth + profiles)
+    if (rest.email && senha) {
+      await backendCreateUser({
+        email: rest.email,
+        password: senha,
+        fullName: rest.nome,
+        role: rest.cargo || 'profissional',
+      })
+    }
+
+    // profile_id = ID da clínica que cadastrou o profissional
+    const insertData = { ...rest, senha: undefined } as any
+    delete insertData.senha
+    insertData.admin_profile_id = adminProfileId
+    insertData.profile_id = adminProfileId
+    insertData.status = payload.status ?? 'ativo'
 
     const { data, error } = await supabase
       .from('profissionais_clinica')
-      .insert({
-        ...rest,
-        admin_profile_id: adminProfileId,
-        status: payload.status ?? 'ativo',
-      })
+      .insert(insertData)
       .select()
       .single()
 

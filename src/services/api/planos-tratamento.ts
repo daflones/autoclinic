@@ -111,7 +111,7 @@ function prepareItensForInsert(planoId: string, itens?: PlanoTratamentoItemInput
 
 export const planosTratamentoService = {
   async getAll(filters: PlanoTratamentoFilters = {}): Promise<{ data: PlanoTratamento[]; count: number }> {
-    const { adminProfileId } = await getAdminContext()
+    const { adminProfileId, role, profissionalClinicaId } = await getAdminContext()
 
     const page = filters.page ?? 1
     const limit = filters.limit ?? 20
@@ -128,7 +128,10 @@ export const planosTratamentoService = {
       query = query.eq('paciente_id', filters.paciente_id)
     }
 
-    if (filters.responsavel_profissional_id) {
+    // Profissional só vê planos onde é o responsável
+    if (role === 'profissional' && profissionalClinicaId) {
+      query = query.eq('responsavel_profissional_id', profissionalClinicaId)
+    } else if (filters.responsavel_profissional_id) {
       query = query.eq('responsavel_profissional_id', filters.responsavel_profissional_id)
     }
 
@@ -171,14 +174,20 @@ export const planosTratamentoService = {
   },
 
   async getById(id: string): Promise<PlanoTratamento | null> {
-    const { adminProfileId } = await getAdminContext()
+    const { adminProfileId, role, profissionalClinicaId } = await getAdminContext()
 
-    const { data: plano, error } = await supabase
+    let query = supabase
       .from('planos_tratamento')
       .select('*')
       .eq('id', id)
       .eq('admin_profile_id', adminProfileId)
-      .single()
+
+    // Profissional só vê planos onde é o responsável
+    if (role === 'profissional' && profissionalClinicaId) {
+      query = query.eq('responsavel_profissional_id', profissionalClinicaId)
+    }
+
+    const { data: plano, error } = await query.single()
 
     if (error) {
       console.error('Erro ao buscar plano de tratamento:', error)

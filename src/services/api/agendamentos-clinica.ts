@@ -182,7 +182,7 @@ function buildSelectQuery() {
 
 export const agendamentosClinicaService = {
   async getAll(filters: AgendamentoClinicaFilters = {}): Promise<{ data: AgendamentoClinica[]; count: number }> {
-    const { adminProfileId } = await getAdminContext()
+    const { adminProfileId, role, profissionalClinicaId } = await getAdminContext()
 
     const page = filters.page ?? 1
     const limit = filters.limit ?? 50
@@ -193,12 +193,15 @@ export const agendamentosClinicaService = {
       .order('data_inicio', { ascending: true })
       .range(offset, offset + limit - 1)
 
-    if (filters.paciente_id) {
-      query = query.eq('paciente_id', filters.paciente_id)
+    // Profissional só vê agendamentos onde é o responsável
+    if (role === 'profissional' && profissionalClinicaId) {
+      query = query.eq('profissional_id', profissionalClinicaId)
+    } else if (filters.profissional_id) {
+      query = query.eq('profissional_id', filters.profissional_id)
     }
 
-    if (filters.profissional_id) {
-      query = query.eq('profissional_id', filters.profissional_id)
+    if (filters.paciente_id) {
+      query = query.eq('paciente_id', filters.paciente_id)
     }
 
     if (filters.plano_tratamento_id) {
@@ -256,12 +259,18 @@ export const agendamentosClinicaService = {
   },
 
   async getById(id: string): Promise<AgendamentoClinica | null> {
-    const { adminProfileId } = await getAdminContext()
+    const { adminProfileId, role, profissionalClinicaId } = await getAdminContext()
 
-    const { data, error } = await buildSelectQuery()
+    let query = buildSelectQuery()
       .eq('id', id)
       .eq('admin_profile_id', adminProfileId)
-      .single()
+
+    // Profissional só vê agendamentos onde é o responsável
+    if (role === 'profissional' && profissionalClinicaId) {
+      query = query.eq('profissional_id', profissionalClinicaId)
+    }
+
+    const { data, error } = await query.single()
 
     if (error) {
       console.error('Erro ao buscar agendamento clínico:', error)

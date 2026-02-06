@@ -28,30 +28,16 @@ function hexToRgb(hex: string): [number, number, number] {
 
 function formatIsoToPtBr(iso: string) {
   try {
-    return new Date(iso).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })
+    return new Date(iso).toLocaleString('pt-BR')
   } catch {
     return iso
   }
 }
 
-function getPeriodoLabel(periodo: RelatoriosPeriodo): string {
-  const labels: Record<RelatoriosPeriodo, string> = {
-    hoje: 'Hoje',
-    semana: 'Esta Semana',
-    mes: 'Este Mês',
-    trimestre: 'Trimestre',
-    ano: 'Este Ano',
-  }
-  return labels[periodo] || periodo
-}
-
-export type RelatorioTipo = 'vendas' | 'vendedores' | 'produtos' | 'financeiro' | 'pipeline' | 'clientes' | 'geral'
-
 export interface RelatoriosClinicaPdfOptions {
   theme?: ColorTheme
   empresaNome?: string
   periodo: RelatoriosPeriodo
-  tipo?: RelatorioTipo
 }
 
 export class RelatoriosClinicaPDFGenerator {
@@ -82,10 +68,6 @@ export class RelatoriosClinicaPDFGenerator {
     this.doc.setTextColor(r, g, b)
   }
 
-  private setTextColorRgb(r: number, g: number, b: number) {
-    this.doc.setTextColor(r, g, b)
-  }
-
   private setFillColor(hex: string) {
     const [r, g, b] = hexToRgb(hex)
     this.doc.setFillColor(r, g, b)
@@ -96,28 +78,18 @@ export class RelatoriosClinicaPDFGenerator {
     this.doc.setDrawColor(r, g, b)
   }
 
-  private addHeader(periodo: RelatoriosPeriodo, tipo: RelatorioTipo, data: RelatoriosClinicaData) {
+  private addHeader(periodo: RelatoriosPeriodo, data: RelatoriosClinicaData) {
     this.setFillColor(this.theme.primary)
     this.doc.rect(0, 0, this.pageWidth, 26, 'F')
-
-    const tipoLabels: Record<RelatorioTipo, string> = {
-      vendas: 'RELATÓRIO DE VENDAS',
-      vendedores: 'PERFORMANCE DE VENDEDORES',
-      produtos: 'ANÁLISE DE PRODUTOS',
-      financeiro: 'RELATÓRIO FINANCEIRO',
-      pipeline: 'PIPELINE DE VENDAS',
-      clientes: 'ANÁLISE DE CLIENTES',
-      geral: 'RELATÓRIO DA CLÍNICA',
-    }
 
     this.doc.setFont('helvetica', 'bold')
     this.doc.setFontSize(16)
     this.doc.setTextColor(255, 255, 255)
-    this.doc.text(tipoLabels[tipo], this.margin, 12)
+    this.doc.text('RELATÓRIO DA CLÍNICA', this.margin, 12)
 
     this.doc.setFont('helvetica', 'normal')
     this.doc.setFontSize(9)
-    const subtitle = `${this.empresaNome} • Período: ${getPeriodoLabel(periodo)}`
+    const subtitle = `${this.empresaNome} • Período: ${periodo.toUpperCase()}`
     this.doc.text(subtitle, this.margin, 19)
 
     this.currentY = 34
@@ -132,9 +104,16 @@ export class RelatoriosClinicaPDFGenerator {
     this.currentY += 10
   }
 
-  private addMetricCards(cards: { label: string; value: string }[]) {
+  private addMetricCards(data: RelatoriosClinicaData) {
+    const cards = [
+      { label: 'Faturamento', value: `R$ ${data.metricas.faturamento.toFixed(2)}` },
+      { label: 'Ticket médio', value: `R$ ${data.metricas.ticketMedio.toFixed(2)}` },
+      { label: 'Conversão', value: `${data.metricas.conversao}%` },
+      { label: 'Novos clientes', value: String(data.metricas.novosClientes) },
+    ]
+
     const gap = 6
-    const cardW = (this.pageWidth - this.margin * 2 - gap * (cards.length - 1)) / cards.length
+    const cardW = (this.pageWidth - this.margin * 2 - gap * 3) / 4
     const cardH = 18
 
     this.ensureSpace(cardH + 4)
@@ -171,11 +150,100 @@ export class RelatoriosClinicaPDFGenerator {
     this.currentY += 6
   }
 
+  private addSerieDiariaChart(data: RelatoriosClinicaData) {
+    const w = this.pageWidth - this.margin * 2
+    const h = 42
+
+    this.ensureSpace(h + 8)
+
+    const x = this.margin
+    const y = this.currentY
+
+    this.setFillColor('#ffffff')
+    this.doc.roundedRect(x, y, w, h, 2, 2, 'F')
+    this.setDrawColor(COLORS.border)
+    this.doc.roundedRect(x, y, w, h, 2, 2, 'S')
+
+    const padding = 6
+    const plotX = x + padding
+    const plotY = y + padding + 6
+    const plotW = w - padding * 2
+    const plotH = h - padding * 2 - 6
+
+    const serie = data.serieDiaria
+    const max = Math.max(1, ...serie.map((s) => s.faturamento))
+
+    this.doc.setFont('helvetica', 'normal')
+    this.doc.setFontSize(7)
+    this.setTextColor(COLORS.muted)
+    this.doc.text('Faturamento por dia', x + padding, y + padding + 1)
+
+    this.setDrawColor(COLORS.border)
+    this.doc.line(plotX, plotY, plotX, plotY + plotH)
+    this.doc.line(plotX, plotY + plotH, plotX + plotW, plotY + plotH)
+
+    if (serie.length >= 2) {
+      const step = plotW / (serie.length - 1)
+      const points = serie.map((s, idx) => {
+        const px = plotX + idx * step
+        const py = plotY + plotH - (s.faturamento / max) * plotH
+        return { x: px, y: py }
+      })
+
+      const [r, g, b] = hexToRgb(this.theme.primary)
+      this.doc.setDrawColor(r, g, b)
+      this.doc.setLineWidth(1)
+      for (let i = 0; i < points.length - 1; i++) {
+        this.doc.line(points[i].x, points[i].y, points[i + 1].x, points[i + 1].y)
+      }
+      this.doc.setLineWidth(0.2)
+
+      this.doc.setFillColor(r, g, b)
+      points.forEach((p) => {
+        this.doc.circle(p.x, p.y, 0.7, 'F')
+      })
+    }
+
+    this.currentY += h + 8
+  }
+
+  private addStatusBars(data: RelatoriosClinicaData) {
+    const rows = data.distribuicaoStatus.slice(0, 8)
+
+    this.ensureSpace(8 + rows.length * 6)
+
+    const x = this.margin
+    const w = this.pageWidth - this.margin * 2
+
+    const max = Math.max(1, ...rows.map((r) => r.total))
+
+    rows.forEach((r) => {
+      const y = this.currentY
+      const barW = (w * r.total) / max
+
+      this.doc.setFont('helvetica', 'normal')
+      this.doc.setFontSize(8)
+      this.setTextColor(15, 23, 42)
+      this.doc.text(`${r.status} (${r.total})`, x, y + 3.8)
+
+      this.setFillColor(this.theme.light)
+      this.doc.rect(x, y + 5, w, 2.4, 'F')
+
+      this.setFillColor(this.theme.primary)
+      this.doc.rect(x, y + 5, barW, 2.4, 'F')
+
+      this.currentY += 8
+    })
+
+    this.currentY += 2
+  }
+
   private addTable(title: string, head: string[], body: (string | number)[][]) {
     this.addSectionTitle(title)
+
     this.ensureSpace(20)
 
-    autoTable(this.doc, {
+    this.doc.autoTable({
       head: [head],
       body,
       startY: this.currentY,
@@ -198,151 +266,17 @@ export class RelatoriosClinicaPDFGenerator {
       },
     })
 
-    this.currentY = ((this.doc as any).lastAutoTable?.finalY ?? this.currentY) + 10
+    this.currentY = (this.doc.lastAutoTable?.finalY ?? this.currentY) + 10
   }
 
-  public async generateVendas(periodo: RelatoriosPeriodo, data: RelatoriosClinicaData): Promise<Blob> {
-    this.addHeader(periodo, 'vendas', data)
-    
-    this.addMetricCards([
-      { label: 'Faturamento', value: `R$ ${data.metricas.faturamento.toFixed(2)}` },
-      { label: 'Ticket médio', value: `R$ ${data.metricas.ticketMedio.toFixed(2)}` },
-      { label: 'Conversão', value: `${data.metricas.conversao}%` },
-      { label: 'Novos clientes', value: String(data.metricas.novosClientes) },
-    ])
+  public async generate(periodo: RelatoriosPeriodo, data: RelatoriosClinicaData): Promise<Blob> {
+    this.addHeader(periodo, data)
+    this.addMetricCards(data)
 
-    this.addTable(
-      'Procedimentos mais vendidos',
-      ['Procedimento', 'Agend.', 'Concl.', 'Conversão', 'Faturamento'],
-      data.topProcedimentos.map((p) => [p.nome, p.total, p.concluidos, `${p.conversao}%`, `R$ ${p.faturamento.toFixed(2)}`])
-    )
-
-    this.addTable(
-      'Protocolos/Pacotes mais vendidos',
-      ['Pacote', 'Agend.', 'Concl.', 'Conversão', 'Faturamento'],
-      data.topPacotes.map((p) => [p.nome, p.total, p.concluidos, `${p.conversao}%`, `R$ ${p.faturamento.toFixed(2)}`])
-    )
-
-    return this.doc.output('blob')
-  }
-
-  public async generateVendedores(periodo: RelatoriosPeriodo, data: RelatoriosClinicaData): Promise<Blob> {
-    this.addHeader(periodo, 'vendedores', data)
-    
-    this.addMetricCards([
-      { label: 'Faturamento', value: `R$ ${data.metricas.faturamento.toFixed(2)}` },
-      { label: 'Agendamentos', value: String(data.metricas.agendamentosTotal) },
-      { label: 'Concluídos', value: String(data.metricas.agendamentosConcluidos) },
-      { label: 'Conversão', value: `${data.metricas.conversao}%` },
-    ])
-
-    this.addTable(
-      'Performance por profissional',
-      ['Profissional', 'Agend.', 'Concl.', 'Proced.', 'Pacotes', 'Faturamento'],
-      data.profissionaisAnalise.slice(0, 15).map((p) => [
-        p.nome,
-        p.agendamentosTotal,
-        p.agendamentosConcluidos,
-        p.procedimentosVendidos,
-        p.pacotesVendidos,
-        `R$ ${p.faturamento.toFixed(2)}`,
-      ])
-    )
-
-    return this.doc.output('blob')
-  }
-
-  public async generateProdutos(periodo: RelatoriosPeriodo, data: RelatoriosClinicaData): Promise<Blob> {
-    this.addHeader(periodo, 'produtos', data)
-    
-    this.addTable(
-      'Procedimentos mais vendidos',
-      ['Procedimento', 'Agend.', 'Concl.', 'Conversão', 'Faturamento'],
-      data.topProcedimentos.map((p) => [p.nome, p.total, p.concluidos, `${p.conversao}%`, `R$ ${p.faturamento.toFixed(2)}`])
-    )
-
-    this.addTable(
-      'Protocolos/Pacotes mais vendidos',
-      ['Pacote', 'Agend.', 'Concl.', 'Conversão', 'Faturamento'],
-      data.topPacotes.map((p) => [p.nome, p.total, p.concluidos, `${p.conversao}%`, `R$ ${p.faturamento.toFixed(2)}`])
-    )
-
-    return this.doc.output('blob')
-  }
-
-  public async generateFinanceiro(periodo: RelatoriosPeriodo, data: RelatoriosClinicaData): Promise<Blob> {
-    this.addHeader(periodo, 'financeiro', data)
-    
-    this.addMetricCards([
-      { label: 'Faturamento', value: `R$ ${data.metricas.faturamento.toFixed(2)}` },
-      { label: 'Ticket médio', value: `R$ ${data.metricas.ticketMedio.toFixed(2)}` },
-      { label: 'Conversão', value: `${data.metricas.conversao}%` },
-      { label: 'Novos clientes', value: String(data.metricas.novosClientes) },
-    ])
-
-    this.addTable(
-      'Faturamento por dia',
-      ['Data', 'Faturamento', 'Agend.', 'Concl.'],
-      data.serieDiaria.map((s) => [s.dia, `R$ ${s.faturamento.toFixed(2)}`, s.agendamentosTotal, s.agendamentosConcluidos])
-    )
-
-    return this.doc.output('blob')
-  }
-
-  public async generatePipeline(periodo: RelatoriosPeriodo, data: RelatoriosClinicaData): Promise<Blob> {
-    this.addHeader(periodo, 'pipeline', data)
-    
-    const total = data.distribuicaoStatus.reduce((acc, s) => acc + s.total, 0)
-    
-    this.addMetricCards([
-      { label: 'Total', value: String(total) },
-      { label: 'Agendados', value: String(data.distribuicaoStatus.find((s) => s.status === 'agendado')?.total ?? 0) },
-      { label: 'Confirmados', value: String(data.distribuicaoStatus.find((s) => s.status === 'confirmado')?.total ?? 0) },
-      { label: 'Concluídos', value: String(data.distribuicaoStatus.find((s) => s.status === 'concluido')?.total ?? 0) },
-    ])
-
-    this.addTable(
-      'Distribuição por status',
-      ['Status', 'Total', 'Percentual'],
-      data.distribuicaoStatus.map((s) => [s.status, s.total, `${total ? Math.round((s.total / total) * 100) : 0}%`])
-    )
-
-    return this.doc.output('blob')
-  }
-
-  public async generateClientes(periodo: RelatoriosPeriodo, data: RelatoriosClinicaData): Promise<Blob> {
-    this.addHeader(periodo, 'clientes', data)
-    
-    this.addTable(
-      'Top clientes por faturamento',
-      ['Cliente', 'Agend.', 'Concl.', 'Faturamento'],
-      data.topClientes.map((c) => [c.nome, c.agendamentosTotal, c.agendamentosConcluidos, `R$ ${c.faturamento.toFixed(2)}`])
-    )
-
-    this.addTable(
-      'Análise detalhada de clientes',
-      ['Cliente', 'Concl.', 'Faturamento', 'Procedimentos', 'Pacotes'],
-      data.clientesAnalise.slice(0, 20).map((c) => [
-        c.nome,
-        c.agendamentosConcluidos,
-        `R$ ${c.faturamento.toFixed(2)}`,
-        c.procedimentos.map((p) => `${p.nome} (${p.total})`).join(', ') || '—',
-        c.pacotes.map((p) => `${p.nome} (${p.total})`).join(', ') || '—',
-      ])
-    )
-
-    return this.doc.output('blob')
-  }
-
-  public async generateGeral(periodo: RelatoriosPeriodo, data: RelatoriosClinicaData): Promise<Blob> {
-    this.addHeader(periodo, 'geral', data)
-    
-    this.addMetricCards([
-      { label: 'Faturamento', value: `R$ ${data.metricas.faturamento.toFixed(2)}` },
-      { label: 'Ticket médio', value: `R$ ${data.metricas.ticketMedio.toFixed(2)}` },
-      { label: 'Conversão', value: `${data.metricas.conversao}%` },
-      { label: 'Novos clientes', value: String(data.metricas.novosClientes) },
-    ])
+    this.addSectionTitle('Gráficos')
+    this.addSerieDiariaChart(data)
+    this.addSectionTitle('Distribuição por status')
+    this.addStatusBars(data)
 
     this.addTable(
       'Procedimentos mais vendidos',
@@ -363,7 +297,7 @@ export class RelatoriosClinicaPDFGenerator {
     )
 
     this.addTable(
-      'Top clientes',
+      'Top clientes (por faturamento)',
       ['Cliente', 'Agend.', 'Concl.', 'Faturamento'],
       data.topClientes.map((c) => [c.nome, c.agendamentosTotal, c.agendamentosConcluidos, `R$ ${c.faturamento.toFixed(2)}`])
     )
@@ -377,24 +311,7 @@ export async function generateRelatoriosClinicaPDF(
   data: RelatoriosClinicaData
 ): Promise<Blob> {
   const generator = new RelatoriosClinicaPDFGenerator(opts.theme || 'purple', opts.empresaNome)
-  const tipo = opts.tipo || 'geral'
-
-  switch (tipo) {
-    case 'vendas':
-      return generator.generateVendas(opts.periodo, data)
-    case 'vendedores':
-      return generator.generateVendedores(opts.periodo, data)
-    case 'produtos':
-      return generator.generateProdutos(opts.periodo, data)
-    case 'financeiro':
-      return generator.generateFinanceiro(opts.periodo, data)
-    case 'pipeline':
-      return generator.generatePipeline(opts.periodo, data)
-    case 'clientes':
-      return generator.generateClientes(opts.periodo, data)
-    default:
-      return generator.generateGeral(opts.periodo, data)
-  }
+  return generator.generate(opts.periodo, data)
 }
 
 export async function downloadRelatoriosClinicaPDF(
@@ -405,8 +322,7 @@ export async function downloadRelatoriosClinicaPDF(
   const url = URL.createObjectURL(pdfBlob)
   const link = document.createElement('a')
   link.href = url
-  const tipo = opts.tipo || 'geral'
-  link.download = `relatorio-${tipo}-${opts.periodo}-${new Date().toISOString().slice(0, 10)}.pdf`
+  link.download = `relatorios-${opts.periodo}-${new Date().toISOString().slice(0, 10)}.pdf`
   document.body.appendChild(link)
   link.click()
   document.body.removeChild(link)

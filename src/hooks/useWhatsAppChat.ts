@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { 
+  checkWhatsAppInstance,
   getConversas,
   getConversaByRemoteJid,
   getMensagens,
@@ -11,12 +12,26 @@ import {
   sendLocationMessage,
   sendReaction,
   editMessage,
+  deleteMessageForEveryone,
   markMessagesAsRead,
   vincularPacienteConversa,
   updateConversa,
   type WhatsAppConversa,
   type WhatsAppMensagem,
 } from '@/services/api/whatsapp-chat'
+
+// =====================================================
+// HOOK: useWhatsAppInstanceCheck
+// Verifica se a clínica tem instância WhatsApp configurada
+// =====================================================
+
+export function useWhatsAppInstanceCheck() {
+  return useQuery({
+    queryKey: ['whatsapp', 'instance-check'],
+    queryFn: checkWhatsAppInstance,
+    staleTime: 5 * 60 * 1000,
+  })
+}
 
 // =====================================================
 // HOOK: useWhatsAppConversas
@@ -258,6 +273,27 @@ export function useEditMessage() {
     }) => editMessage(variables.remoteJid, variables.messageId, variables.newText),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['whatsapp', 'mensagens', variables.conversaId] })
+    },
+  })
+}
+
+// =====================================================
+// HOOK: useDeleteMessage
+// Deleta uma mensagem para todos
+// =====================================================
+
+export function useDeleteMessage() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (variables: {
+      conversaId: string
+      remoteJid: string
+      messageId: string
+    }) => deleteMessageForEveryone(variables.remoteJid, variables.messageId),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['whatsapp', 'mensagens', variables.conversaId] })
+      queryClient.invalidateQueries({ queryKey: ['whatsapp', 'conversas'] })
     },
   })
 }

@@ -753,7 +753,7 @@ export default function WhatsAppPage() {
       } catch {
         // ignore
       }
-    }
+    
 
     poll()
     const t = setInterval(poll, 3000)

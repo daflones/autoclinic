@@ -377,15 +377,6 @@ export function RelatoriosPage() {
       bgColor: 'bg-green-50',
     },
     {
-      id: 7,
-      titulo: 'Procedimentos Realizados / Agendamentos Realizados',
-      descricao: 'Lista detalhada de todos os procedimentos e agendamentos concluídos',
-      tipo: 'agendamentos_realizados',
-      icon: BarChart3,
-      color: 'from-teal-400 to-teal-600',
-      bgColor: 'bg-teal-50',
-    },
-    {
       id: 2,
       titulo: 'Performance de Profissionais',
       descricao: 'Desempenho individual e metas atingidas',
@@ -457,7 +448,6 @@ export function RelatoriosPage() {
     if (activeReportType === 'financeiro') return 'Relatório de Pacotes Vendidos'
     if (activeReportType === 'pipeline') return 'Relatórios de Planos de Tratamento Criados'
     if (activeReportType === 'clientes') return 'Análise de Clientes'
-    if (activeReportType === 'agendamentos_realizados') return 'Procedimentos Realizados / Agendamentos Realizados'
     return 'Relatório'
   }, [activeReportType])
 
@@ -1487,6 +1477,7 @@ export function RelatoriosPage() {
                   </div>
                 </>
               ) : null}
+
 
               {activeReportType === 'financeiro' ? (
                 <>

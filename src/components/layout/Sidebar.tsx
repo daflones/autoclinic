@@ -19,7 +19,9 @@ import {
   BarChart3,
   Clock,
   AlertTriangle,
-  RefreshCw
+  RefreshCw,
+  Stethoscope,
+  CalendarCheck
 } from 'lucide-react'
 
 type AppRole = 'clinica' | 'admin' | 'profissional' | 'recepcao' | 'gestor'
@@ -182,11 +184,27 @@ const menuItems: MenuItem[] = [
     ],
   },
   {
-    label: 'Relatórios',
+    label: 'Relatórios e Analytics',
     icon: BarChart3,
     href: '/app/relatorios',
-    color: 'from-purple-400 to-pink-500',
-    allowedRoles: ADMIN_GESTOR,
+    color: 'from-indigo-400 to-indigo-600',
+    allowedRoles: ['clinica', 'admin', 'gestor'],
+    subItems: [
+      {
+        label: 'Procedimentos Realizados',
+        icon: Stethoscope,
+        href: '/app/relatorios/procedimentos-realizados',
+        color: 'from-teal-300 to-teal-500',
+        allowedRoles: ['clinica', 'admin', 'gestor', 'profissional'],
+      },
+      {
+        label: 'Agendamentos Realizados',
+        icon: CalendarCheck,
+        href: '/app/relatorios/agendamentos-realizados',
+        color: 'from-blue-300 to-blue-500',
+        allowedRoles: ['clinica', 'admin', 'gestor', 'recepcao'],
+      },
+    ]
   },
   {
     label: 'Planos & Assinaturas',

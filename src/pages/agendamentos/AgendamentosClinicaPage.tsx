@@ -191,6 +191,20 @@ export function AgendamentosClinicaPage() {
     motivo: '',
   })
 
+  // Client-side filtering for search by patient name, professional name, title (case-insensitive)
+  const filteredAgendamentos = useMemo(() => {
+    if (!searchTerm.trim()) return agendamentos
+    const term = searchTerm.trim().toLowerCase()
+    return agendamentos.filter((a) => {
+      const titulo = (a.titulo || '').toLowerCase()
+      const pacienteNome = (a.paciente?.nome_completo || '').toLowerCase()
+      const profissionalNome = (a.profissional?.nome || '').toLowerCase()
+      const descricao = (a.descricao || '').toLowerCase()
+      const sala = (a.sala || '').toLowerCase()
+      return titulo.includes(term) || pacienteNome.includes(term) || profissionalNome.includes(term) || descricao.includes(term) || sala.includes(term)
+    })
+  }, [agendamentos, searchTerm])
+
   const stats = useMemo(() => {
     const hoje = new Date().toISOString().split('T')[0]
     const agendamentosHoje = agendamentos.filter((a) => a.data_inicio.startsWith(hoje))
@@ -619,7 +633,7 @@ export function AgendamentosClinicaPage() {
         </div>
       </section>
 
-      <section className="rounded-2xl border border-border/40 bg-background/60 px-4 py-3 shadow-sm backdrop-blur">
+      <section className="relative z-20 overflow-visible rounded-2xl border border-border/40 bg-background/60 px-4 py-3 shadow-sm backdrop-blur">
         <div className="flex flex-wrap items-end gap-3">
           <div className="relative min-w-[160px] flex-1">
             <span className="mb-1 block text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Buscar</span>
@@ -676,13 +690,13 @@ export function AgendamentosClinicaPage() {
                   <SelectItem value="__header_proc" disabled className="text-[10px] font-semibold text-muted-foreground uppercase">— Procedimentos —</SelectItem>
                 )}
                 {(procedimentos || []).map((p: any) => (
-                  <SelectItem key={p.id} value={p.id}>{p.nome}</SelectItem>
+                  <SelectItem key={p.id} value={p.id} className="text-foreground font-medium">{p.nome}</SelectItem>
                 ))}
                 {(protocolosPacotes || []).length > 0 && (
                   <SelectItem value="__header_pac" disabled className="text-[10px] font-semibold text-muted-foreground uppercase">— Pacotes —</SelectItem>
                 )}
                 {((protocolosPacotes || []) as any[]).map((p: any) => (
-                  <SelectItem key={`pac_${p.id}`} value={p.id}>{p.nome}</SelectItem>
+                  <SelectItem key={`pac_${p.id}`} value={p.id} className="text-foreground font-medium">{p.nome}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -870,11 +884,11 @@ export function AgendamentosClinicaPage() {
               <div className="flex items-center justify-center py-8">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
               </div>
-            ) : agendamentos.length === 0 ? (
+            ) : filteredAgendamentos.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">Nenhum agendamento encontrado</div>
             ) : (
               <div className="space-y-4">
-                {agendamentos.map((agendamento) => {
+                {filteredAgendamentos.map((agendamento) => {
                   const statusConfig = STATUS_CONFIG[agendamento.status]
                   const StatusIcon = statusConfig.icon
 

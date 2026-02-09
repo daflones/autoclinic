@@ -319,6 +319,25 @@ export function AgendamentoModals({
       const interval = item.intervalo_recomendado || '7 dias'
       const intervalDays = extractDaysFromInterval(interval)
       
+      // Get the actual procedure name from the item
+      let procedimentoNome = 'Sessão'
+      
+      // Try to get from nome_manual first
+      if (item.nome_manual) {
+        procedimentoNome = item.nome_manual
+      }
+      // If no nome_manual, try to find the procedure by ID
+      else if (item.procedimento_id) {
+        const procedure = procedimentos.find((p: any) => p.id === item.procedimento_id)
+        if (procedure) {
+          procedimentoNome = procedure.nome
+        }
+      }
+      // If still no name, try to get from item.nome
+      else if (item.nome) {
+        procedimentoNome = item.nome
+      }
+      
       for (let i = 0; i < sessionCount; i++) {
         sessions.push({
           id: `package-${packageId}-${item.ordem || 0}-${i}`,
@@ -330,7 +349,7 @@ export function AgendamentoModals({
           duration,
           interval,
           intervalDays,
-          procedimentoNome: item.nome_manual || 'Sessão',
+          procedimentoNome,
           data_inicio: '',
           data_fim: '',
         })
@@ -346,10 +365,10 @@ export function AgendamentoModals({
 
     // Get session configuration from procedure's IA config
     const iaConfig = procedure.ia_config || {}
-    const execucao = iaConfig.execucao || {}
-    const sessionCount = execucao.sessoes_qtd || 1
-    const duration = execucao.duracao_sessao_min || 60
-    const interval = execucao.intervalo_recomendado || '7 dias'
+    const sessoes = iaConfig.sessoes || {}
+    const sessionCount = sessoes.quantidade_recomendada || 1
+    const duration = sessoes.duracao_estimada_min || (procedure as any).duracao_estimada || 60
+    const interval = sessoes.intervalo || '7 dias'
     const intervalDays = extractDaysFromInterval(interval)
 
     const sessions = []
@@ -422,6 +441,43 @@ export function AgendamentoModals({
     setFormState({ ...formState, sessoes_agendamento: updatedSessions } as any)
   }
 
+  const formatLocalDateTime = (date: Date) => {
+    const pad = (n: number) => String(n).padStart(2, '0')
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`
+  }
+
+  const updateSessionDataBatch = (sessionId: string, startValue: string, durationMin: number) => {
+    const currentSessions = (formState as any).sessoes_agendamento || []
+    const allTemplates = getSessionsForSelectedItems()
+    
+    // Start from current sessions, deep copy
+    let updatedSessions = [...currentSessions.map((s: any) => ({ ...s }))]
+    
+    // Ensure ALL template sessions exist in updatedSessions (not just the one being edited)
+    for (const template of allTemplates) {
+      if (!updatedSessions.find((s: any) => s.id === template.id)) {
+        updatedSessions.push({ ...template })
+      }
+    }
+    
+    // Find the session being edited
+    let sessionEntry = updatedSessions.find((s: any) => s.id === sessionId)
+
+    if (sessionEntry) {
+      sessionEntry.data_inicio = startValue
+      if (startValue) {
+        sessionEntry.data_fim = calculateSessionEndTime(startValue, durationMin)
+      }
+
+      // Auto-schedule following sessions if this is session 1
+      if (sessionEntry.sessionNumber === 1) {
+        autoScheduleFollowingSessions(updatedSessions, sessionEntry)
+      }
+    }
+
+    setFormState({ ...formState, sessoes_agendamento: updatedSessions } as any)
+  }
+
   const autoScheduleFollowingSessions = (sessions: any[], firstSession: any) => {
     const relatedSessions = sessions.filter((s: any) => 
       s.type === firstSession.type && 
@@ -430,6 +486,7 @@ export function AgendamentoModals({
     )
 
     const firstStartTime = new Date(firstSession.data_inicio)
+    if (isNaN(firstStartTime.getTime())) return
     
     relatedSessions.forEach((session: any) => {
       const sessionIndex = session.sessionNumber - 1
@@ -438,7 +495,7 @@ export function AgendamentoModals({
       const scheduledDate = new Date(firstStartTime)
       scheduledDate.setDate(scheduledDate.getDate() + daysToAdd)
       
-      const startTime = scheduledDate.toISOString()
+      const startTime = formatLocalDateTime(scheduledDate)
       const endTime = calculateSessionEndTime(startTime, session.duration)
       
       session.data_inicio = startTime
@@ -449,8 +506,9 @@ export function AgendamentoModals({
   const calculateSessionEndTime = (startTime: string, durationMinutes: number) => {
     if (!startTime) return ''
     const start = new Date(startTime)
+    if (isNaN(start.getTime())) return ''
     const end = new Date(start.getTime() + durationMinutes * 60000)
-    return end.toISOString().slice(0, 16)
+    return formatLocalDateTime(end)
   }
 
   const renderSessionScheduling = () => {
@@ -490,11 +548,7 @@ export function AgendamentoModals({
                   <DateTimePicker
                     value={startTime || ''}
                     onChange={(value) => {
-                      updateSessionData(session.id, 'data_inicio', value || '')
-                      if (value) {
-                        const calculatedEndTime = calculateSessionEndTime(value, session.duration)
-                        updateSessionData(session.id, 'data_fim', calculatedEndTime)
-                      }
+                      updateSessionDataBatch(session.id, value || '', session.duration)
                     }}
                     label=""
                   />

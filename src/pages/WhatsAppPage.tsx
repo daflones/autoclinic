@@ -326,9 +326,47 @@ export default function WhatsAppPage() {
     if (localStorageBatchKey) window.localStorage.removeItem(localStorageBatchKey)
   }
 
+  // Build a valid remoteJid from patient data: use remotejid if available, otherwise format whatsapp field
+  const getRemoteJid = (p: any): string => {
+    const existing = String(p?.remotejid ?? p?.remoteJid ?? '').trim()
+    if (existing) return existing
+
+    // Fallback: build from whatsapp field
+    let whatsapp = String(p?.whatsapp ?? '').trim()
+    if (!whatsapp) return ''
+
+    // Remove non-digit characters
+    whatsapp = whatsapp.replace(/\D/g, '')
+    if (!whatsapp) return ''
+
+    // Add country code (55 for Brazil) if not already present
+    if (whatsapp.length <= 11) {
+      whatsapp = '55' + whatsapp
+    }
+
+    return whatsapp + '@s.whatsapp.net'
+  }
+
+  // Display formatter: strip @s.whatsapp.net and country code, show clean phone number
+  const formatWhatsAppDisplay = (remoteJid: string): string => {
+    if (!remoteJid) return ''
+    // Remove @s.whatsapp.net or @lid suffix
+    let number = remoteJid.replace(/@.*$/, '')
+    // Remove country code (55) for display if present
+    if (number.startsWith('55') && number.length >= 12) {
+      number = number.slice(2)
+    }
+    // Format as (XX) XXXXX-XXXX or (XX) XXXX-XXXX
+    if (number.length === 11) {
+      return `(${number.slice(0, 2)}) ${number.slice(2, 7)}-${number.slice(7)}`
+    } else if (number.length === 10) {
+      return `(${number.slice(0, 2)}) ${number.slice(2, 6)}-${number.slice(6)}`
+    }
+    return number
+  }
+
   const pacientesComRemoteJid = (pacientes || []).filter((p: any) => {
-    const remotejid = String((p as any)?.remotejid ?? (p as any)?.remoteJid ?? '').trim()
-    return Boolean(remotejid)
+    return Boolean(getRemoteJid(p))
   })
 
   const passesKanbanFilter = (p: any) => {
@@ -337,30 +375,29 @@ export default function WhatsAppPage() {
   }
 
   const hiddenByPendingCount = pacientesComRemoteJid.filter((p: any) => {
-    const remotejid = String((p as any)?.remotejid ?? (p as any)?.remoteJid ?? '').trim()
+    const remotejid = getRemoteJid(p)
     return remotejid && activeDisparoNumbers.has(remotejid)
   }).length
 
   const hiddenByKanbanCount = pacientesComRemoteJid.filter((p: any) => {
-    const remotejid = String((p as any)?.remotejid ?? (p as any)?.remoteJid ?? '').trim()
+    const remotejid = getRemoteJid(p)
     if (!remotejid) return false
     if (activeDisparoNumbers.has(remotejid)) return false
     return !passesKanbanFilter(p)
   }).length
 
   const pacientesDisponiveisParaDisparo = pacientesComRemoteJid.filter((p: any) => {
-    const remotejid = String((p as any)?.remotejid ?? (p as any)?.remoteJid ?? '').trim()
+    const remotejid = getRemoteJid(p)
     return remotejid && !activeDisparoNumbers.has(remotejid) && passesKanbanFilter(p)
   })
 
   const remoteJidToWhatsApp = new Map<string, string>()
   const remoteJidToPacienteNome = new Map<string, string>()
   pacientesComRemoteJid.forEach((p: any) => {
-    const remotejid = String((p as any)?.remotejid ?? (p as any)?.remoteJid ?? '').trim()
-    const whatsapp = String((p as any)?.whatsapp ?? '').trim()
+    const remotejid = getRemoteJid(p)
     const nome = String((p as any)?.nome_completo ?? '').trim()
     if (remotejid) {
-      remoteJidToWhatsApp.set(remotejid, whatsapp)
+      remoteJidToWhatsApp.set(remotejid, formatWhatsAppDisplay(remotejid))
       remoteJidToPacienteNome.set(remotejid, nome)
     }
   })
@@ -580,8 +617,7 @@ export default function WhatsAppPage() {
       const baseUrl = getWhatsAppServerBaseUrl()
       const items = selectedPacientes
         .map((p: any) => {
-          const remotejid = String((p as any)?.remotejid ?? (p as any)?.remoteJid ?? '').trim()
-          const number = remotejid
+          const number = getRemoteJid(p)
           const sendNumber = String((p as any)?.telefone ?? (p as any)?.whatsapp ?? '').trim()
           const patientName = String(
             (p as any)?.nome_completo ?? (p as any)?.nome ?? (p as any)?.name ?? (p as any)?.full_name ?? ''
@@ -748,7 +784,7 @@ export default function WhatsAppPage() {
             WhatsApp/Automação
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Importante: Faça a conexão da IA ao WhatsApp que será utilizado para rodar a automação.
+            Configure e gerencie a integração do WhatsApp com automação inteligente.
           </p>
         </div>
       </div>
@@ -1110,8 +1146,8 @@ export default function WhatsAppPage() {
                   </thead>
                   <tbody className="divide-y divide-border/60">
                     {pacientesDisponiveisParaDisparo.map((p: any) => {
-                      const remotejid = String((p as any)?.remotejid ?? (p as any)?.remoteJid ?? '').trim()
-                      const display = remotejid
+                      const remotejid = getRemoteJid(p)
+                      const display = formatWhatsAppDisplay(remotejid)
                       const checked = Boolean(selectedPacienteIds[p.id])
                       return (
                         <tr key={p.id} className="hover:bg-muted/20">
@@ -1294,21 +1330,19 @@ export default function WhatsAppPage() {
         // Instância configurada
         <div className={`grid gap-6 ${status?.status === 'open' ? 'md:grid-cols-1' : 'md:grid-cols-2'}`}>
           {/* Status da Instância */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                <span className="flex items-center gap-2">
-                  <Smartphone className="w-5 h-5" />
-                  Status de Conexão
-                </span>
-                {statusLoading ? (
-                  <RefreshCw className="w-4 h-4 animate-spin" />
-                ) : (
-                  getStatusBadge(status?.status)
-                )}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
+          <div className="rounded-3xl border border-border/60 bg-background/80 p-6 shadow-lg backdrop-blur">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <Smartphone className="w-5 h-5 text-primary" />
+                <h2 className="text-lg font-semibold text-foreground">Status de Conexão</h2>
+              </div>
+              {status?.status === 'open' && (
+                <Badge className="bg-green-100 text-green-800">
+                  Conectado
+                </Badge>
+              )}
+            </div>
+            <div className="space-y-6">
               {/* Nome do Perfil */}
               {status?.profileName && (
                 <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-lg border border-green-200 dark:border-green-800">
@@ -1400,22 +1434,20 @@ export default function WhatsAppPage() {
                   </AlertDialogContent>
                 </AlertDialog>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
 
           {/* QR Code - Ocultar quando conectado */}
           {status?.status !== 'open' && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <QrCode className="w-5 h-5" />
-                  Conexão WhatsApp
-                </CardTitle>
-                <CardDescription>
-                  Escaneie o QR Code com seu WhatsApp
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
+            <div className="rounded-3xl border border-border/60 bg-background/80 p-6 shadow-lg backdrop-blur">
+              <div className="flex items-center gap-2 mb-4">
+                <QrCode className="w-5 h-5 text-primary" />
+                <h2 className="text-lg font-semibold text-foreground">Conexão WhatsApp</h2>
+              </div>
+              <p className="text-sm text-muted-foreground mb-6">
+                Escaneie o QR Code com seu WhatsApp
+              </p>
+              <div>
                 {shouldShowQRCode ? (
                   <QRCodeDisplay 
                     instanceName={instance.instanceName}
@@ -1429,8 +1461,8 @@ export default function WhatsAppPage() {
                     <p className="text-muted-foreground">Verificando status da conexão...</p>
                   </div>
                 )}
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           )}
         </div>
       )}
@@ -1465,13 +1497,6 @@ export default function WhatsAppPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Informações importantes */}
-      <Alert>
-        <AlertTriangle className="h-4 w-4" />
-        <AlertDescription>
-          <strong>Importante:</strong> Faça a conexão da IA ao WhatsApp que será utilizado para rodar a automação.
-        </AlertDescription>
-      </Alert>
     </div>
   )
 }

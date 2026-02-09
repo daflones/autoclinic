@@ -42,46 +42,56 @@ export function DatePicker({
     onChange?.(selectedDate)
   }
 
+  const [open, setOpen] = React.useState(false)
+
   return (
-    <Popover>
+    <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button
-          variant={"outline"}
+        <button
+          type="button"
           disabled={disabled}
           className={cn(
-            "w-full justify-start text-left font-normal",
+            "flex h-9 w-full items-center rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background cursor-pointer hover:bg-accent/50 transition-colors",
             !date && "text-muted-foreground",
+            disabled && "opacity-50 cursor-not-allowed",
             className
           )}
         >
-          <CalendarIcon className="mr-2 h-4 w-4" />
-          {date ? format(date, "PPP", { locale: ptBR }) : <span>{placeholder}</span>}
-        </Button>
+          <CalendarIcon className="mr-2 h-4 w-4 shrink-0 text-black dark:text-white" />
+          <span className="truncate">
+            {date ? format(date, "dd/MM/yyyy", { locale: ptBR }) : <span>{placeholder}</span>}
+          </span>
+        </button>
       </PopoverTrigger>
-      <PopoverContent className="w-auto p-0" align="start">
+      <PopoverContent className="w-auto p-0 rounded-xl shadow-lg border" align="start">
         <Calendar
           mode="single"
           selected={date}
-          onSelect={handleSelect}
+          onSelect={(d) => {
+            handleSelect(d)
+            if (d) setOpen(false)
+          }}
           initialFocus
         />
         <div className="p-3 border-t flex gap-2">
           <Button
             variant="outline"
-            className="flex-1"
+            className="flex-1 rounded-lg"
             onClick={() => {
               setDate(undefined)
               onChange?.(undefined)
+              setOpen(false)
             }}
           >
             Fechar
           </Button>
           <Button
-            className="flex-1 bg-purple-600 hover:bg-purple-700"
+            className="flex-1 bg-purple-600 hover:bg-purple-700 text-white rounded-lg"
             onClick={() => {
               const today = new Date()
               setDate(today)
               onChange?.(today)
+              setOpen(false)
             }}
           >
             Hoje

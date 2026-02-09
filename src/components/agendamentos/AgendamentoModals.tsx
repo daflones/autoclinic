@@ -18,9 +18,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Edit, Trash2 } from 'lucide-react'
+import { Edit, Trash2, X } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
+import { DateTimePicker } from '@/components/ui/datetime-picker'
 import type {
   AgendamentoClinica,
   AgendamentoClinicaCreateData,
@@ -45,21 +46,6 @@ const STATUS_CONFIG: Record<
   remarcado: { label: 'Remarcado', variant: 'outline', icon: null },
 }
 
-const toDateTimeLocalValue = (value: string) => {
-  if (!value) return ''
-  const d = new Date(value)
-  if (Number.isNaN(d.getTime())) return value
-  const pad = (n: number) => String(n).padStart(2, '0')
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
-}
-
-const toUtcIsoFromLocalInput = (value: string) => {
-  if (!value) return ''
-  // value is local time without timezone (YYYY-MM-DDTHH:mm)
-  const d = new Date(value)
-  if (Number.isNaN(d.getTime())) return value
-  return d.toISOString()
-}
 
 interface AgendamentoModalsProps {
   isCreateModalOpen: boolean
@@ -155,16 +141,103 @@ export function AgendamentoModals({
     return Number.isFinite(total) ? total : 0
   }
 
+  const generateTitle = (
+    isAvaliacao: boolean,
+    _pacienteId: string | null,
+    procedimentoIds: string[],
+    pacoteIds: string[],
+    _profissionalId: string | null
+  ) => {
+    const parts: string[] = []
+    
+    // Add "Avaliação:" prefix if it's an evaluation
+    if (isAvaliacao) {
+      parts.push('Avaliação:')
+    }
+    
+    // Add procedures with proper prefix
+    if (procedimentoIds.length > 0) {
+      const procedureNames: string[] = []
+      procedimentoIds.forEach(id => {
+        const proc = procedimentos.find((p: any) => p.id === id)
+        if (proc) {
+          procedureNames.push(proc.nome)
+        }
+      })
+      
+      if (procedureNames.length > 0) {
+        const prefix = procedureNames.length === 1 ? 'Procedimento:' : 'Procedimentos:'
+        parts.push(`${prefix} ${procedureNames.join(', ')}`)
+      }
+    }
+    
+    // Add packages with proper prefix
+    if (pacoteIds.length > 0) {
+      const packageNames: string[] = []
+      pacoteIds.forEach(id => {
+        const pack = protocolosPacotes.find((p: any) => p.id === id)
+        if (pack) {
+          packageNames.push(pack.nome)
+        }
+      })
+      
+      if (packageNames.length > 0) {
+        const prefix = packageNames.length === 1 ? 'Protocolo/Pacote:' : 'Protocolos/Pacotes:'
+        parts.push(`${prefix} ${packageNames.join(', ')}`)
+      }
+    }
+    
+    // Return a default title if no parts were added
+    return parts.length > 0 ? parts.join(' - ') : 'Agendamento'
+  }
+
+  const calculateEndTime = (startTime: string, durationMinutes: number): string => {
+    if (!startTime || !durationMinutes) return ''
+    
+    try {
+      const startDate = new Date(startTime)
+      if (isNaN(startDate.getTime())) return ''
+      
+      const endDate = new Date(startDate.getTime() + durationMinutes * 60 * 1000)
+      return endDate.toISOString()
+    } catch {
+      return ''
+    }
+  }
+
+  const getDurationFromTimes = (startTime: string, endTime: string): number => {
+    if (!startTime || !endTime) return 60 // default 60 minutes
+    
+    try {
+      const start = new Date(startTime)
+      const end = new Date(endTime)
+      if (isNaN(start.getTime()) || isNaN(end.getTime())) return 60
+      
+      const diffMs = end.getTime() - start.getTime()
+      return Math.max(15, Math.round(diffMs / (60 * 1000))) // minimum 15 minutes
+    } catch {
+      return 60
+    }
+  }
+
   const toggleCreateProcedimento = (id: string) => {
     const current = normalizeIdArray((formState as any).procedimentos_ids)
     const next = current.includes(id) ? current.filter((x) => x !== id) : [...current, id]
     const pacoteIds = normalizeIdArray((formState as any).protocolos_pacotes_ids)
     const valor = calcValor(next, pacoteIds)
+    const newTitle = generateTitle(
+      Boolean(formState.is_avaliacao),
+      formState.paciente_id || null,
+      next,
+      pacoteIds,
+      formState.profissional_id || null
+    )
     setFormState({
       ...formState,
       procedimentos_ids: next,
       procedimento_id: next[0] ?? null,
       valor,
+      titulo: newTitle,
       plano_tratamento_id: null,
     } as any)
   }
@@ -174,10 +247,18 @@ export function AgendamentoModals({
     const next = current.includes(id) ? current.filter((x) => x !== id) : [...current, id]
     const procedimentoIds = normalizeIdArray((formState as any).procedimentos_ids)
     const valor = calcValor(procedimentoIds, next)
+    const newTitle = generateTitle(
+      Boolean(formState.is_avaliacao),
+      formState.paciente_id || null,
+      procedimentoIds,
+      next,
+      formState.profissional_id || null
+    )
     setFormState({
       ...formState,
       protocolos_pacotes_ids: next,
       valor,
+      titulo: newTitle,
       plano_tratamento_id: null,
     } as any)
   }
@@ -187,11 +268,19 @@ export function AgendamentoModals({
     const next = current.includes(id) ? current.filter((x) => x !== id) : [...current, id]
     const pacoteIds = normalizeIdArray((editFormState as any).protocolos_pacotes_ids)
     const valor = calcValor(next, pacoteIds)
+    const newTitle = generateTitle(
+      Boolean(editFormState.is_avaliacao),
+      editFormState.paciente_id || null,
+      next,
+      pacoteIds,
+      editFormState.profissional_id || null
+    )
     setEditFormState({
       ...editFormState,
       procedimentos_ids: next,
       procedimento_id: next[0] ?? null,
       valor,
+      titulo: newTitle,
       plano_tratamento_id: null,
     } as any)
   }
@@ -201,19 +290,250 @@ export function AgendamentoModals({
     const next = current.includes(id) ? current.filter((x) => x !== id) : [...current, id]
     const procedimentoIds = normalizeIdArray((editFormState as any).procedimentos_ids)
     const valor = calcValor(procedimentoIds, next)
+    const newTitle = generateTitle(
+      Boolean(editFormState.is_avaliacao),
+      editFormState.paciente_id || null,
+      procedimentoIds,
+      next,
+      editFormState.profissional_id || null
+    )
     setEditFormState({
       ...editFormState,
       protocolos_pacotes_ids: next,
       valor,
+      titulo: newTitle,
       plano_tratamento_id: null,
     } as any)
+  }
+
+  const generateSessionsFromPackage = (packageId: string) => {
+    const pack = protocolosPacotes.find((p: any) => p.id === packageId)
+    if (!pack || !pack.conteudo?.estrutura?.itens) return []
+
+    const sessions = []
+    const items = pack.conteudo.estrutura.itens || []
+    
+    for (const item of items) {
+      const sessionCount = item.sessoes_qtd || 1
+      const duration = item.duracao_sessao_min || 60
+      const interval = item.intervalo_recomendado || '7 dias'
+      const intervalDays = extractDaysFromInterval(interval)
+      
+      for (let i = 0; i < sessionCount; i++) {
+        sessions.push({
+          id: `package-${packageId}-${item.ordem || 0}-${i}`,
+          type: 'package',
+          packageId,
+          itemId: item.ordem || 0,
+          sessionNumber: i + 1,
+          totalSessions: sessionCount,
+          duration,
+          interval,
+          intervalDays,
+          procedimentoNome: item.nome_manual || 'Sessão',
+          data_inicio: '',
+          data_fim: '',
+        })
+      }
+    }
+    
+    return sessions
+  }
+
+  const generateSessionsFromProcedure = (procedureId: string) => {
+    const procedure = procedimentos.find((p: any) => p.id === procedureId)
+    if (!procedure) return []
+
+    // Get session configuration from procedure's IA config
+    const iaConfig = procedure.ia_config || {}
+    const execucao = iaConfig.execucao || {}
+    const sessionCount = execucao.sessoes_qtd || 1
+    const duration = execucao.duracao_sessao_min || 60
+    const interval = execucao.intervalo_recomendado || '7 dias'
+    const intervalDays = extractDaysFromInterval(interval)
+
+    const sessions = []
+    for (let i = 0; i < sessionCount; i++) {
+      sessions.push({
+        id: `procedure-${procedureId}-${i}`,
+        type: 'procedure',
+        procedureId,
+        sessionNumber: i + 1,
+        totalSessions: sessionCount,
+        duration,
+        interval,
+        intervalDays,
+        procedimentoNome: procedure.nome,
+        data_inicio: '',
+        data_fim: '',
+      })
+    }
+    
+    return sessions
+  }
+
+  const extractDaysFromInterval = (interval: string): number => {
+    if (!interval) return 7
+    const match = interval.match(/(\d+)\s*dia/i)
+    return match ? parseInt(match[1]) : 7
+  }
+
+  const getSessionsForSelectedItems = () => {
+    const selectedPackageIds = normalizeIdArray((formState as any).protocolos_pacotes_ids)
+    const selectedProcedureIds = normalizeIdArray((formState as any).procedimentos_ids)
+    const allSessions = []
+    
+    // Add sessions from packages
+    for (const packageId of selectedPackageIds) {
+      const packageSessions = generateSessionsFromPackage(packageId)
+      allSessions.push(...packageSessions)
+    }
+    
+    // Add sessions from procedures
+    for (const procedureId of selectedProcedureIds) {
+      const procedureSessions = generateSessionsFromProcedure(procedureId)
+      allSessions.push(...procedureSessions)
+    }
+    
+    return allSessions
+  }
+
+  const updateSessionData = (sessionId: string, field: string, value: string) => {
+    const currentSessions = (formState as any).sessoes_agendamento || []
+    const updatedSessions = currentSessions.map((session: any) => 
+      session.id === sessionId ? { ...session, [field]: value } : session
+    )
+    
+    if (!currentSessions.find((s: any) => s.id === sessionId)) {
+      const sessionTemplate = getSessionsForSelectedItems().find((s: any) => s.id === sessionId)
+      if (sessionTemplate) {
+        updatedSessions.push({ ...sessionTemplate, [field]: value })
+      }
+    }
+    
+    // If updating the first session's start time, automatically schedule other sessions
+    if (field === 'data_inicio' && value) {
+      const session = updatedSessions.find((s: any) => s.id === sessionId)
+      if (session && session.sessionNumber === 1) {
+        autoScheduleFollowingSessions(updatedSessions, session)
+      }
+    }
+    
+    setFormState({ ...formState, sessoes_agendamento: updatedSessions } as any)
+  }
+
+  const autoScheduleFollowingSessions = (sessions: any[], firstSession: any) => {
+    const relatedSessions = sessions.filter((s: any) => 
+      s.type === firstSession.type && 
+      (s.packageId === firstSession.packageId || s.procedureId === firstSession.procedureId) &&
+      s.sessionNumber > 1
+    )
+
+    const firstStartTime = new Date(firstSession.data_inicio)
+    
+    relatedSessions.forEach((session: any) => {
+      const sessionIndex = session.sessionNumber - 1
+      const daysToAdd = sessionIndex * session.intervalDays
+      
+      const scheduledDate = new Date(firstStartTime)
+      scheduledDate.setDate(scheduledDate.getDate() + daysToAdd)
+      
+      const startTime = scheduledDate.toISOString()
+      const endTime = calculateSessionEndTime(startTime, session.duration)
+      
+      session.data_inicio = startTime
+      session.data_fim = endTime
+    })
+  }
+
+  const calculateSessionEndTime = (startTime: string, durationMinutes: number) => {
+    if (!startTime) return ''
+    const start = new Date(startTime)
+    const end = new Date(start.getTime() + durationMinutes * 60000)
+    return end.toISOString().slice(0, 16)
+  }
+
+  const renderSessionScheduling = () => {
+    const sessions = getSessionsForSelectedItems()
+    const currentSessionData = (formState as any).sessoes_agendamento || []
+    
+    if (sessions.length === 0) return null
+
+    return (
+      <div className="space-y-4">
+        <div className="text-sm text-muted-foreground">
+          Configure as datas e horários para cada sessão dos procedimentos e protocolos/pacotes selecionados.
+        </div>
+        
+        {sessions.map((session: any, index: number) => {
+          const sessionData = currentSessionData.find((s: any) => s.id === session.id) || session
+          const startTime = sessionData.data_inicio
+          const endTime = sessionData.data_fim || calculateSessionEndTime(startTime, session.duration)
+          const typeLabel = session.type === 'package' ? 'Pacote' : 'Procedimento'
+          
+          return (
+            <div key={session.id} className="rounded-lg border p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h4 className="font-medium">
+                    {session.procedimentoNome} - Sessão {session.sessionNumber}/{session.totalSessions}
+                  </h4>
+                  <div className="text-xs text-muted-foreground mt-1">
+                    {typeLabel} • Duração: {session.duration} min
+                  </div>
+                </div>
+              </div>
+              
+              <div className="grid gap-3 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label>Data/Hora Início</Label>
+                  <DateTimePicker
+                    value={startTime || ''}
+                    onChange={(value) => {
+                      updateSessionData(session.id, 'data_inicio', value || '')
+                      if (value) {
+                        const calculatedEndTime = calculateSessionEndTime(value, session.duration)
+                        updateSessionData(session.id, 'data_fim', calculatedEndTime)
+                      }
+                    }}
+                    label=""
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label>Data/Hora Fim</Label>
+                  <DateTimePicker
+                    value={endTime || ''}
+                    onChange={(value) => updateSessionData(session.id, 'data_fim', value || '')}
+                    label=""
+                    min={startTime}
+                  />
+                </div>
+              </div>
+              
+              {session.interval && (
+                <div className="text-xs text-muted-foreground">
+                  Intervalo recomendado: {session.interval} ({session.intervalDays} dias)
+                </div>
+              )}
+              
+              {session.sessionNumber === 1 && session.totalSessions > 1 && (
+                <div className="text-xs text-blue-600 bg-blue-50 p-2 rounded">
+                  💡 Configure a primeira sessão e as demais serão agendadas automaticamente respeitando o intervalo de {session.intervalDays} dias.
+                </div>
+              )}
+            </div>
+          )
+        })}
+      </div>
+    )
   }
 
   return (
     <>
       {/* Modal de Criação */}
       <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Novo Agendamento</DialogTitle>
             <DialogDescription>Crie um novo agendamento clínico</DialogDescription>
@@ -243,7 +563,16 @@ export function AgendamentoModals({
                   type="checkbox"
                   className="h-4 w-4 rounded border-border"
                   checked={Boolean(formState.is_avaliacao)}
-                  onChange={(e) => setFormState({ ...formState, is_avaliacao: e.target.checked })}
+                  onChange={(e) => {
+                    const newTitle = generateTitle(
+                      e.target.checked,
+                      formState.paciente_id || null,
+                      normalizeIdArray((formState as any).procedimentos_ids),
+                      normalizeIdArray((formState as any).protocolos_pacotes_ids),
+                      formState.profissional_id || null
+                    )
+                    setFormState({ ...formState, is_avaliacao: e.target.checked, titulo: newTitle })
+                  }}
                 />
                 <Label htmlFor="create-is-avaliacao" className="text-sm">
                   Agendamento é uma avaliação
@@ -268,9 +597,17 @@ export function AgendamentoModals({
                 <Label htmlFor="create-paciente">Paciente</Label>
                 <Select
                   value={formState.paciente_id || 'none'}
-                  onValueChange={(v) =>
-                    setFormState({ ...formState, paciente_id: v === 'none' ? null : v })
-                  }
+                  onValueChange={(v) => {
+                    const newPacienteId = v === 'none' ? null : v
+                    const newTitle = generateTitle(
+                      Boolean(formState.is_avaliacao),
+                      newPacienteId,
+                      normalizeIdArray((formState as any).procedimentos_ids),
+                      normalizeIdArray((formState as any).protocolos_pacotes_ids),
+                      formState.profissional_id || null
+                    )
+                    setFormState({ ...formState, paciente_id: newPacienteId, titulo: newTitle })
+                  }}
                 >
                   <SelectTrigger id="create-paciente">
                     <SelectValue placeholder="Selecione o paciente" />
@@ -290,9 +627,17 @@ export function AgendamentoModals({
                 <Label htmlFor="create-profissional">Profissional</Label>
                 <Select
                   value={formState.profissional_id || 'none'}
-                  onValueChange={(v) =>
-                    setFormState({ ...formState, profissional_id: v === 'none' ? null : v })
-                  }
+                  onValueChange={(v) => {
+                    const newProfissionalId = v === 'none' ? null : v
+                    const newTitle = generateTitle(
+                      Boolean(formState.is_avaliacao),
+                      formState.paciente_id || null,
+                      normalizeIdArray((formState as any).procedimentos_ids),
+                      normalizeIdArray((formState as any).protocolos_pacotes_ids),
+                      newProfissionalId
+                    )
+                    setFormState({ ...formState, profissional_id: newProfissionalId, titulo: newTitle })
+                  }}
                 >
                   <SelectTrigger id="create-profissional">
                     <SelectValue placeholder="Selecione o profissional" />
@@ -311,69 +656,175 @@ export function AgendamentoModals({
 
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="create-procedimento">Procedimentos</Label>
-                <div className="rounded-md border border-border/70 bg-muted/10 p-2 max-h-48 overflow-y-auto space-y-2">
-                  {procedimentos.map((p: any) => {
-                    const checked = normalizeIdArray((formState as any).procedimentos_ids).includes(p.id)
-                    return (
-                      <label key={p.id} className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1 hover:bg-accent">
-                        <input
-                          type="checkbox"
-                          className="h-4 w-4"
-                          checked={checked}
-                          onChange={() => toggleCreateProcedimento(p.id)}
-                        />
-                        <span className="text-sm">{p.nome}</span>
-                      </label>
-                    )
-                  })}
-                </div>
+                <Label>Procedimentos</Label>
+                <Select
+                  value="none"
+                  onValueChange={(v) => {
+                    if (v !== 'none') {
+                      toggleCreateProcedimento(v)
+                    }
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecionar procedimentos" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Selecionar procedimentos</SelectItem>
+                    {procedimentos.map((p: any) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        {p.nome}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {normalizeIdArray((formState as any).procedimentos_ids).length > 0 && (
+                  <div className="space-y-2">
+                    {normalizeIdArray((formState as any).procedimentos_ids).map((id: string) => {
+                      const proc = procedimentos.find((p: any) => p.id === id)
+                      return (
+                        <div key={id} className="flex items-center justify-between gap-2 rounded-md border p-2 bg-muted/20">
+                          <span className="text-sm font-medium">{proc?.nome || id}</span>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => toggleCreateProcedimento(id)}
+                            className="h-6 w-6 p-0 hover:bg-destructive hover:text-destructive-foreground"
+                          >
+                            <X className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="create-pacote">Protocolos/Pacotes</Label>
-                <div className="rounded-md border border-border/70 bg-muted/10 p-2 max-h-48 overflow-y-auto space-y-2">
-                  {protocolosPacotes.map((p: any) => {
-                    const checked = normalizeIdArray((formState as any).protocolos_pacotes_ids).includes(p.id)
-                    return (
-                      <label key={p.id} className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1 hover:bg-accent">
-                        <input
-                          type="checkbox"
-                          className="h-4 w-4"
-                          checked={checked}
-                          onChange={() => toggleCreatePacote(p.id)}
-                        />
-                        <span className="text-sm">{p.nome}</span>
-                      </label>
-                    )
-                  })}
-                </div>
+                <Label>Protocolos/Pacotes</Label>
+                <Select
+                  value="none"
+                  onValueChange={(v) => {
+                    if (v !== 'none') {
+                      toggleCreatePacote(v)
+                    }
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecionar pacotes" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Selecionar pacotes</SelectItem>
+                    {protocolosPacotes.map((p: any) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        {p.nome}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {normalizeIdArray((formState as any).protocolos_pacotes_ids).length > 0 && (
+                  <div className="space-y-2">
+                    {normalizeIdArray((formState as any).protocolos_pacotes_ids).map((id: string) => {
+                      const pack = protocolosPacotes.find((p: any) => p.id === id)
+                      return (
+                        <div key={id} className="flex items-center justify-between gap-2 rounded-md border p-2 bg-muted/20">
+                          <span className="text-sm font-medium">{pack?.nome || id}</span>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => toggleCreatePacote(id)}
+                            className="h-6 w-6 p-0 hover:bg-destructive hover:text-destructive-foreground"
+                          >
+                            <X className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
                 {normalizeIdArray((formState as any).protocolos_pacotes_ids).length > 0 && !formState.paciente_id && (
                   <p className="text-xs text-muted-foreground">Selecione um paciente para vincular os pacotes.</p>
                 )}
               </div>
+
+              {/* Session Scheduling Interface */}
+              {(normalizeIdArray((formState as any).protocolos_pacotes_ids).length > 0 || 
+                normalizeIdArray((formState as any).procedimentos_ids).length > 0) && (
+                <div className="space-y-4">
+                  <Label className="text-base font-semibold">Agendamento das Sessões</Label>
+                  {renderSessionScheduling()}
+                </div>
+              )}
             </div>
 
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid gap-4 md:grid-cols-3">
               <div className="space-y-2">
-                <Label htmlFor="create-data-inicio">Data/Hora Início *</Label>
-                <Input
-                  id="create-data-inicio"
-                  type="datetime-local"
-                  value={toDateTimeLocalValue(formState.data_inicio)}
-                  onChange={(e) =>
-                    setFormState({ ...formState, data_inicio: toUtcIsoFromLocalInput(e.target.value) })
-                  }
+                <DateTimePicker
+                  value={formState.data_inicio || ''}
+                  onChange={(value) => {
+                    const currentDuration = getDurationFromTimes(formState.data_inicio, formState.data_fim)
+                    const newEndTime = calculateEndTime(value, currentDuration)
+                    setFormState({ 
+                      ...formState, 
+                      data_inicio: value,
+                      data_fim: newEndTime || formState.data_fim
+                    })
+                  }}
+                  label="Data/Hora Início"
+                  required
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="create-data-fim">Data/Hora Fim *</Label>
-                <Input
-                  id="create-data-fim"
-                  type="datetime-local"
-                  value={toDateTimeLocalValue(formState.data_fim)}
-                  onChange={(e) => setFormState({ ...formState, data_fim: toUtcIsoFromLocalInput(e.target.value) })}
+                <Label>Duração (min) *</Label>
+                <div className="space-y-1">
+                  <Input
+                    type="number"
+                    min="15"
+                    max="480"
+                    value={getDurationFromTimes(formState.data_inicio, formState.data_fim)}
+                    onChange={(e) => {
+                      const duration = parseInt(e.target.value) || 60
+                      const newEndTime = calculateEndTime(formState.data_inicio, duration)
+                      if (newEndTime) {
+                        setFormState({ ...formState, data_fim: newEndTime })
+                      }
+                    }}
+                    placeholder="60"
+                    className="text-center text-sm h-8"
+                  />
+                  <div className="flex flex-wrap gap-1">
+                    {[15, 30, 45, 60, 90, 120].map((minutes) => (
+                      <Button
+                        key={minutes}
+                        type="button"
+                        variant={getDurationFromTimes(formState.data_inicio, formState.data_fim) === minutes ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => {
+                          const newEndTime = calculateEndTime(formState.data_inicio, minutes)
+                          if (newEndTime) {
+                            setFormState({ ...formState, data_fim: newEndTime })
+                          }
+                        }}
+                        className="text-xs h-6 px-2"
+                      >
+                        {minutes}min
+                      </Button>
+                    ))}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    ✓ Duração: {getDurationFromTimes(formState.data_inicio, formState.data_fim)} minutos
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <DateTimePicker
+                  value={formState.data_fim || ''}
+                  onChange={(value) => setFormState({ ...formState, data_fim: value })}
+                  label="Data/Hora Fim"
+                  required
                 />
               </div>
             </div>
@@ -552,7 +1003,7 @@ export function AgendamentoModals({
 
       {/* Modal de Edição */}
       <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Editar Agendamento</DialogTitle>
             <DialogDescription>Atualize as informações do agendamento</DialogDescription>
@@ -581,7 +1032,16 @@ export function AgendamentoModals({
                   type="checkbox"
                   className="h-4 w-4 rounded border-border"
                   checked={Boolean(editFormState.is_avaliacao)}
-                  onChange={(e) => setEditFormState({ ...editFormState, is_avaliacao: e.target.checked })}
+                  onChange={(e) => {
+                    const newTitle = generateTitle(
+                      e.target.checked,
+                      editFormState.paciente_id || null,
+                      normalizeIdArray((editFormState as any).procedimentos_ids),
+                      normalizeIdArray((editFormState as any).protocolos_pacotes_ids),
+                      editFormState.profissional_id || null
+                    )
+                    setEditFormState({ ...editFormState, is_avaliacao: e.target.checked, titulo: newTitle })
+                  }}
                 />
                 <Label htmlFor="edit-is-avaliacao" className="text-sm">
                   Agendamento é uma avaliação
@@ -606,9 +1066,17 @@ export function AgendamentoModals({
                 <Label htmlFor="edit-paciente">Paciente</Label>
                 <Select
                   value={editFormState.paciente_id || 'none'}
-                  onValueChange={(v) =>
-                    setEditFormState({ ...editFormState, paciente_id: v === 'none' ? null : v })
-                  }
+                  onValueChange={(v) => {
+                    const newPacienteId = v === 'none' ? null : v
+                    const newTitle = generateTitle(
+                      Boolean(editFormState.is_avaliacao),
+                      newPacienteId,
+                      normalizeIdArray((editFormState as any).procedimentos_ids),
+                      normalizeIdArray((editFormState as any).protocolos_pacotes_ids),
+                      editFormState.profissional_id || null
+                    )
+                    setEditFormState({ ...editFormState, paciente_id: newPacienteId, titulo: newTitle })
+                  }}
                 >
                   <SelectTrigger id="edit-paciente">
                     <SelectValue />
@@ -628,9 +1096,17 @@ export function AgendamentoModals({
                 <Label htmlFor="edit-profissional">Profissional</Label>
                 <Select
                   value={editFormState.profissional_id || 'none'}
-                  onValueChange={(v) =>
-                    setEditFormState({ ...editFormState, profissional_id: v === 'none' ? null : v })
-                  }
+                  onValueChange={(v) => {
+                    const newProfissionalId = v === 'none' ? null : v
+                    const newTitle = generateTitle(
+                      Boolean(editFormState.is_avaliacao),
+                      editFormState.paciente_id || null,
+                      normalizeIdArray((editFormState as any).procedimentos_ids),
+                      normalizeIdArray((editFormState as any).protocolos_pacotes_ids),
+                      newProfissionalId
+                    )
+                    setEditFormState({ ...editFormState, profissional_id: newProfissionalId, titulo: newTitle })
+                  }}
                 >
                   <SelectTrigger id="edit-profissional">
                     <SelectValue />
@@ -649,69 +1125,166 @@ export function AgendamentoModals({
 
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="edit-procedimento">Procedimentos</Label>
-                <div className="rounded-md border border-border/70 bg-muted/10 p-2 max-h-48 overflow-y-auto space-y-2">
-                  {procedimentos.map((p: any) => {
-                    const checked = normalizeIdArray((editFormState as any).procedimentos_ids).includes(p.id)
-                    return (
-                      <label key={p.id} className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1 hover:bg-accent">
-                        <input
-                          type="checkbox"
-                          className="h-4 w-4"
-                          checked={checked}
-                          onChange={() => toggleEditProcedimento(p.id)}
-                        />
-                        <span className="text-sm">{p.nome}</span>
-                      </label>
-                    )
-                  })}
-                </div>
+                <Label>Procedimentos</Label>
+                <Select
+                  value="none"
+                  onValueChange={(v) => {
+                    if (v !== 'none') {
+                      toggleEditProcedimento(v)
+                    }
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecionar procedimentos" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Selecionar procedimentos</SelectItem>
+                    {procedimentos.map((p: any) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        {p.nome}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {normalizeIdArray((editFormState as any).procedimentos_ids).length > 0 && (
+                  <div className="space-y-2">
+                    {normalizeIdArray((editFormState as any).procedimentos_ids).map((id: string) => {
+                      const proc = procedimentos.find((p: any) => p.id === id)
+                      return (
+                        <div key={id} className="flex items-center justify-between gap-2 rounded-md border p-2 bg-muted/20">
+                          <span className="text-sm font-medium">{proc?.nome || id}</span>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => toggleEditProcedimento(id)}
+                            className="h-6 w-6 p-0 hover:bg-destructive hover:text-destructive-foreground"
+                          >
+                            <X className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="edit-pacote">Protocolos/Pacotes</Label>
-                <div className="rounded-md border border-border/70 bg-muted/10 p-2 max-h-48 overflow-y-auto space-y-2">
-                  {protocolosPacotes.map((p: any) => {
-                    const checked = normalizeIdArray((editFormState as any).protocolos_pacotes_ids).includes(p.id)
-                    return (
-                      <label key={p.id} className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1 hover:bg-accent">
-                        <input
-                          type="checkbox"
-                          className="h-4 w-4"
-                          checked={checked}
-                          onChange={() => toggleEditPacote(p.id)}
-                        />
-                        <span className="text-sm">{p.nome}</span>
-                      </label>
-                    )
-                  })}
-                </div>
+                <Label>Protocolos/Pacotes</Label>
+                <Select
+                  value="none"
+                  onValueChange={(v) => {
+                    if (v !== 'none') {
+                      toggleEditPacote(v)
+                    }
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecionar pacotes" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Selecionar pacotes</SelectItem>
+                    {protocolosPacotes.map((p: any) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        {p.nome}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {normalizeIdArray((editFormState as any).protocolos_pacotes_ids).length > 0 && (
+                  <div className="space-y-2">
+                    {normalizeIdArray((editFormState as any).protocolos_pacotes_ids).map((id: string) => {
+                      const pack = protocolosPacotes.find((p: any) => p.id === id)
+                      return (
+                        <div key={id} className="flex items-center justify-between gap-2 rounded-md border p-2 bg-muted/20">
+                          <span className="text-sm font-medium">{pack?.nome || id}</span>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => toggleEditPacote(id)}
+                            className="h-6 w-6 p-0 hover:bg-destructive hover:text-destructive-foreground"
+                          >
+                            <X className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
                 {normalizeIdArray((editFormState as any).protocolos_pacotes_ids).length > 0 && !editFormState.paciente_id && (
                   <p className="text-xs text-muted-foreground">Selecione um paciente para vincular os pacotes.</p>
                 )}
               </div>
             </div>
 
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid gap-4 md:grid-cols-3">
               <div className="space-y-2">
-                <Label htmlFor="edit-data-inicio">Data/Hora Início *</Label>
-                <Input
-                  id="edit-data-inicio"
-                  type="datetime-local"
-                  value={toDateTimeLocalValue(editFormState.data_inicio)}
-                  onChange={(e) =>
-                    setEditFormState({ ...editFormState, data_inicio: toUtcIsoFromLocalInput(e.target.value) })
-                  }
+                <DateTimePicker
+                  value={editFormState.data_inicio || ''}
+                  onChange={(value) => {
+                    const currentDuration = getDurationFromTimes(editFormState.data_inicio, editFormState.data_fim)
+                    const newEndTime = calculateEndTime(value, currentDuration)
+                    setEditFormState({ 
+                      ...editFormState, 
+                      data_inicio: value,
+                      data_fim: newEndTime || editFormState.data_fim
+                    })
+                  }}
+                  label="Data/Hora Início"
+                  required
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="edit-data-fim">Data/Hora Fim *</Label>
-                <Input
-                  id="edit-data-fim"
-                  type="datetime-local"
-                  value={toDateTimeLocalValue(editFormState.data_fim)}
-                  onChange={(e) => setEditFormState({ ...editFormState, data_fim: toUtcIsoFromLocalInput(e.target.value) })}
+                <Label>Duração (min) *</Label>
+                <div className="space-y-1">
+                  <Input
+                    type="number"
+                    min="15"
+                    max="480"
+                    value={getDurationFromTimes(editFormState.data_inicio, editFormState.data_fim)}
+                    onChange={(e) => {
+                      const duration = parseInt(e.target.value) || 60
+                      const newEndTime = calculateEndTime(editFormState.data_inicio, duration)
+                      if (newEndTime) {
+                        setEditFormState({ ...editFormState, data_fim: newEndTime })
+                      }
+                    }}
+                    placeholder="60"
+                    className="text-center text-sm h-8"
+                  />
+                  <div className="flex flex-wrap gap-1">
+                    {[15, 30, 45, 60, 90, 120].map((minutes) => (
+                      <Button
+                        key={minutes}
+                        type="button"
+                        variant={getDurationFromTimes(editFormState.data_inicio, editFormState.data_fim) === minutes ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => {
+                          const newEndTime = calculateEndTime(editFormState.data_inicio, minutes)
+                          if (newEndTime) {
+                            setEditFormState({ ...editFormState, data_fim: newEndTime })
+                          }
+                        }}
+                        className="text-xs h-6 px-2"
+                      >
+                        {minutes}min
+                      </Button>
+                    ))}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    ✓ Duração: {getDurationFromTimes(editFormState.data_inicio, editFormState.data_fim)} minutos
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <DateTimePicker
+                  value={editFormState.data_fim || ''}
+                  onChange={(value) => setEditFormState({ ...editFormState, data_fim: value })}
+                  label="Data/Hora Fim"
+                  required
                 />
               </div>
             </div>

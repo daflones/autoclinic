@@ -451,189 +451,171 @@ export function ProcedimentosPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <header className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Procedimentos</h1>
-          <p className="text-muted-foreground">Gerencie os procedimentos e tratamentos oferecidos</p>
+          <h1 className="text-3xl font-semibold tracking-tight text-foreground">Procedimentos</h1>
+          <p className="text-sm text-muted-foreground">Gerencie os procedimentos e tratamentos oferecidos</p>
         </div>
         <Button onClick={handleOpenCreate}>
           <Plus className="mr-2 h-4 w-4" />
           Novo Procedimento
         </Button>
-      </div>
+      </header>
 
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total</CardTitle>
-            <Stethoscope className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.total}</div>
-            <p className="text-xs text-muted-foreground">Procedimentos cadastrados</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Ativos</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.ativos}</div>
-            <p className="text-xs text-muted-foreground">Disponíveis para agendamento</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Inativos</CardTitle>
-            <Clock className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.inativos}</div>
-            <p className="text-xs text-muted-foreground">Temporariamente indisponíveis</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Filter className="h-5 w-5" />
-            Filtros
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-3">
-            <div className="space-y-2">
-              <Label htmlFor="search">Buscar</Label>
-              <div className="relative">
-                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="search"
-                  placeholder="Nome, código ou descrição..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-8"
-                />
-              </div>
+      <section className="grid gap-4 md:grid-cols-3">
+        <div className="rounded-2xl border border-border/60 bg-gradient-to-br from-primary/10 via-background to-background p-5 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Total</p>
+              <h3 className="mt-2 text-2xl font-semibold text-foreground">{stats.total}</h3>
             </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="status-filter">Status</Label>
-              <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as any)}>
-                <SelectTrigger id="status-filter">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos</SelectItem>
-                  {Object.entries(STATUS_CONFIG).map(([key, config]) => (
-                    <SelectItem key={key} value={key}>
-                      {config.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="categoria-filter">Categoria</Label>
-              <Select value={categoriaFilter} onValueChange={setCategoriaFilter}>
-                <SelectTrigger id="categoria-filter">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todas</SelectItem>
-                  {categorias.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>
-                      {c.nome}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <div className="rounded-full bg-primary/10 p-2 text-primary">
+              <Stethoscope className="h-5 w-5" />
             </div>
           </div>
-        </CardContent>
-      </Card>
+          <p className="mt-2 text-xs text-muted-foreground">Procedimentos cadastrados</p>
+        </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Procedimentos ({count})</CardTitle>
-          <CardDescription>Lista de todos os procedimentos cadastrados</CardDescription>
-        </CardHeader>
-        <CardContent>
+        <div className="rounded-2xl border border-border/60 bg-gradient-to-br from-emerald-500/10 via-background to-background p-5 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Ativos</p>
+              <h3 className="mt-2 text-2xl font-semibold text-foreground">{stats.ativos}</h3>
+            </div>
+            <div className="rounded-full bg-emerald-500/10 p-2 text-emerald-500">
+              <DollarSign className="h-5 w-5" />
+            </div>
+          </div>
+          <p className="mt-2 text-xs text-muted-foreground">Disponíveis para agendamento</p>
+        </div>
+
+        <div className="rounded-2xl border border-border/60 bg-gradient-to-br from-rose-500/10 via-background to-background p-5 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Inativos</p>
+              <h3 className="mt-2 text-2xl font-semibold text-foreground">{stats.inativos}</h3>
+            </div>
+            <div className="rounded-full bg-rose-500/10 p-2 text-rose-500">
+              <Clock className="h-5 w-5" />
+            </div>
+          </div>
+          <p className="mt-2 text-xs text-muted-foreground">Temporariamente indisponíveis</p>
+        </div>
+      </section>
+
+      <section className="rounded-3xl border border-border/60 bg-background/80 p-6 shadow-lg backdrop-blur">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold text-foreground">Procedimentos ({count})</h2>
+          <span className="text-sm text-muted-foreground">Exibindo {procedimentos.length} registros</span>
+        </div>
+
+        <div className="flex flex-col gap-4 md:flex-row md:items-center mb-6">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Nome, código ou descrição..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+          <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as any)}>
+            <SelectTrigger className="w-full md:w-40">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos os status</SelectItem>
+              {Object.entries(STATUS_CONFIG).map(([key, config]) => (
+                <SelectItem key={key} value={key}>
+                  {config.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={categoriaFilter} onValueChange={setCategoriaFilter}>
+            <SelectTrigger className="w-full md:w-48">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas as categorias</SelectItem>
+              {categorias.map((c) => (
+                <SelectItem key={c.id} value={c.id}>
+                  {c.nome}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="overflow-hidden rounded-2xl border border-border/50">
           {isLoading ? (
-            <div className="flex items-center justify-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            <div className="flex items-center justify-center py-12 text-muted-foreground">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
             </div>
           ) : procedimentos.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
+            <div className="text-center py-12 text-muted-foreground">
               Nenhum procedimento encontrado
             </div>
           ) : (
-            <div className="space-y-4">
-              {procedimentos.map((procedimento) => {
-                const statusConfig = STATUS_CONFIG[procedimento.status]
-
-                return (
-                  <div
-                    key={procedimento.id}
-                    className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent transition-colors cursor-pointer"
-                    onClick={() => handleOpenDetails(procedimento)}
-                  >
-                    <div className="flex-1 space-y-1">
-                      <div className="flex items-center gap-2">
-                        <h3 className="font-semibold">{procedimento.nome}</h3>
-                        <Badge variant={statusConfig.variant}>{statusConfig.label}</Badge>
-                        {procedimento.categoria && (
-                          <Badge variant="outline">{procedimento.categoria.nome}</Badge>
+            <table className="min-w-full divide-y divide-border/60 text-sm">
+              <thead className="bg-muted/40 text-muted-foreground">
+                <tr>
+                  <th scope="col" className="px-5 py-3 text-left font-medium">Procedimento</th>
+                  <th scope="col" className="px-5 py-3 text-left font-medium">Categoria</th>
+                  <th scope="col" className="px-5 py-3 text-left font-medium">Valor</th>
+                  <th scope="col" className="px-5 py-3 text-left font-medium">Duração</th>
+                  <th scope="col" className="px-5 py-3 text-left font-medium">Status</th>
+                  <th scope="col" className="px-5 py-3 text-right font-medium">Ações</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border/60 bg-background/40">
+                {procedimentos.map((procedimento) => {
+                  const statusConfig = STATUS_CONFIG[procedimento.status]
+                  return (
+                    <tr key={procedimento.id} className="hover:bg-muted/30 cursor-pointer transition-colors" onClick={() => handleOpenDetails(procedimento)}>
+                      <td className="px-5 py-4 align-top">
+                        <div className="font-medium text-foreground">{procedimento.nome}</div>
+                        {procedimento.codigo && <p className="text-xs text-muted-foreground">Cód: {procedimento.codigo}</p>}
+                        {procedimento.descricao && <p className="text-xs text-muted-foreground line-clamp-1">{procedimento.descricao}</p>}
+                      </td>
+                      <td className="px-5 py-4 align-top">
+                        {procedimento.categoria ? (
+                          <span className="rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-medium text-primary">{procedimento.categoria.nome}</span>
+                        ) : (
+                          <span className="text-xs text-muted-foreground/60">—</span>
                         )}
-                      </div>
-                      {procedimento.descricao && (
-                        <p className="text-sm text-muted-foreground">{procedimento.descricao}</p>
-                      )}
-                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                        {procedimento.codigo && <span>Código: {procedimento.codigo}</span>}
-                        <span className="flex items-center gap-1">
-                          <DollarSign className="h-3 w-3" />
-                          {formatCurrency(procedimento.valor_base)}
+                      </td>
+                      <td className="px-5 py-4 align-top text-muted-foreground">
+                        <span className="flex items-center gap-1 text-xs"><DollarSign className="h-3 w-3" />{formatCurrency(procedimento.valor_base)}</span>
+                      </td>
+                      <td className="px-5 py-4 align-top text-muted-foreground">
+                        <span className="flex items-center gap-1 text-xs"><Clock className="h-3 w-3" />{formatDuration(procedimento.duracao_estimada)}</span>
+                      </td>
+                      <td className="px-5 py-4 align-top">
+                        <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ${
+                          procedimento.status === 'ativo' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300'
+                          : procedimento.status === 'inativo' ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300'
+                          : 'bg-rose-100 text-rose-700 dark:bg-rose-500/10 dark:text-rose-300'
+                        }`}>
+                          {statusConfig.label}
                         </span>
-                        <span className="flex items-center gap-1">
-                          <Clock className="h-3 w-3" />
-                          {formatDuration(procedimento.duracao_estimada)}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          handleOpenEdit(procedimento)
-                        }}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          handleRequestDelete(procedimento)
-                        }}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
+                      </td>
+                      <td className="px-5 py-4 align-top text-right">
+                        <Button variant="ghost" size="icon" className="text-primary hover:text-primary hover:bg-primary/10" onClick={(e) => { e.stopPropagation(); handleOpenEdit(procedimento) }}>
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="text-rose-600 hover:text-rose-700 hover:bg-rose-500/10" onClick={(e) => { e.stopPropagation(); handleRequestDelete(procedimento) }}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </section>
 
       {/* Modal de Detalhes */}
       <Dialog
@@ -809,11 +791,11 @@ export function ProcedimentosPage() {
                       <div className="space-y-4">
                         <div className="grid gap-4 md:grid-cols-2">
                           <div className="space-y-2">
-                            <Label>Descrição técnica (profissional)</Label>
+                            <Label>Descrição técnica</Label>
                             <div className="text-sm text-muted-foreground whitespace-pre-wrap">{descProf || '—'}</div>
                           </div>
                           <div className="space-y-2">
-                            <Label>Como funciona (leigo)</Label>
+                            <Label>Como funciona</Label>
                             <div className="text-sm text-muted-foreground whitespace-pre-wrap">{comoFunciona || '—'}</div>
                           </div>
                         </div>
@@ -954,7 +936,7 @@ export function ProcedimentosPage() {
             <div className="space-y-4">
               <div className="grid gap-4 md:grid-cols-3">
                 <div className="space-y-2">
-                  <Label htmlFor="create-nome">Nome *</Label>
+                  <Label className="text-xs" htmlFor="create-nome">Nome *</Label>
                   <Input
                     id="create-nome"
                     value={formState.nome}
@@ -964,7 +946,7 @@ export function ProcedimentosPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="create-codigo">Código</Label>
+                  <Label className="text-xs" htmlFor="create-codigo">Código</Label>
                   <Input
                     id="create-codigo"
                     value={formState.codigo || ''}
@@ -974,7 +956,7 @@ export function ProcedimentosPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="edit-status">Status</Label>
+                  <Label className="text-xs" htmlFor="edit-status">Status</Label>
                   <Select
                     value={formState.status}
                     onValueChange={(v) =>
@@ -996,7 +978,7 @@ export function ProcedimentosPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="create-categoria">Categoria</Label>
+                <Label className="text-xs" htmlFor="create-categoria">Categoria</Label>
                 <Select
                   value={formState.categoria_id || 'none'}
                   onValueChange={(v) =>
@@ -1018,7 +1000,7 @@ export function ProcedimentosPage() {
               </div>
 
             <div className="space-y-2">
-              <Label htmlFor="create-descricao">Descrição</Label>
+              <Label className="text-xs" htmlFor="create-descricao">Descrição</Label>
               <Textarea
                 id="create-descricao"
                 value={formState.descricao || ''}
@@ -1029,7 +1011,7 @@ export function ProcedimentosPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="create-detalhes">Detalhes</Label>
+              <Label className="text-xs" htmlFor="create-detalhes">Detalhes</Label>
               <Textarea
                 id="create-detalhes"
                 value={formState.detalhes || ''}
@@ -1041,7 +1023,7 @@ export function ProcedimentosPage() {
 
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="create-cuidados-durante">Cuidados durante</Label>
+                <Label className="text-xs" htmlFor="create-cuidados-durante">Cuidados durante</Label>
                 <Textarea
                   id="create-cuidados-durante"
                   value={formState.cuidados_durante || ''}
@@ -1052,7 +1034,7 @@ export function ProcedimentosPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="create-cuidados-apos">Cuidados após</Label>
+                <Label className="text-xs" htmlFor="create-cuidados-apos">Cuidados após</Label>
                 <Textarea
                   id="create-cuidados-apos"
                   value={formState.cuidados_apos || ''}
@@ -1065,7 +1047,7 @@ export function ProcedimentosPage() {
 
             <div className="grid gap-4 md:grid-cols-3">
               <div className="space-y-2">
-                <Label htmlFor="duracao-sessao">Duração da sessão (minutos)</Label>
+                <Label className="text-xs" htmlFor="duracao-sessao">Duração da sessão</Label>
                 <Input
                   id="duracao-sessao"
                   type="number"
@@ -1079,7 +1061,7 @@ export function ProcedimentosPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="intervalo-sessoes">Tempo de intervalo entre sessões</Label>
+                <Label className="text-xs" htmlFor="intervalo-sessoes">Intervalo entre sessões</Label>
                 <Input
                   id="intervalo-sessoes"
                   value={getIA('sessoes.intervalo', '')}
@@ -1088,7 +1070,7 @@ export function ProcedimentosPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="qtd-sessoes">Quantidade recomendada de sessões</Label>
+                <Label className="text-xs" htmlFor="qtd-sessoes">Quantidade de sessões</Label>
                 <Input
                   id="qtd-sessoes"
                   type="number"
@@ -1103,67 +1085,70 @@ export function ProcedimentosPage() {
               </div>
             </div>
 
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label>Quem executa (pode selecionar mais de um)</Label>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button type="button" variant="outline" className="justify-between">
-                      Selecionar profissionais
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent className="max-h-72 overflow-auto">
-                    {profissionaisClinica.map((p: any) => {
-                      const selectedIds = (getIA('execucao.profissionais_ids', []) as string[]) || []
-                      const checked = selectedIds.includes(p.id)
-                      return (
-                        <DropdownMenuCheckboxItem
-                          key={p.id}
-                          checked={checked}
-                          onCheckedChange={() =>
-                            setIA('execucao.profissionais_ids', toggleMulti(selectedIds, p.id))
-                          }
-                        >
-                          {p.nome}
-                        </DropdownMenuCheckboxItem>
-                      )
-                    })}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-                {(() => {
-                  const ids = (getIA('execucao.profissionais_ids', []) as string[]) || []
-                  if (ids.length === 0) {
-                    return <div className="text-xs text-muted-foreground">Nenhum selecionado</div>
-                  }
-                  const selected = profissionaisClinica.filter((p: any) => ids.includes(p.id))
-                  return (
-                    <div className="flex flex-wrap gap-2 pt-1">
-                      {selected.map((p: any) => (
-                        <Badge key={p.id} variant="secondary" className="flex items-center gap-2">
-                          <span className="max-w-[220px] truncate">{p.nome}</span>
-                          <button
-                            type="button"
-                            className="rounded-sm opacity-80 hover:opacity-100"
-                            onClick={() => {
-                              const current = (getIA('execucao.profissionais_ids', []) as string[]) || []
-                              setIA('execucao.profissionais_ids', current.filter((x) => x !== p.id))
-                            }}
+            <div className="space-y-3 pt-4 border-t">
+              <Label className="text-base font-semibold">Profissional</Label>
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Quem Executa</Label>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button type="button" variant="outline" className="justify-between">
+                        Selecionar profissionais
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent className="max-h-72 overflow-auto">
+                      {profissionaisClinica.map((p: any) => {
+                        const selectedIds = (getIA('execucao.profissionais_ids', []) as string[]) || []
+                        const checked = selectedIds.includes(p.id)
+                        return (
+                          <DropdownMenuCheckboxItem
+                            key={p.id}
+                            checked={checked}
+                            onCheckedChange={() =>
+                              setIA('execucao.profissionais_ids', toggleMulti(selectedIds, p.id))
+                            }
                           >
-                            ×
-                          </button>
-                        </Badge>
-                      ))}
-                    </div>
-                  )
-                })()}
-              </div>
-              <div className="space-y-2">
-                <Label>Equipamentos usados (opcional)</Label>
-                <ListEditor
-                  placeholder="Adicione equipamentos"
-                  items={normalizeStringList(getIA('tecnica.equipamentos', []))}
-                  onChange={(items) => setIA('tecnica.equipamentos', items)}
-                />
+                            {p.nome}
+                          </DropdownMenuCheckboxItem>
+                        )
+                      })}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                  {(() => {
+                    const ids = (getIA('execucao.profissionais_ids', []) as string[]) || []
+                    if (ids.length === 0) {
+                      return <div className="text-xs text-muted-foreground">Nenhum selecionado</div>
+                    }
+                    const selected = profissionaisClinica.filter((p: any) => ids.includes(p.id))
+                    return (
+                      <div className="flex flex-wrap gap-2 pt-1">
+                        {selected.map((p: any) => (
+                          <Badge key={p.id} variant="secondary" className="flex items-center gap-2">
+                            <span className="max-w-[220px] truncate">{p.nome}</span>
+                            <button
+                              type="button"
+                              className="rounded-sm opacity-80 hover:opacity-100"
+                              onClick={() => {
+                                const current = (getIA('execucao.profissionais_ids', []) as string[]) || []
+                                setIA('execucao.profissionais_ids', current.filter((x) => x !== p.id))
+                              }}
+                            >
+                              ×
+                            </button>
+                          </Badge>
+                        ))}
+                      </div>
+                    )
+                  })()}
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs">Equipamentos usados</Label>
+                  <ListEditor
+                    placeholder="Adicione equipamentos"
+                    items={normalizeStringList(getIA('tecnica.equipamentos', []))}
+                    onChange={(items) => setIA('tecnica.equipamentos', items)}
+                  />
+                </div>
               </div>
             </div>
 
@@ -1291,15 +1276,15 @@ export function ProcedimentosPage() {
                 <Label className="text-base font-semibold">Descrição técnica</Label>
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="grid gap-2">
-                    <Label>Descrição técnica (profissional)</Label>
+                    <Label className="text-xs">Descrição técnica</Label>
                     <Textarea value={getIA('tecnica.descricao_profissional', '')} onChange={(e) => setIA('tecnica.descricao_profissional', e.target.value)} rows={4} />
                   </div>
                   <div className="grid gap-2">
-                    <Label>Como funciona (leigo)</Label>
+                    <Label className="text-xs">Como funciona</Label>
                     <Textarea value={getIA('tecnica.como_funciona_leigo', '')} onChange={(e) => setIA('tecnica.como_funciona_leigo', e.target.value)} rows={4} />
                   </div>
                   <div className="grid gap-2 md:col-span-2">
-                    <Label>Tecnologia</Label>
+                    <Label className="text-xs">Tecnologia</Label>
                     <Textarea value={getIA('tecnica.tecnologia', '')} onChange={(e) => setIA('tecnica.tecnologia', e.target.value)} rows={4} />
                   </div>
                   <div className="grid gap-2">
@@ -1327,15 +1312,15 @@ export function ProcedimentosPage() {
                     />
                   </div>
                   <div className="grid gap-2">
-                    <Label>Tempo de recuperação</Label>
+                    <Label className="text-xs">Tempo de recuperação</Label>
                     <Input value={getIA('tecnica.tempo_recuperacao', '')} onChange={(e) => setIA('tecnica.tempo_recuperacao', e.target.value)} />
                   </div>
                   <div className="grid gap-2">
-                    <Label>Quando começam os resultados</Label>
+                    <Label className="text-xs">Quando começam os resultados</Label>
                     <Input value={getIA('tecnica.quando_comecam_resultados', '')} onChange={(e) => setIA('tecnica.quando_comecam_resultados', e.target.value)} />
                   </div>
                   <div className="grid gap-2">
-                    <Label>Quanto tempo duram os resultados</Label>
+                    <Label className="text-xs">Quanto tempo duram os resultados</Label>
                     <Input value={getIA('tecnica.quanto_tempo_duram_resultados', '')} onChange={(e) => setIA('tecnica.quanto_tempo_duram_resultados', e.target.value)} />
                   </div>
                 </div>
@@ -1485,29 +1470,40 @@ export function ProcedimentosPage() {
                 <Label className="text-base font-semibold">Gatilhos de venda específicos</Label>
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="grid gap-2">
-                    <Label>O que torna esse procedimento superior a outros</Label>
+                    <Label className="text-xs">O que torna esse procedimento superior a outros</Label>
                     <Textarea value={getIA('vendas.superioridade', '')} onChange={(e) => setIA('vendas.superioridade', e.target.value)} rows={4} />
                   </div>
                   <div className="grid gap-2">
-                    <Label>Por que vale a pena fazer na clínica</Label>
+                    <Label className="text-xs">Por que vale a pena fazer na clínica</Label>
                     <Textarea value={getIA('vendas.porque_na_clinica', '')} onChange={(e) => setIA('vendas.porque_na_clinica', e.target.value)} rows={4} />
                   </div>
                   <div className="grid gap-2">
-                    <Label>Diferenciais do equipamento ou técnica</Label>
+                    <Label className="text-xs">Diferenciais do equipamento ou técnica</Label>
                     <Textarea value={getIA('vendas.diferenciais_tecnica', '')} onChange={(e) => setIA('vendas.diferenciais_tecnica', e.target.value)} rows={4} />
                   </div>
-                  <div className="grid gap-2 md:col-span-2">
-                    <Label>Selo de segurança</Label>
-                    <Textarea value={getIA('vendas.selo_seguranca', '')} onChange={(e) => setIA('vendas.selo_seguranca', e.target.value)} rows={3} />
+                  <div className="grid gap-2">
+                    <Label className="text-xs">Selo de segurança</Label>
+                    <Textarea value={getIA('vendas.selo_seguranca', '')} onChange={(e) => setIA('vendas.selo_seguranca', e.target.value)} rows={4} />
                   </div>
                   <div className="grid gap-2">
-                    <Label>Garantias (se houver)</Label>
-                    <Textarea value={getIA('vendas.garantias', '')} onChange={(e) => setIA('vendas.garantias', e.target.value)} rows={3} />
+                    <Label className="text-xs">Garantias</Label>
+                    <Textarea value={getIA('vendas.garantias', '')} onChange={(e) => setIA('vendas.garantias', e.target.value)} rows={4} />
                   </div>
                 </div>
 
                 <div className="space-y-3 pt-4 border-t">
                   <Label className="text-sm font-semibold">Depoimentos</Label>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      const items = [ ...(((getIA('midias.depoimentos', []) as any[]) || []) as any[]) ]
+                      items.push({ nome: '', idade: null, texto: '' })
+                      setIA('midias.depoimentos', items)
+                    }}
+                  >
+                    Adicionar depoimento
+                  </Button>
                   {(((getIA('midias.depoimentos', []) as any[]) || []) as any[]).map((d: any, idx) => (
                     <div key={idx} className="grid gap-3 md:grid-cols-3 border rounded-lg p-3">
                       <div className="grid gap-2">
@@ -1560,17 +1556,6 @@ export function ProcedimentosPage() {
                       </div>
                     </div>
                   ))}
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => {
-                      const items = [ ...(((getIA('midias.depoimentos', []) as any[]) || []) as any[]) ]
-                      items.push({ nome: '', idade: null, texto: '' })
-                      setIA('midias.depoimentos', items)
-                    }}
-                  >
-                    Adicionar depoimento
-                  </Button>
                 </div>
 
                 <div className="grid gap-4 md:grid-cols-2 pt-4 border-t">
@@ -1638,163 +1623,184 @@ export function ProcedimentosPage() {
 
               <div className="space-y-3 pt-4 border-t">
                 <Label className="text-base font-semibold">Upsell inteligente</Label>
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div className="grid gap-2">
-                    <Label>Procedimentos complementares</Label>
-                    <DropdownMenu modal={false}>
-                      <DropdownMenuTrigger asChild>
-                        <Button type="button" variant="outline" className="justify-between">
-                          {(() => {
-                            const ids = (getIA('upsell.complementares_ids', []) as string[]) || []
-                            if (ids.length === 0) return 'Selecionar procedimentos'
-                            const nomes = procedimentos
-                              .filter((p) => ids.includes(p.id))
-                              .map((p) => p.nome)
-                            return nomes.join(', ')
-                          })()}
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent className="max-h-72 overflow-auto">
-                        {procedimentos.map((p) => {
-                          const ids = (getIA('upsell.complementares_ids', []) as string[]) || []
-                          const checked = ids.includes(p.id)
-                          return (
-                            <DropdownMenuCheckboxItem
-                              key={p.id}
-                              checked={checked}
-                              onCheckedChange={() => setIA('upsell.complementares_ids', toggleMulti(ids, p.id))}
-                              onSelect={(e) => e.preventDefault()}
-                            >
-                              {p.nome}
-                            </DropdownMenuCheckboxItem>
-                          )
-                        })}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                  <div className="grid gap-2">
-                    <Label>Procedimentos de upsell (upgrade direto)</Label>
-                    <DropdownMenu modal={false}>
-                      <DropdownMenuTrigger asChild>
-                        <Button type="button" variant="outline" className="justify-between">
-                          {(() => {
+                <div className="space-y-4">
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="grid gap-2">
+                      <Label>Procedimentos de Upsell (Upgrade Premium)</Label>
+                      <DropdownMenu modal={false}>
+                        <DropdownMenuTrigger asChild>
+                          <Button type="button" variant="outline" className="justify-between">
+                            {(() => {
+                              const ids = (getIA('upsell.upgrades_ids', []) as string[]) || []
+                              if (ids.length === 0) return 'Selecionar procedimentos'
+                              const nomes = procedimentos
+                                .filter((p) => ids.includes(p.id))
+                                .map((p) => p.nome)
+                              return nomes.join(', ')
+                            })()}
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent className="max-h-72 overflow-auto">
+                          {procedimentos.map((p) => {
                             const ids = (getIA('upsell.upgrades_ids', []) as string[]) || []
-                            if (ids.length === 0) return 'Selecionar procedimentos'
-                            const nomes = procedimentos
-                              .filter((p) => ids.includes(p.id))
-                              .map((p) => p.nome)
-                            return nomes.join(', ')
-                          })()}
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent className="max-h-72 overflow-auto">
-                        {procedimentos.map((p) => {
-                          const ids = (getIA('upsell.upgrades_ids', []) as string[]) || []
-                          const checked = ids.includes(p.id)
-                          return (
-                            <DropdownMenuCheckboxItem
-                              key={p.id}
-                              checked={checked}
-                              onCheckedChange={() => setIA('upsell.upgrades_ids', toggleMulti(ids, p.id))}
-                              onSelect={(e) => e.preventDefault()}
-                            >
-                              {p.nome}
-                            </DropdownMenuCheckboxItem>
-                          )
-                        })}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                            const checked = ids.includes(p.id)
+                            return (
+                              <DropdownMenuCheckboxItem
+                                key={p.id}
+                                checked={checked}
+                                onCheckedChange={() => setIA('upsell.upgrades_ids', toggleMulti(ids, p.id))}
+                                onSelect={(e) => e.preventDefault()}
+                              >
+                                {p.nome}
+                              </DropdownMenuCheckboxItem>
+                            )
+                          })}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                      {(() => {
+                        const ids = (getIA('upsell.upgrades_ids', []) as string[]) || []
+                        if (ids.length === 0) return null
+                        const selected = procedimentos.filter((p) => ids.includes(p.id))
+                        return (
+                          <div className="flex flex-wrap gap-2 pt-1">
+                            {selected.map((p) => (
+                              <Badge key={p.id} variant="secondary" className="flex items-center gap-2">
+                                <span className="max-w-[220px] truncate">{p.nome}</span>
+                                <button
+                                  type="button"
+                                  className="rounded-sm opacity-80 hover:opacity-100"
+                                  onClick={() => {
+                                    const current = (getIA('upsell.upgrades_ids', []) as string[]) || []
+                                    setIA('upsell.upgrades_ids', current.filter((x) => x !== p.id))
+                                  }}
+                                >
+                                  ×
+                                </button>
+                              </Badge>
+                            ))}
+                          </div>
+                        )
+                      })()}
+                    </div>
+                    <div className="grid gap-2">
+                      <Label>Quando oferecer</Label>
+                      <Select value={getIA('upsell.quando_oferecer', 'imediato')} onValueChange={(v) => setIA('upsell.quando_oferecer', v)}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="imediato">Imediato</SelectItem>
+                          <SelectItem value="pos_avaliacao">Pós avaliação</SelectItem>
+                          <SelectItem value="pos_primeiro_atendimento">Pós primeiro atendimento</SelectItem>
+                          <SelectItem value="apos_x_dias">Após X dias</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
+
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="grid gap-2">
+                      <Label>Opções de pacote</Label>
+                      <DropdownMenu modal={false}>
+                        <DropdownMenuTrigger asChild>
+                          <Button type="button" variant="outline" className="justify-between">
+                            {(() => {
+                              const ids = (getIA('upsell.pacotes_ids', []) as string[]) || []
+                              if (ids.length === 0) return 'Selecionar pacotes'
+                              const nomes = pacotes
+                                .filter((p: any) => ids.includes(p.id))
+                                .map((p: any) => p.nome)
+                              return nomes.join(', ')
+                            })()}
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent className="max-h-72 overflow-auto">
+                          {pacotes.map((p: any) => {
+                            const ids = (getIA('upsell.pacotes_ids', []) as string[]) || []
+                            const checked = ids.includes(p.id)
+                            return (
+                              <DropdownMenuCheckboxItem
+                                key={p.id}
+                                checked={checked}
+                                onCheckedChange={() => setIA('upsell.pacotes_ids', toggleMulti(ids, p.id))}
+                                onSelect={(e) => e.preventDefault()}
+                              >
+                                {p.nome}
+                              </DropdownMenuCheckboxItem>
+                            )
+                          })}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                      {(() => {
+                        const ids = (getIA('upsell.pacotes_ids', []) as string[]) || []
+                        if (ids.length === 0) return null
+                        const selected = pacotes.filter((p: any) => ids.includes(p.id))
+                        return (
+                          <div className="flex flex-wrap gap-2 pt-1">
+                            {selected.map((p: any) => (
+                              <Badge key={p.id} variant="secondary" className="flex items-center gap-2">
+                                <span className="max-w-[220px] truncate">{p.nome}</span>
+                                <button
+                                  type="button"
+                                  className="rounded-sm opacity-80 hover:opacity-100"
+                                  onClick={() => {
+                                    const current = (getIA('upsell.pacotes_ids', []) as string[]) || []
+                                    setIA('upsell.pacotes_ids', current.filter((x: string) => x !== p.id))
+                                  }}
+                                >
+                                  ×
+                                </button>
+                              </Badge>
+                            ))}
+                          </div>
+                        )
+                      })()}
+                    </div>
+                    <div className="grid gap-2">
+                      <Label>Material de apoio (upload imagem e vídeo)</Label>
+                      <FileUploadButton
+                        label="Enviar arquivos"
+                        accept="image/*,video/*"
+                        multiple
+                        disabled={uploadingMidiaKey === 'midia:material_apoio'}
+                        onFiles={(files) => void handleUploadMidias('material_apoio', files)}
+                      />
+                      {(((getIA('midias.material_apoio', []) as any[]) || []) as any[]).length > 0 ? (
+                        <div className="grid grid-cols-2 gap-3">
+                          {(((getIA('midias.material_apoio', []) as any[]) || []) as any[]).map((m: any) => {
+                            const urlKey = `${m.bucket}:${m.path}`
+                            const url = midiaUrlByKey[urlKey]
+                            const isImg = typeof url === 'string' && /\.(png|jpg|jpeg|webp|gif)(\?.*)?$/i.test(url)
+                            return (
+                              <div key={m.path} className="overflow-hidden rounded-md border border-border/60">
+                                {url ? (
+                                  isImg ? (
+                                    <img src={url} className="h-24 w-full object-cover" />
+                                  ) : (
+                                    <a className="block p-3 text-sm underline" href={url} target="_blank" rel="noreferrer">
+                                      Abrir
+                                    </a>
+                                  )
+                                ) : (
+                                  <div className="flex h-24 items-center justify-center text-xs text-muted-foreground">Carregando...</div>
+                                )}
+                                <div className="flex items-center justify-between gap-2 p-2">
+                                  <div className="min-w-0 text-xs text-muted-foreground truncate">{m.path}</div>
+                                  <Button type="button" variant="outline" size="sm" onClick={() => void handleRemoveMidia('material_apoio', m)}>
+                                    Remover
+                                  </Button>
+                                </div>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      ) : null}
+                    </div>
+                  </div>
+
                   <div className="grid gap-2">
                     <Label>Motivo do upsell</Label>
                     <Textarea value={getIA('upsell.motivo', '')} onChange={(e) => setIA('upsell.motivo', e.target.value)} rows={3} />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label>Quando oferecer</Label>
-                    <Select value={getIA('upsell.quando_oferecer', 'imediato')} onValueChange={(v) => setIA('upsell.quando_oferecer', v)}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="imediato">Imediato</SelectItem>
-                        <SelectItem value="pos_avaliacao">Pós avaliação</SelectItem>
-                        <SelectItem value="pos_primeiro_atendimento">Pós primeiro atendimento</SelectItem>
-                        <SelectItem value="apos_x_dias">Após X dias</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="grid gap-2">
-                    <ListEditor
-                      label="Triggers"
-                      placeholder="Adicione triggers"
-                      items={(getIA('upsell.triggers', []) as any[]) as string[]}
-                      onChange={(items) => setIA('upsell.triggers', items)}
-                    />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label>Opções de pacote</Label>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button type="button" variant="outline" className="justify-between">
-                          Selecionar pacotes
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent className="max-h-72 overflow-auto">
-                        {pacotes.map((p: any) => {
-                          const ids = (getIA('upsell.pacotes_ids', []) as string[]) || []
-                          const checked = ids.includes(p.id)
-                          return (
-                            <DropdownMenuCheckboxItem
-                              key={p.id}
-                              checked={checked}
-                              onCheckedChange={() => setIA('upsell.pacotes_ids', toggleMulti(ids, p.id))}
-                            >
-                              {p.nome}
-                            </DropdownMenuCheckboxItem>
-                          )
-                        })}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                  <div className="grid gap-2 md:col-span-2">
-                    <Label>Material de apoio (upload imagem e vídeo)</Label>
-                    <FileUploadButton
-                      label="Enviar arquivos"
-                      accept="image/*,video/*"
-                      multiple
-                      disabled={uploadingMidiaKey === 'midia:material_apoio'}
-                      onFiles={(files) => void handleUploadMidias('material_apoio', files)}
-                    />
-                    {(((getIA('midias.material_apoio', []) as any[]) || []) as any[]).length > 0 ? (
-                      <div className="grid grid-cols-2 gap-3">
-                        {(((getIA('midias.material_apoio', []) as any[]) || []) as any[]).map((m: any) => {
-                          const urlKey = `${m.bucket}:${m.path}`
-                          const url = midiaUrlByKey[urlKey]
-                          const isImg = typeof url === 'string' && /\.(png|jpg|jpeg|webp|gif)(\?.*)?$/i.test(url)
-                          return (
-                            <div key={m.path} className="overflow-hidden rounded-md border border-border/60">
-                              {url ? (
-                                isImg ? (
-                                  <img src={url} className="h-24 w-full object-cover" />
-                                ) : (
-                                  <a className="block p-3 text-sm underline" href={url} target="_blank" rel="noreferrer">
-                                    Abrir
-                                  </a>
-                                )
-                              ) : (
-                                <div className="flex h-24 items-center justify-center text-xs text-muted-foreground">Carregando...</div>
-                              )}
-                              <div className="flex items-center justify-between gap-2 p-2">
-                                <div className="min-w-0 text-xs text-muted-foreground truncate">{m.path}</div>
-                                <Button type="button" variant="outline" size="sm" onClick={() => void handleRemoveMidia('material_apoio', m)}>
-                                  Remover
-                                </Button>
-                              </div>
-                            </div>
-                          )
-                        })}
-                      </div>
-                    ) : null}
                   </div>
                 </div>
               </div>
@@ -1905,134 +1911,119 @@ export function ProcedimentosPage() {
                     ) : null}
                   </div>
 
-                  <div className="grid gap-2 md:col-span-2">
-                    <Label className="text-sm font-semibold">Vídeos curtos para WhatsApp</Label>
-                    <div className="grid gap-4">
-                      <div className="grid gap-2">
-                        <Label>Upload</Label>
-                        <FileUploadButton
-                          label="Enviar vídeos"
-                          accept="video/*"
-                          multiple
-                          disabled={uploadingMidiaKey === 'midia:videos_whatsapp'}
-                          onFiles={(files) => void handleUploadMidias('videos_whatsapp', files)}
-                        />
-                        {(((getIA('midias.videos_whatsapp', []) as any[]) || []) as any[]).length > 0 ? (
-                          <div className="grid grid-cols-1 gap-3">
-                            {(((getIA('midias.videos_whatsapp', []) as any[]) || []) as any[]).map((m: any) => {
-                              const urlKey = `${m.bucket}:${m.path}`
-                              const url = midiaUrlByKey[urlKey]
-                              return (
-                                <div key={m.path} className="overflow-hidden rounded-md border border-border/60">
-                                  {url ? (
-                                    <video src={url} controls className="h-40 w-full object-cover" />
-                                  ) : (
-                                    <div className="flex h-40 items-center justify-center text-xs text-muted-foreground">Carregando...</div>
-                                  )}
-                                  <div className="flex items-center justify-between gap-2 p-2">
-                                    <div className="min-w-0 text-xs text-muted-foreground truncate">{m.path}</div>
-                                    <Button type="button" variant="outline" size="sm" onClick={() => void handleRemoveMidia('videos_whatsapp', m)}>
-                                      Remover
-                                    </Button>
-                                  </div>
-                                </div>
-                              )
-                            })}
-                          </div>
-                        ) : null}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="grid gap-2 md:col-span-2">
-                    <Label className="text-sm font-semibold">Vídeos explicativos</Label>
-                    <div className="grid gap-4">
-                      <div className="grid gap-2">
-                        <Label>Upload</Label>
-                        <FileUploadButton
-                          label="Enviar vídeos"
-                          accept="video/*"
-                          multiple
-                          disabled={uploadingMidiaKey === 'midia:videos_explicativos'}
-                          onFiles={(files) => void handleUploadMidias('videos_explicativos', files)}
-                        />
-                        {(((getIA('midias.videos_explicativos', []) as any[]) || []) as any[]).length > 0 ? (
-                          <div className="grid grid-cols-1 gap-3">
-                            {(((getIA('midias.videos_explicativos', []) as any[]) || []) as any[]).map((m: any) => {
-                              const urlKey = `${m.bucket}:${m.path}`
-                              const url = midiaUrlByKey[urlKey]
-                              return (
-                                <div key={m.path} className="overflow-hidden rounded-md border border-border/60">
-                                  {url ? (
-                                    <video src={url} controls className="h-40 w-full object-cover" />
-                                  ) : (
-                                    <div className="flex h-40 items-center justify-center text-xs text-muted-foreground">Carregando...</div>
-                                  )}
-                                  <div className="flex items-center justify-between gap-2 p-2">
-                                    <div className="min-w-0 text-xs text-muted-foreground truncate">{m.path}</div>
-                                    <Button type="button" variant="outline" size="sm" onClick={() => void handleRemoveMidia('videos_explicativos', m)}>
-                                      Remover
-                                    </Button>
-                                  </div>
-                                </div>
-                              )
-                            })}
-                          </div>
-                        ) : null}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="grid gap-2 md:col-span-2">
-                    <Label className="text-sm font-semibold">Vídeos de depoimentos</Label>
-                    <div className="grid gap-2">
-                      <Label>Upload</Label>
-                      <FileUploadButton
-                        label="Enviar vídeos"
-                        accept="video/*"
-                        multiple
-                        disabled={uploadingMidiaKey === 'midia:videos_depoimentos'}
-                        onFiles={(files) => void handleUploadMidias('videos_depoimentos', files)}
-                      />
-                      {(((getIA('midias.videos_depoimentos', []) as any[]) || []) as any[]).length > 0 ? (
-                        <div className="grid grid-cols-1 gap-3">
-                          {(((getIA('midias.videos_depoimentos', []) as any[]) || []) as any[]).map((m: any) => {
-                            const urlKey = `${m.bucket}:${m.path}`
-                            const url = midiaUrlByKey[urlKey]
-                            return (
-                              <div key={m.path} className="overflow-hidden rounded-md border border-border/60">
-                                {url ? (
-                                  <video src={url} controls className="h-40 w-full object-cover" />
-                                ) : (
-                                  <div className="flex h-40 items-center justify-center text-xs text-muted-foreground">Carregando...</div>
-                                )}
-                                <div className="flex items-center justify-between gap-2 p-2">
-                                  <div className="min-w-0 text-xs text-muted-foreground truncate">{m.path}</div>
-                                  <Button type="button" variant="outline" size="sm" onClick={() => void handleRemoveMidia('videos_depoimentos', m)}>
-                                    Remover
-                                  </Button>
-                                </div>
+                  <div className="grid gap-2">
+                    <Label>Vídeos curtos para WhatsApp</Label>
+                    <FileUploadButton
+                      label="Enviar vídeos"
+                      accept="video/*"
+                      multiple
+                      disabled={uploadingMidiaKey === 'midia:videos_whatsapp'}
+                      onFiles={(files) => void handleUploadMidias('videos_whatsapp', files)}
+                    />
+                    {(((getIA('midias.videos_whatsapp', []) as any[]) || []) as any[]).length > 0 ? (
+                      <div className="grid grid-cols-1 gap-3">
+                        {(((getIA('midias.videos_whatsapp', []) as any[]) || []) as any[]).map((m: any) => {
+                          const urlKey = `${m.bucket}:${m.path}`
+                          const url = midiaUrlByKey[urlKey]
+                          return (
+                            <div key={m.path} className="overflow-hidden rounded-md border border-border/60">
+                              {url ? (
+                                <video src={url} controls className="h-40 w-full object-cover" />
+                              ) : (
+                                <div className="flex h-40 items-center justify-center text-xs text-muted-foreground">Carregando...</div>
+                              )}
+                              <div className="flex items-center justify-between gap-2 p-2">
+                                <div className="min-w-0 text-xs text-muted-foreground truncate">{m.path}</div>
+                                <Button type="button" variant="outline" size="sm" onClick={() => void handleRemoveMidia('videos_whatsapp', m)}>
+                                  Remover
+                                </Button>
                               </div>
-                            )
-                          })}
-                        </div>
-                      ) : null}
-                    </div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    ) : null}
+                  </div>
+
+                  <div className="grid gap-2">
+                    <Label>Vídeos explicativos</Label>
+                    <FileUploadButton
+                      label="Enviar vídeos"
+                      accept="video/*"
+                      multiple
+                      disabled={uploadingMidiaKey === 'midia:videos_explicativos'}
+                      onFiles={(files) => void handleUploadMidias('videos_explicativos', files)}
+                    />
+                    {(((getIA('midias.videos_explicativos', []) as any[]) || []) as any[]).length > 0 ? (
+                      <div className="grid grid-cols-1 gap-3">
+                        {(((getIA('midias.videos_explicativos', []) as any[]) || []) as any[]).map((m: any) => {
+                          const urlKey = `${m.bucket}:${m.path}`
+                          const url = midiaUrlByKey[urlKey]
+                          return (
+                            <div key={m.path} className="overflow-hidden rounded-md border border-border/60">
+                              {url ? (
+                                <video src={url} controls className="h-40 w-full object-cover" />
+                              ) : (
+                                <div className="flex h-40 items-center justify-center text-xs text-muted-foreground">Carregando...</div>
+                              )}
+                              <div className="flex items-center justify-between gap-2 p-2">
+                                <div className="min-w-0 text-xs text-muted-foreground truncate">{m.path}</div>
+                                <Button type="button" variant="outline" size="sm" onClick={() => void handleRemoveMidia('videos_explicativos', m)}>
+                                  Remover
+                                </Button>
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    ) : null}
+                  </div>
+
+                  <div className="grid gap-2">
+                    <Label>Vídeos de depoimentos</Label>
+                    <FileUploadButton
+                      label="Enviar vídeos"
+                      accept="video/*"
+                      multiple
+                      disabled={uploadingMidiaKey === 'midia:videos_depoimentos'}
+                      onFiles={(files) => void handleUploadMidias('videos_depoimentos', files)}
+                    />
+                    {(((getIA('midias.videos_depoimentos', []) as any[]) || []) as any[]).length > 0 ? (
+                      <div className="grid grid-cols-1 gap-3">
+                        {(((getIA('midias.videos_depoimentos', []) as any[]) || []) as any[]).map((m: any) => {
+                          const urlKey = `${m.bucket}:${m.path}`
+                          const url = midiaUrlByKey[urlKey]
+                          return (
+                            <div key={m.path} className="overflow-hidden rounded-md border border-border/60">
+                              {url ? (
+                                <video src={url} controls className="h-40 w-full object-cover" />
+                              ) : (
+                                <div className="flex h-40 items-center justify-center text-xs text-muted-foreground">Carregando...</div>
+                              )}
+                              <div className="flex items-center justify-between gap-2 p-2">
+                                <div className="min-w-0 text-xs text-muted-foreground truncate">{m.path}</div>
+                                <Button type="button" variant="outline" size="sm" onClick={() => void handleRemoveMidia('videos_depoimentos', m)}>
+                                  Remover
+                                </Button>
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    ) : null}
                   </div>
                 </div>
-              </div>
-            </div>
 
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="flex items-center justify-between rounded-lg border p-3">
-                <div className="space-y-0.5">
-                  <Label>IA envia imagens do procedimento?</Label>
-                  <p className="text-sm text-muted-foreground">Permite a IA enviar imagens cadastradas</p>
+                <div className="flex items-center justify-between rounded-lg border p-3">
+                  <div className="space-y-0.5">
+                    <Label>IA envia imagens do procedimento?</Label>
+                    <p className="text-sm text-muted-foreground">Permite a IA enviar imagens cadastradas</p>
+                  </div>
+                  <Switch
+                    checked={Boolean(formState.ia_envia_imagens)}
+                    onCheckedChange={(checked) => setFormState({ ...formState, ia_envia_imagens: checked })}
+                  />
                 </div>
-                <Switch
-                  checked={Boolean(formState.ia_envia_imagens)}
-                  onCheckedChange={(checked) => setFormState({ ...formState, ia_envia_imagens: checked })}
-                />
               </div>
             </div>
           </div>

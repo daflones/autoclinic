@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+// Card components removed after style standardization
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
@@ -14,10 +14,9 @@ import {
 } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import {
-  Calendar,
   Plus,
   Search,
-  Filter,
+  Calendar,
   Clock,
   User,
   Stethoscope,
@@ -28,8 +27,8 @@ import {
   CalendarCheck,
   CalendarX,
   CalendarClock,
-  Wand2,
-  RefreshCw,
+  Edit,
+  Trash2,
 } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
@@ -40,12 +39,6 @@ import dayGridPlugin from '@fullcalendar/daygrid'
 import interactionPlugin from '@fullcalendar/interaction'
 import type { EventDropArg } from '@fullcalendar/core'
 import { DateTimePicker } from '@/components/ui/datetime-picker'
-import {
-  useListaEsperaAgendamentos,
-  useCreateListaEsperaAgendamento,
-  useUpdateListaEsperaAgendamento,
-  useDeleteListaEsperaAgendamento,
-} from '@/hooks/useListaEsperaAgendamentos'
 import {
   useAgendamentosClinica,
   useCreateAgendamentoClinica,
@@ -64,10 +57,6 @@ import type {
   AgendamentoClinicaCreateData,
   StatusAgendamentoClinica,
 } from '@/services/api/agendamentos-clinica'
-import type {
-  ListaEsperaPrioridade,
-  ListaEsperaStatus,
-} from '@/services/api/lista-espera-agendamentos'
 
 type CalendarView = 'timeGridDay' | 'timeGridWeek' | 'dayGridMonth'
 type AgendaView = 'calendario' | 'lista'
@@ -148,14 +137,8 @@ export function AgendamentosClinicaPage() {
       ? new Date(`${dataFimFilter}T23:59:59.999`).toISOString()
       : undefined
 
-    const pacienteSearchActive = pacienteFilter === 'all' ? pacienteSearch : ''
-    const combinedSearch = [searchTerm, pacienteSearchActive]
-      .map((t) => t.trim())
-      .filter(Boolean)
-      .join(' ')
-
     return {
-      search: combinedSearch || undefined,
+      search: searchTerm.trim() || undefined,
       status: statusFilter !== 'all' ? statusFilter : undefined,
       paciente_id: pacienteFilter !== 'all' ? pacienteFilter : undefined,
       profissional_id: profissionalFilter !== 'all' ? profissionalFilter : undefined,
@@ -165,7 +148,7 @@ export function AgendamentosClinicaPage() {
       data_inicio: startIso,
       data_fim: endIso,
     }
-  }, [searchTerm, pacienteSearch, statusFilter, pacienteFilter, profissionalFilter, procedimentoFilter, avaliacaoFilter, dataInicioFilter, dataFimFilter])
+  }, [searchTerm, statusFilter, pacienteFilter, profissionalFilter, procedimentoFilter, avaliacaoFilter, dataInicioFilter, dataFimFilter])
 
   const { data: agendamentos, isLoading, count } = useAgendamentosClinica(filters)
   const { data: pacientes } = usePacientes({ limit: 1000 })
@@ -195,32 +178,11 @@ export function AgendamentosClinicaPage() {
     return Number.isFinite(total) ? total : 0
   }
 
-  const pacientesFiltered = useMemo(() => {
-    const term = pacienteSearch.trim().toLowerCase()
-    if (!term) return pacientes
-    return (pacientes || []).filter((p) => String(p.nome_completo || '').toLowerCase().includes(term))
-  }, [pacientes, pacienteSearch])
-
   const createMutation = useCreateAgendamentoClinica()
   const rescheduleMutation = useRescheduleAgendamentoClinica()
   const updateMutation = useUpdateAgendamentoClinica()
   const deleteMutation = useDeleteAgendamentoClinica()
   const updateStatusMutation = useUpdateAgendamentoClinicaStatus()
-
-  const { data: waitlistQuery } = useListaEsperaAgendamentos({ limit: 200 })
-  const createWaitlistMutation = useCreateListaEsperaAgendamento()
-  const updateWaitlistMutation = useUpdateListaEsperaAgendamento()
-  const deleteWaitlistMutation = useDeleteListaEsperaAgendamento()
-
-  const [waitlistForm, setWaitlistForm] = useState({
-    paciente_id: 'none',
-    nome_paciente: '',
-    telefone: '',
-    procedimento_id: 'none',
-    preferencia_horario: '',
-    prioridade: 'media' as ListaEsperaPrioridade,
-    observacoes: '',
-  })
 
   const [isRescheduleModalOpen, setIsRescheduleModalOpen] = useState(false)
   const [rescheduleState, setRescheduleState] = useState({
@@ -253,16 +215,6 @@ export function AgendamentosClinicaPage() {
 
   const toUtcIso = (date: Date) => {
     return date.toISOString()
-  }
-
-  const handleWaitlistAgendar = (itemId: string, pacienteId?: string | null, nome?: string | null) => {
-    setFormState((prev) => ({
-      ...prev,
-      titulo: nome ? `Agendamento - ${nome}` : prev.titulo || 'Agendamento',
-      paciente_id: pacienteId ?? null,
-    }))
-    setIsCreateModalOpen(true)
-    updateWaitlistMutation.mutate({ id: itemId, data: { status: 'agendado' } })
   }
 
   const handleOpenRescheduleModal = () => {
@@ -308,28 +260,6 @@ export function AgendamentosClinicaPage() {
       console.error('Erro ao reagendar:', error)
     }
   }
-
-  const noShows = useMemo(() => agendamentos.filter((a) => a.status === 'nao_compareceu'), [agendamentos])
-
-  const retornoSuggestions = useMemo(() => {
-    const now = new Date()
-    const candidates = agendamentos
-      .filter((a) => a.status === 'concluido')
-      .map((a) => {
-        const end = new Date(a.data_fim)
-        const follow = new Date(end)
-        follow.setDate(follow.getDate() + 30)
-        return {
-          agendamento: a,
-          follow,
-        }
-      })
-      .filter((c) => c.follow <= now)
-      .sort((a, b) => b.follow.getTime() - a.follow.getTime())
-      .slice(0, 8)
-
-    return candidates
-  }, [agendamentos])
 
   const handleCreateAgendamento = async () => {
     if (!formState.titulo || !formState.data_inicio || !formState.data_fim) {
@@ -607,10 +537,10 @@ export function AgendamentosClinicaPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <header className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Agenda Clínica</h1>
-          <p className="text-muted-foreground">Gerencie os agendamentos de consultas e procedimentos</p>
+          <h1 className="text-3xl font-semibold tracking-tight text-foreground">Agenda Clínica</h1>
+          <p className="text-sm text-muted-foreground">Gerencie os agendamentos de consultas e procedimentos</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Button
@@ -633,197 +563,219 @@ export function AgendamentosClinicaPage() {
             Novo Agendamento
           </Button>
         </div>
-      </div>
+      </header>
 
-      <div className="grid gap-4 md:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total</CardTitle>
-            <Calendar className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.total}</div>
-            <p className="text-xs text-muted-foreground">Agendamentos totais</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Hoje</CardTitle>
-            <Clock className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.hoje}</div>
-            <p className="text-xs text-muted-foreground">Agendamentos para hoje</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Confirmados</CardTitle>
-            <CheckCircle2 className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.confirmados}</div>
-            <p className="text-xs text-muted-foreground">Aguardando atendimento</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Concluídos</CardTitle>
-            <CalendarCheck className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.concluidos}</div>
-            <p className="text-xs text-muted-foreground">Atendimentos finalizados</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Filter className="h-5 w-5" />
-            Filtros
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-4">
-            <div className="space-y-2">
-              <Label htmlFor="search">Buscar</Label>
-              <div className="relative">
-                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="search"
-                  placeholder="Buscar por título..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-8"
-                />
-              </div>
+      <section className="grid gap-4 md:grid-cols-4">
+        <div className="rounded-2xl border border-border/60 bg-gradient-to-br from-primary/10 via-background to-background p-5 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Total</p>
+              <h3 className="mt-2 text-2xl font-semibold text-foreground">{stats.total}</h3>
             </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="status-filter">Status</Label>
-              <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as any)}>
-                <SelectTrigger id="status-filter">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos</SelectItem>
-                  {Object.entries(STATUS_CONFIG).map(([key, config]) => (
-                    <SelectItem key={key} value={key}>
-                      {config.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <div className="rounded-full bg-primary/10 p-2 text-primary">
+              <Calendar className="h-5 w-5" />
             </div>
+          </div>
+          <p className="mt-2 text-xs text-muted-foreground">Agendamentos totais</p>
+        </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="paciente-filter">Paciente</Label>
+        <div className="rounded-2xl border border-border/60 bg-gradient-to-br from-sky-500/10 via-background to-background p-5 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Hoje</p>
+              <h3 className="mt-2 text-2xl font-semibold text-foreground">{stats.hoje}</h3>
+            </div>
+            <div className="rounded-full bg-sky-500/10 p-2 text-sky-500">
+              <Clock className="h-5 w-5" />
+            </div>
+          </div>
+          <p className="mt-2 text-xs text-muted-foreground">Agendamentos para hoje</p>
+        </div>
+
+        <div className="rounded-2xl border border-border/60 bg-gradient-to-br from-emerald-500/10 via-background to-background p-5 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Confirmados</p>
+              <h3 className="mt-2 text-2xl font-semibold text-foreground">{stats.confirmados}</h3>
+            </div>
+            <div className="rounded-full bg-emerald-500/10 p-2 text-emerald-500">
+              <CheckCircle2 className="h-5 w-5" />
+            </div>
+          </div>
+          <p className="mt-2 text-xs text-muted-foreground">Aguardando atendimento</p>
+        </div>
+
+        <div className="rounded-2xl border border-border/60 bg-gradient-to-br from-purple-500/10 via-background to-background p-5 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Concluídos</p>
+              <h3 className="mt-2 text-2xl font-semibold text-foreground">{stats.concluidos}</h3>
+            </div>
+            <div className="rounded-full bg-purple-500/10 p-2 text-purple-500">
+              <CalendarCheck className="h-5 w-5" />
+            </div>
+          </div>
+          <p className="mt-2 text-xs text-muted-foreground">Atendimentos finalizados</p>
+        </div>
+      </section>
+
+      <section className="rounded-2xl border border-border/40 bg-background/60 px-4 py-3 shadow-sm backdrop-blur">
+        <div className="flex flex-wrap items-end gap-3">
+          <div className="relative min-w-[160px] flex-1">
+            <span className="mb-1 block text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Buscar</span>
+            <div className="relative">
+              <Search className="absolute left-2 top-2 h-3.5 w-3.5 text-muted-foreground" />
               <Input
-                id="paciente-filter-search"
-                placeholder="Digite para filtrar pacientes..."
-                value={pacienteSearch}
-                onChange={(e) => setPacienteSearch(e.target.value)}
+                placeholder="Buscar..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="h-8 pl-7 text-xs"
               />
-              <Select value={pacienteFilter} onValueChange={setPacienteFilter}>
-                <SelectTrigger id="paciente-filter">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos</SelectItem>
-                  {pacientesFiltered.map((p) => (
-                    <SelectItem key={p.id} value={p.id}>
-                      {p.nome_completo}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="profissional-filter">Profissional</Label>
-              <Select value={profissionalFilter} onValueChange={setProfissionalFilter}>
-                <SelectTrigger id="profissional-filter">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos</SelectItem>
-                  {profissionais.map((p) => (
-                    <SelectItem key={p.id} value={p.id}>
-                      {p.nome}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
             </div>
           </div>
 
-          <div className="grid gap-4 md:grid-cols-4">
-            <div className="space-y-2">
-              <Label htmlFor="procedimento-filter">Procedimento</Label>
-              <Select value={procedimentoFilter} onValueChange={setProcedimentoFilter}>
-                <SelectTrigger id="procedimento-filter">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos</SelectItem>
-                  {procedimentos.map((p: any) => (
-                    <SelectItem key={p.id} value={p.id}>
-                      {p.nome}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="avaliacao-filter">Avaliação</Label>
-              <Select value={avaliacaoFilter} onValueChange={(v) => setAvaliacaoFilter(v as any)}>
-                <SelectTrigger id="avaliacao-filter">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos</SelectItem>
-                  <SelectItem value="true">Somente avaliações</SelectItem>
-                  <SelectItem value="false">Somente não-avaliações</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="data-inicio-filter">Data início</Label>
-              <Input
-                id="data-inicio-filter"
-                type="date"
-                value={dataInicioFilter}
-                onChange={(e) => setDataInicioFilter(e.target.value)}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="data-fim-filter">Data fim</Label>
-              <Input
-                id="data-fim-filter"
-                type="date"
-                value={dataFimFilter}
-                onChange={(e) => setDataFimFilter(e.target.value)}
-              />
-            </div>
+          <div>
+            <span className="mb-1 block text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Status</span>
+            <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as any)}>
+              <SelectTrigger className="h-8 w-[130px] text-xs">
+                <SelectValue placeholder="Todos" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos</SelectItem>
+                {Object.entries(STATUS_CONFIG).map(([key, config]) => (
+                  <SelectItem key={key} value={key}>{config.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
-        </CardContent>
-      </Card>
+
+          <div>
+            <span className="mb-1 block text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Pacientes</span>
+            <Select value={pacienteFilter} onValueChange={(v) => { setPacienteFilter(v); setPacienteSearch('') }}>
+              <SelectTrigger className="h-8 w-[160px] text-xs">
+                <SelectValue placeholder="Todos" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos</SelectItem>
+                {(pacientes || []).map((p) => (
+                  <SelectItem key={p.id} value={p.id}>{p.nome_completo}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <span className="mb-1 block text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Pacotes/Procedimentos</span>
+            <Select value={procedimentoFilter} onValueChange={setProcedimentoFilter}>
+              <SelectTrigger className="h-8 w-[180px] text-xs">
+                <SelectValue placeholder="Todos" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos</SelectItem>
+                {(procedimentos || []).length > 0 && (
+                  <SelectItem value="__header_proc" disabled className="text-[10px] font-semibold text-muted-foreground uppercase">— Procedimentos —</SelectItem>
+                )}
+                {(procedimentos || []).map((p: any) => (
+                  <SelectItem key={p.id} value={p.id}>{p.nome}</SelectItem>
+                ))}
+                {(protocolosPacotes || []).length > 0 && (
+                  <SelectItem value="__header_pac" disabled className="text-[10px] font-semibold text-muted-foreground uppercase">— Pacotes —</SelectItem>
+                )}
+                {((protocolosPacotes || []) as any[]).map((p: any) => (
+                  <SelectItem key={`pac_${p.id}`} value={p.id}>{p.nome}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <span className="mb-1 block text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Avaliação</span>
+            <Select value={avaliacaoFilter} onValueChange={(v) => setAvaliacaoFilter(v as any)}>
+              <SelectTrigger className="h-8 w-[130px] text-xs">
+                <SelectValue placeholder="Todos" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos</SelectItem>
+                <SelectItem value="true">Avaliações</SelectItem>
+                <SelectItem value="false">Não-avaliações</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <span className="mb-1 block text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Data início</span>
+            <DateTimePicker
+              value={dataInicioFilter ? `${dataInicioFilter}T00:00:00` : ''}
+              onChange={(value) => {
+                if (value) {
+                  const date = new Date(value)
+                  if (!isNaN(date.getTime())) {
+                    const yyyy = date.getFullYear()
+                    const mm = String(date.getMonth() + 1).padStart(2, '0')
+                    const dd = String(date.getDate()).padStart(2, '0')
+                    setDataInicioFilter(`${yyyy}-${mm}-${dd}`)
+                  }
+                } else {
+                  setDataInicioFilter('')
+                }
+              }}
+              label=""
+            />
+          </div>
+
+          <div>
+            <span className="mb-1 block text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Data fim</span>
+            <DateTimePicker
+              value={dataFimFilter ? `${dataFimFilter}T23:59:59` : ''}
+              onChange={(value) => {
+                if (value) {
+                  const date = new Date(value)
+                  if (!isNaN(date.getTime())) {
+                    const yyyy = date.getFullYear()
+                    const mm = String(date.getMonth() + 1).padStart(2, '0')
+                    const dd = String(date.getDate()).padStart(2, '0')
+                    setDataFimFilter(`${yyyy}-${mm}-${dd}`)
+                  }
+                } else {
+                  setDataFimFilter('')
+                }
+              }}
+              label=""
+            />
+          </div>
+
+          {(searchTerm || statusFilter !== 'all' || pacienteFilter !== 'all' || profissionalFilter !== 'all' || procedimentoFilter !== 'all' || avaliacaoFilter !== 'all' || dataInicioFilter || dataFimFilter) && (
+            <div className="flex items-end">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 text-xs text-muted-foreground"
+                onClick={() => {
+                  setSearchTerm('')
+                  setStatusFilter('all')
+                  setPacienteFilter('all')
+                  setPacienteSearch('')
+                  setProfissionalFilter('all')
+                  setProcedimentoFilter('all')
+                  setAvaliacaoFilter('all')
+                  setDataInicioFilter('')
+                  setDataFimFilter('')
+                }}
+              >
+                Limpar
+              </Button>
+            </div>
+          )}
+        </div>
+      </section>
 
       {agendaView === 'calendario' ? (
-        <Card>
-          <CardHeader className="space-y-3">
+        <section className="rounded-3xl border border-border/60 bg-background/80 p-6 shadow-lg backdrop-blur">
+          <div className="space-y-3">
             <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
               <div>
-                <CardTitle>Calendário</CardTitle>
-                <CardDescription>Visualização diária, semanal e mensal. Arraste para reagendar.</CardDescription>
+                <h2 className="text-lg font-semibold text-foreground">Calendário</h2>
+                <p className="text-sm text-muted-foreground">Visualização diária, semanal e mensal. Arraste para reagendar.</p>
               </div>
 
               <div className="flex flex-wrap items-center gap-2">
@@ -860,9 +812,9 @@ export function AgendamentosClinicaPage() {
                 </Button>
               </div>
             </div>
-          </CardHeader>
+          </div>
 
-          <CardContent>
+          <div>
             <div className="rounded-xl border overflow-hidden bg-background">
               <FullCalendar
                 ref={calendarRef as any}
@@ -903,17 +855,17 @@ export function AgendamentosClinicaPage() {
                 eventTimeFormat={{ hour: '2-digit', minute: '2-digit', hour12: false } as any}
               />
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </section>
       ) : null}
 
       {agendaView === 'lista' ? (
-        <Card>
-          <CardHeader>
-            <CardTitle>Agendamentos ({count})</CardTitle>
-            <CardDescription>Lista de todos os agendamentos clínicos</CardDescription>
-          </CardHeader>
-          <CardContent>
+        <section className="rounded-3xl border border-border/60 bg-background/80 p-6 shadow-lg backdrop-blur">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-foreground">Agendamentos ({count})</h2>
+            <span className="text-sm text-muted-foreground">Lista de todos os agendamentos clínicos</span>
+          </div>
+          <div>
             {isLoading ? (
               <div className="flex items-center justify-center py-8">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -929,10 +881,12 @@ export function AgendamentosClinicaPage() {
                   return (
                     <div
                       key={agendamento.id}
-                      className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent cursor-pointer transition-colors"
-                      onClick={() => handleOpenDetails(agendamento)}
+                      className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent transition-colors"
                     >
-                      <div className="flex-1 space-y-1">
+                      <div 
+                        className="flex-1 space-y-1 cursor-pointer"
+                        onClick={() => handleOpenDetails(agendamento)}
+                      >
                         <div className="flex items-center gap-2">
                           <h3 className="font-semibold">{agendamento.titulo}</h3>
                           <Badge variant={statusConfig.variant}>
@@ -966,298 +920,41 @@ export function AgendamentosClinicaPage() {
                           )}
                         </div>
                       </div>
+                      <div className="flex items-center gap-2 ml-4">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 w-8 p-0"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            // TODO: Implement edit functionality
+                            console.log('Edit agendamento:', agendamento.id)
+                          }}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            if (confirm('Tem certeza que deseja excluir este agendamento?')) {
+                              deleteMutation.mutate(agendamento.id)
+                            }
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
                   )
                 })}
               </div>
             )}
-          </CardContent>
-        </Card>
+          </div>
+        </section>
       ) : null}
-
-      <div className="grid gap-4 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Wand2 className="h-5 w-5" />
-              Lista de espera
-            </CardTitle>
-            <CardDescription>
-              Registre pacientes interessados quando não há horário disponível. Use prioridade e status para organizar.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="grid gap-3">
-              <div className="grid gap-3 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label>Paciente cadastrado (opcional)</Label>
-                  <Select value={waitlistForm.paciente_id} onValueChange={(v) => setWaitlistForm((s) => ({ ...s, paciente_id: v }))}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">Nenhum</SelectItem>
-                      {pacientes.map((p) => (
-                        <SelectItem key={p.id} value={p.id}>
-                          {p.nome_completo}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Procedimento desejado (opcional)</Label>
-                  <Input
-                    value={waitlistForm.procedimento_id === 'none' ? '' : waitlistForm.procedimento_id}
-                    onChange={(e) => setWaitlistForm((s) => ({ ...s, procedimento_id: e.target.value || 'none' }))}
-                    placeholder="(por enquanto: informe o ID do procedimento)"
-                  />
-                </div>
-              </div>
-
-              <div className="grid gap-3 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label>Nome (se não cadastrado)</Label>
-                  <Input value={waitlistForm.nome_paciente} onChange={(e) => setWaitlistForm((s) => ({ ...s, nome_paciente: e.target.value }))} />
-                </div>
-                <div className="space-y-2">
-                  <Label>Telefone</Label>
-                  <Input value={waitlistForm.telefone} onChange={(e) => setWaitlistForm((s) => ({ ...s, telefone: e.target.value }))} />
-                </div>
-              </div>
-
-              <div className="grid gap-3 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label>Preferência de horário</Label>
-                  <Input value={waitlistForm.preferencia_horario} onChange={(e) => setWaitlistForm((s) => ({ ...s, preferencia_horario: e.target.value }))} placeholder="Ex: manhã, tarde, seg/qua" />
-                </div>
-                <div className="space-y-2">
-                  <Label>Prioridade</Label>
-                  <Select value={waitlistForm.prioridade} onValueChange={(v) => setWaitlistForm((s) => ({ ...s, prioridade: v as ListaEsperaPrioridade }))}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="alta">Alta</SelectItem>
-                      <SelectItem value="media">Média</SelectItem>
-                      <SelectItem value="baixa">Baixa</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Observações</Label>
-                <Textarea value={waitlistForm.observacoes} onChange={(e) => setWaitlistForm((s) => ({ ...s, observacoes: e.target.value }))} rows={3} />
-              </div>
-
-              <div className="flex gap-2">
-                <Button
-                  type="button"
-                  onClick={async () => {
-                    if (waitlistForm.paciente_id === 'none' && !waitlistForm.nome_paciente.trim()) {
-                      toast.error('Informe um paciente ou o nome')
-                      return
-                    }
-
-                    await createWaitlistMutation.mutateAsync({
-                      paciente_id: waitlistForm.paciente_id === 'none' ? null : waitlistForm.paciente_id,
-                      nome_paciente: waitlistForm.nome_paciente || null,
-                      telefone: waitlistForm.telefone || null,
-                      procedimento_id: waitlistForm.procedimento_id === 'none' ? null : waitlistForm.procedimento_id,
-                      preferencia_horario: waitlistForm.preferencia_horario || null,
-                      prioridade: waitlistForm.prioridade,
-                      status: 'aguardando',
-                      observacoes: waitlistForm.observacoes || null,
-                    })
-
-                    setWaitlistForm({
-                      paciente_id: 'none',
-                      nome_paciente: '',
-                      telefone: '',
-                      procedimento_id: 'none',
-                      preferencia_horario: '',
-                      prioridade: 'media',
-                      observacoes: '',
-                    })
-                  }}
-                  disabled={createWaitlistMutation.isPending}
-                >
-                  {createWaitlistMutation.isPending ? 'Adicionando...' : 'Adicionar'}
-                </Button>
-              </div>
-            </div>
-
-            <div className="pt-4 border-t">
-              <div className="text-sm font-medium mb-2">Fila ({waitlistQuery?.count ?? 0})</div>
-              {waitlistQuery?.data?.length ? (
-                <div className="space-y-2">
-                  {waitlistQuery.data.map((item) => {
-                    const nome = item.paciente?.nome_completo || item.nome_paciente || 'Sem nome'
-                    const statusLabel: Record<ListaEsperaStatus, string> = {
-                      aguardando: 'Aguardando',
-                      contatado: 'Contatado',
-                      agendado: 'Agendado',
-                      cancelado: 'Cancelado',
-                    }
-
-                    const prioLabel: Record<ListaEsperaPrioridade, string> = {
-                      alta: 'Alta',
-                      media: 'Média',
-                      baixa: 'Baixa',
-                    }
-
-                    return (
-                      <div key={item.id} className="rounded-xl border p-3">
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="min-w-0">
-                            <div className="font-medium truncate">{nome}</div>
-                            <div className="text-xs text-muted-foreground">
-                              {item.preferencia_horario ? item.preferencia_horario : 'Sem preferência'}
-                              {item.telefone ? ` • ${item.telefone}` : ''}
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Badge variant="outline">{prioLabel[item.prioridade]}</Badge>
-                            <Badge variant="secondary">{statusLabel[item.status]}</Badge>
-                          </div>
-                        </div>
-
-                        {item.observacoes ? (
-                          <div className="text-xs text-muted-foreground mt-2 whitespace-pre-wrap">{item.observacoes}</div>
-                        ) : null}
-
-                        <div className="mt-3 flex flex-wrap gap-2">
-                          <Button
-                            type="button"
-                            size="sm"
-                            onClick={() => handleWaitlistAgendar(item.id, item.paciente_id, nome)}
-                          >
-                            Agendar
-                          </Button>
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="outline"
-                            onClick={() => updateWaitlistMutation.mutate({ id: item.id, data: { status: 'contatado' } })}
-                          >
-                            Marcar contatado
-                          </Button>
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="outline"
-                            onClick={() => updateWaitlistMutation.mutate({ id: item.id, data: { status: 'cancelado' } })}
-                          >
-                            Cancelar
-                          </Button>
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="destructive"
-                            onClick={() => deleteWaitlistMutation.mutate(item.id)}
-                          >
-                            Remover
-                          </Button>
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-              ) : (
-                <div className="text-sm text-muted-foreground">Nenhum item na lista de espera.</div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <RefreshCw className="h-5 w-5" />
-              Sugestões automáticas de retorno
-            </CardTitle>
-            <CardDescription>
-              Sugestões geradas a partir de atendimentos concluídos (ex.: retorno em 30 dias).
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {retornoSuggestions.length === 0 ? (
-              <div className="text-sm text-muted-foreground">
-                Nenhuma sugestão no momento. Para gerar sugestões, conclua um atendimento (status: Concluído).
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {retornoSuggestions.map(({ agendamento, follow }) => (
-                  <div key={agendamento.id} className="rounded-xl border p-3">
-                    <div className="font-medium truncate">
-                      {agendamento.paciente?.nome_completo || agendamento.titulo}
-                    </div>
-                    <div className="text-xs text-muted-foreground mt-1">
-                      Último: {formatDateTime(agendamento.data_fim)}
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      Sugestão: {format(follow, 'dd/MM/yyyy', { locale: ptBR })}
-                    </div>
-                    <div className="mt-3">
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        onClick={() => {
-                          setFormState({
-                            ...formState,
-                            titulo: `Retorno - ${agendamento.paciente?.nome_completo || agendamento.titulo}`,
-                            paciente_id: agendamento.paciente_id ?? null,
-                            profissional_id: agendamento.profissional_id ?? null,
-                            data_inicio: new Date(follow).toISOString(),
-                            data_fim: new Date(new Date(follow).getTime() + 30 * 60 * 1000).toISOString(),
-                          })
-                          setIsCreateModalOpen(true)
-                        }}
-                      >
-                        Sugerir agendamento
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>No-shows</CardTitle>
-          <CardDescription>Agendamentos marcados como “Não Compareceu”.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {noShows.length === 0 ? (
-            <div className="text-sm text-muted-foreground">Nenhum no-show registrado.</div>
-          ) : (
-            <div className="space-y-3">
-              {noShows.map((agendamento) => (
-                <div
-                  key={agendamento.id}
-                  className="flex items-center justify-between rounded-xl border p-3 hover:bg-accent cursor-pointer"
-                  onClick={() => handleOpenDetails(agendamento)}
-                >
-                  <div className="min-w-0">
-                    <div className="font-medium truncate">{agendamento.titulo}</div>
-                    <div className="text-xs text-muted-foreground">
-                      {formatDateTime(agendamento.data_inicio)}
-                      {agendamento.paciente?.nome_completo ? ` • ${agendamento.paciente.nome_completo}` : ''}
-                    </div>
-                  </div>
-                  <Badge variant="destructive">No-show</Badge>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
 
       <Dialog open={isRescheduleModalOpen} onOpenChange={setIsRescheduleModalOpen}>
         <DialogContent className="w-[98vw] max-w-6xl max-h-[calc(100vh-4rem)] overflow-visible flex flex-col">

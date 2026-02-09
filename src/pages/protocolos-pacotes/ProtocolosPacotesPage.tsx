@@ -25,7 +25,7 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Switch } from '@/components/ui/switch'
 import { FileUploadButton } from '@/components/ui/file-upload-button'
-import { Plus, Search, Package, Edit, Trash2, Image as ImageIcon, GripVertical } from 'lucide-react'
+import { Plus, Search, Package, Edit, Trash2, Image as ImageIcon, GripVertical, Ban, Check } from 'lucide-react'
 import { toast } from 'sonner'
 import {
   useCreateProtocoloPacote,
@@ -437,15 +437,27 @@ export function ProtocolosPacotesPage() {
     setIsDeleteConfirmOpen(true)
   }
 
+  const calculateEconomiaGerada = () => {
+    const valorIndividualTotal = getValorTotalSugerido(getEstruturaItens())
+    const valorPacote = formState.preco
+    if (!Number.isFinite(valorIndividualTotal) || valorIndividualTotal <= 0 || !Number.isFinite(valorPacote) || valorPacote <= 0) {
+      return 0
+    }
+    const economia = valorIndividualTotal - valorPacote
+    return economia > 0 ? economia : 0
+  }
+
   const handleCreate = async () => {
     if (!formState.nome) {
       toast.error('Preencha o nome')
       return
     }
     try {
+      const economiaGerada = calculateEconomiaGerada()
       const payload = {
         ...formState,
         imagem_path: null,
+        economia_gerada: economiaGerada,
         ia_config: buildIaConfigFromConteudo(formState),
       }
       const created = await createMutation.mutateAsync(payload)
@@ -469,10 +481,12 @@ export function ProtocolosPacotesPage() {
       return
     }
     try {
+      const economiaGerada = calculateEconomiaGerada()
       await updateMutation.mutateAsync({
         id: selectedItem.id,
         data: {
           ...formState,
+          economia_gerada: economiaGerada,
           ia_config: buildIaConfigFromConteudo(formState),
         },
       })
@@ -621,51 +635,57 @@ export function ProtocolosPacotesPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <header className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Protocolos/Pacotes</h1>
-          <p className="text-muted-foreground">Gerencie protocolos e pacotes disponíveis para sua clínica</p>
+          <h1 className="text-3xl font-semibold tracking-tight text-foreground">Protocolos/Pacotes</h1>
+          <p className="text-sm text-muted-foreground">Gerencie protocolos e pacotes disponíveis para sua clínica</p>
         </div>
         <Button onClick={openCreate}>
           <Plus className="mr-2 h-4 w-4" />
           Novo
         </Button>
-      </div>
+      </header>
 
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total</CardTitle>
-            <Package className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.total}</div>
-            <p className="text-xs text-muted-foreground">Itens cadastrados</p>
-          </CardContent>
-        </Card>
+      <section className="grid gap-4 md:grid-cols-3">
+        <div className="rounded-2xl border border-border/60 bg-gradient-to-br from-primary/10 via-background to-background p-5 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Total</p>
+              <h3 className="mt-2 text-2xl font-semibold text-foreground">{stats.total}</h3>
+            </div>
+            <div className="rounded-full bg-primary/10 p-2 text-primary">
+              <Package className="h-5 w-5" />
+            </div>
+          </div>
+          <p className="mt-2 text-xs text-muted-foreground">Itens cadastrados</p>
+        </div>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Ativos</CardTitle>
-            <Badge variant="default">Ativo</Badge>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.ativos}</div>
-            <p className="text-xs text-muted-foreground">Visíveis/selecionáveis</p>
-          </CardContent>
-        </Card>
+        <div className="rounded-2xl border border-border/60 bg-gradient-to-br from-emerald-500/10 via-background to-background p-5 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Ativos</p>
+              <h3 className="mt-2 text-2xl font-semibold text-foreground">{stats.ativos}</h3>
+            </div>
+            <div className="rounded-full bg-emerald-500/10 p-2 text-emerald-500">
+              <Check className="h-5 w-5" />
+            </div>
+          </div>
+          <p className="mt-2 text-xs text-muted-foreground">Visíveis/selecionáveis</p>
+        </div>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Inativos</CardTitle>
-            <Badge variant="outline">Inativo</Badge>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.inativos}</div>
-            <p className="text-xs text-muted-foreground">Ocultos</p>
-          </CardContent>
-        </Card>
-      </div>
+        <div className="rounded-2xl border border-border/60 bg-gradient-to-br from-rose-500/10 via-background to-background p-5 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Inativos</p>
+              <h3 className="mt-2 text-2xl font-semibold text-foreground">{stats.inativos}</h3>
+            </div>
+            <div className="rounded-full bg-rose-500/10 p-2 text-rose-500">
+              <Ban className="h-5 w-5" />
+            </div>
+          </div>
+          <p className="mt-2 text-xs text-muted-foreground">Ocultos</p>
+        </div>
+      </section>
 
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)}>
         <TabsList className="w-full justify-start flex-wrap h-auto">
@@ -674,12 +694,12 @@ export function ProtocolosPacotesPage() {
         </TabsList>
 
         <TabsContent value="lista">
-          <Card>
-            <CardHeader>
-              <CardTitle>Lista</CardTitle>
-              <CardDescription>Crie, edite e gerencie seus protocolos/pacotes</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
+          <div className="rounded-3xl border border-border/60 bg-background/80 p-6 shadow-lg backdrop-blur">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-foreground">Lista</h2>
+              <span className="text-sm text-muted-foreground">Exibindo {itens.length} registros</span>
+            </div>
+            <div className="space-y-4">
               <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
                 <div className="flex-1 space-y-2">
                   <Label htmlFor="search">Buscar</Label>
@@ -725,8 +745,8 @@ export function ProtocolosPacotesPage() {
                       onClick={() => openDetails(item)}
                     >
                       <div className="flex items-start gap-3">
-                        <div className="h-12 w-12 rounded border bg-muted flex items-center justify-center overflow-hidden">
-                          <ImageIcon className="h-5 w-5 text-muted-foreground" />
+                        <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden">
+                          <Package className="h-5 w-5 text-primary" />
                         </div>
                         <div>
                           <div className="flex items-center gap-2">
@@ -747,50 +767,56 @@ export function ProtocolosPacotesPage() {
                       <div className="flex flex-col gap-2 md:flex-row md:items-center">
                         <Button
                           variant="outline"
+                          size="icon"
+                          title={item.ativo ? 'Desativar' : 'Ativar'}
+                          aria-label={item.ativo ? 'Desativar' : 'Ativar'}
                           onClick={(e) => {
                             e.stopPropagation()
                             void handleToggleAtivo(item)
                           }}
                           disabled={statusMutation.isPending}
                         >
-                          {item.ativo ? 'Desativar' : 'Ativar'}
+                          {item.ativo ? <Ban className="h-4 w-4" /> : <Check className="h-4 w-4" />}
                         </Button>
                         <Button
                           variant="outline"
+                          size="icon"
+                          title="Editar"
+                          aria-label="Editar"
                           onClick={(e) => {
                             e.stopPropagation()
                             openEdit(item)
                           }}
                         >
-                          <Edit className="mr-2 h-4 w-4" />
-                          Editar
+                          <Edit className="h-4 w-4" />
                         </Button>
                         <Button
                           variant="destructive"
+                          size="icon"
+                          title="Excluir"
+                          aria-label="Excluir"
                           onClick={(e) => {
                             e.stopPropagation()
                             requestDelete(item)
                           }}
                         >
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          Excluir
+                          <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
                     </div>
                   ))}
                 </div>
               )}
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </TabsContent>
 
         <TabsContent value="pacientes">
-          <Card>
-            <CardHeader>
-              <CardTitle>Pacientes com pacotes ativos</CardTitle>
-              <CardDescription>Veja quais pacientes possuem um plano vinculado a um pacote</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
+          <div className="rounded-3xl border border-border/60 bg-background/80 p-6 shadow-lg backdrop-blur">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-foreground">Pacientes com pacotes ativos</h2>
+            </div>
+            <div className="space-y-4">
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
                   <Label>Pacote</Label>
@@ -871,8 +897,8 @@ export function ProtocolosPacotesPage() {
                   })}
                 </div>
               )}
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </TabsContent>
       </Tabs>
 
@@ -914,6 +940,12 @@ export function ProtocolosPacotesPage() {
                       <div className="font-medium">R$ {detailsItem.preco.toFixed(2)}</div>
                     </div>
                   ) : null}
+                  {typeof (detailsItem as any).economia_gerada === 'number' && (detailsItem as any).economia_gerada > 0 ? (
+                    <div className="grid gap-1">
+                      <div className="text-sm text-muted-foreground">Economia gerada</div>
+                      <div className="font-medium text-green-600">R$ {((detailsItem as any).economia_gerada).toFixed(2)}</div>
+                    </div>
+                  ) : null}
                 </div>
               </div>
 
@@ -953,9 +985,9 @@ export function ProtocolosPacotesPage() {
                       {items.map((it, idx) => (
                         <div key={idx} className="rounded-lg border p-3">
                           <div className="grid gap-3 md:grid-cols-2">
-                            <div className="text-sm"><span className="text-muted-foreground">Tipo:</span> {String(it?.tipo || '')}</div>
+                            <div className="text-sm"><span className="text-muted-foreground">Tipo:</span> {it?.tipo === 'procedimento' ? 'Procedimento Incluído' : 'Item Manual'}</div>
                             <div className="text-sm"><span className="text-muted-foreground">Ordem:</span> {String(it?.ordem ?? '')}</div>
-                            <div className="text-sm md:col-span-2"><span className="text-muted-foreground">Procedimento/Item:</span> {String(it?.procedimento_id || it?.nome_manual || '')}</div>
+                            <div className="text-sm md:col-span-2"><span className="text-muted-foreground">Procedimento/Item:</span> {it?.tipo === 'procedimento' && it?.procedimento_id ? (procedimentos.find((p: any) => p.id === it.procedimento_id)?.nome || it.procedimento_id) : (it?.nome_manual || '—')}</div>
                             <div className="text-sm"><span className="text-muted-foreground">Sessões:</span> {String(it?.sessoes_qtd ?? '')}</div>
                             <div className="text-sm"><span className="text-muted-foreground">Intervalo:</span> {String(it?.intervalo_recomendado || '')}</div>
                             <div className="text-sm"><span className="text-muted-foreground">Duração (min):</span> {String(it?.duracao_sessao_min ?? '')}</div>
@@ -1065,29 +1097,15 @@ export function ProtocolosPacotesPage() {
               <div className="rounded-xl border p-4 space-y-3">
                 <Label className="text-base font-semibold">Upsell dentro do pacote</Label>
                 {(() => {
-                  const complementos = normalizeStringList(getDetails('upsell.complementos', []))
                   const quando = String(getDetails('upsell.quando', '') || '')
                   const argumento = String(getDetails('upsell.argumento', '') || '')
-                  const midias = Array.isArray(getDetails('upsell.midias_reforco', [])) ? (getDetails('upsell.midias_reforco', []) as any[]) : []
-                  const procedimentos = Array.isArray(getDetails('upsell.procedimentos', [])) ? (getDetails('upsell.procedimentos', []) as any[]) : []
+                  const upsellProcIds = Array.isArray(getDetails('upsell.procedimentos', [])) ? (getDetails('upsell.procedimentos', []) as any[]) : []
                   const upgrades = Array.isArray(getDetails('upsell.upgrades_pacotes', [])) ? (getDetails('upsell.upgrades_pacotes', []) as any[]) : []
                   const adicionais = Array.isArray(getDetails('upsell.adicionais_por_sessao', [])) ? (getDetails('upsell.adicionais_por_sessao', []) as any[]) : []
 
                   return (
                     <div className="space-y-4">
                       <div className="grid gap-4 md:grid-cols-2">
-                        <div className="space-y-2">
-                          <div className="text-sm font-medium">Complementos sugeridos</div>
-                          {complementos.length === 0 ? (
-                            <div className="text-sm text-muted-foreground">Nenhum</div>
-                          ) : (
-                            <div className="flex flex-wrap gap-2">
-                              {complementos.map((x, i) => (
-                                <Badge key={i} variant="secondary">{x}</Badge>
-                              ))}
-                            </div>
-                          )}
-                        </div>
                         <div className="space-y-2">
                           <div className="text-sm font-medium">Quando sugerir</div>
                           <div className="text-sm">{quando || 'Não informado'}</div>
@@ -1102,46 +1120,31 @@ export function ProtocolosPacotesPage() {
 
                       <div className="grid gap-4 md:grid-cols-2">
                         <div className="space-y-2">
-                          <div className="text-sm font-medium">Procedimentos complementares (IDs)</div>
-                          {procedimentos.length === 0 ? (
+                          <div className="text-sm font-medium">Procedimentos complementares</div>
+                          {upsellProcIds.length === 0 ? (
                             <div className="text-sm text-muted-foreground">Nenhum</div>
                           ) : (
                             <div className="flex flex-wrap gap-2">
-                              {procedimentos.map((x: any, i: number) => (
-                                <Badge key={i} variant="secondary">{String(x)}</Badge>
-                              ))}
+                              {upsellProcIds.map((x: any, i: number) => {
+                                const proc = (procedimentos as any[]).find((p: any) => p.id === x)
+                                return <Badge key={i} variant="secondary">{proc?.nome || String(x)}</Badge>
+                              })}
                             </div>
                           )}
                         </div>
                         <div className="space-y-2">
-                          <div className="text-sm font-medium">Upgrade via pacotes (IDs)</div>
+                          <div className="text-sm font-medium">Upgrade para Pacotes Premium</div>
                           {upgrades.length === 0 ? (
                             <div className="text-sm text-muted-foreground">Nenhum</div>
                           ) : (
                             <div className="flex flex-wrap gap-2">
-                              {upgrades.map((x: any, i: number) => (
-                                <Badge key={i} variant="secondary">{String(x)}</Badge>
-                              ))}
+                              {upgrades.map((x: any, i: number) => {
+                                const pack = itens.find((p: any) => p.id === x)
+                                return <Badge key={i} variant="secondary">{pack?.nome || String(x)}</Badge>
+                              })}
                             </div>
                           )}
                         </div>
-                      </div>
-
-                      <div className="space-y-2">
-                        <div className="text-sm font-medium">Mídias de reforço</div>
-                        {midias.length === 0 ? (
-                          <div className="text-sm text-muted-foreground">Nenhuma</div>
-                        ) : (
-                          <div className="space-y-2">
-                            {midias.map((m: any, idx: number) => (
-                              <div key={idx} className="rounded-md border p-2 text-sm">
-                                <div><span className="text-muted-foreground">Tipo:</span> {String(m?.tipo || '')}</div>
-                                <div><span className="text-muted-foreground">URL:</span> {String(m?.url || '')}</div>
-                                {m?.titulo ? <div><span className="text-muted-foreground">Título:</span> {String(m.titulo)}</div> : null}
-                              </div>
-                            ))}
-                          </div>
-                        )}
                       </div>
 
                       <div className="space-y-2">
@@ -1224,6 +1227,22 @@ export function ProtocolosPacotesPage() {
                       >
                         Aplicar sugestão
                       </Button>
+                    </div>
+                  )
+                })()}
+                {(() => {
+                  const valorIndividualTotal = getValorTotalSugerido(getEstruturaItens())
+                  const valorPacote = formState.preco
+                  if (!Number.isFinite(valorIndividualTotal) || valorIndividualTotal <= 0 || !Number.isFinite(valorPacote) || valorPacote <= 0) return null
+                  const economia = valorIndividualTotal - valorPacote
+                  if (economia <= 0) return null
+                  const percentualEconomia = Math.round((economia / valorIndividualTotal) * 100)
+                  return (
+                    <div className="rounded-md border border-green-200 bg-green-50 px-3 py-2 text-sm">
+                      <div className="font-medium text-green-800">Economia gerada</div>
+                      <div className="text-green-700">
+                        {formatCurrency(economia)} ({percentualEconomia}% de desconto)
+                      </div>
                     </div>
                   )
                 })()}
@@ -1362,7 +1381,7 @@ export function ProtocolosPacotesPage() {
                             </div>
                           )}
 
-                          <div className="grid gap-3 md:grid-cols-2">
+                          <div className="grid gap-3 md:grid-cols-3">
                             <div className="grid gap-2">
                               <Label>Quantidade de sessões</Label>
                               <Input
@@ -1373,18 +1392,7 @@ export function ProtocolosPacotesPage() {
                                   items[idx] = { ...items[idx], sessoes_qtd: e.target.value === '' ? null : Number(e.target.value) }
                                   setEstruturaItens(items)
                                 }}
-                              />
-                            </div>
-                            <div className="grid gap-2">
-                              <Label>Intervalo recomendado</Label>
-                              <Input
-                                value={it.intervalo_recomendado || ''}
-                                onChange={(e) => {
-                                  const items = getEstruturaItens()
-                                  items[idx] = { ...items[idx], intervalo_recomendado: e.target.value }
-                                  setEstruturaItens(items)
-                                }}
-                                placeholder="Ex: 7 dias / 2x por semana"
+                                className="w-32"
                               />
                             </div>
                             <div className="grid gap-2">
@@ -1397,42 +1405,72 @@ export function ProtocolosPacotesPage() {
                                   items[idx] = { ...items[idx], duracao_sessao_min: e.target.value === '' ? null : Number(e.target.value) }
                                   setEstruturaItens(items)
                                 }}
+                                className="w-32"
                               />
                             </div>
                             <div className="grid gap-2">
-                              <Label>Valor individual (R$)</Label>
+                              <Label>Intervalo recomendado</Label>
                               <Input
-                                type="number"
-                                step="0.01"
-                                value={it.valor_individual ?? ''}
+                                value={it.intervalo_recomendado || ''}
                                 onChange={(e) => {
                                   const items = getEstruturaItens()
-                                  items[idx] = { ...items[idx], valor_individual: e.target.value === '' ? null : Number(e.target.value) }
+                                  items[idx] = { ...items[idx], intervalo_recomendado: e.target.value }
                                   setEstruturaItens(items)
                                 }}
+                                placeholder="Ex: 7 dias / 2x por semana"
+                                className="w-48"
                               />
-                              {(() => {
-                                const sugestao = getValorSugeridoItem(it)
-                                if (!Number.isFinite(sugestao) || sugestao <= 0 || it.valor_individual === sugestao) return null
-                                return (
-                                  <div className="flex items-center justify-between rounded-md border border-dashed px-3 py-2 text-xs text-muted-foreground">
-                                    <span>Sugestão: {formatCurrency(sugestao)}</span>
-                                    <Button
-                                      type="button"
-                                      variant="ghost"
-                                      size="sm"
-                                      onClick={() => {
-                                        const items = getEstruturaItens()
-                                        items[idx] = { ...items[idx], valor_individual: sugestao }
-                                        setEstruturaItens(items)
-                                      }}
-                                    >
-                                      Aplicar sugestão
-                                    </Button>
-                                  </div>
-                                )
-                              })()}
                             </div>
+                          </div>
+
+                          <div className="grid gap-2">
+                            <Label>Valor individual (R$)</Label>
+                            <Input
+                              type="number"
+                              step="0.01"
+                              value={it.valor_individual ?? ''}
+                              onChange={(e) => {
+                                const items = getEstruturaItens()
+                                items[idx] = { ...items[idx], valor_individual: e.target.value === '' ? null : Number(e.target.value) }
+                                setEstruturaItens(items)
+                              }}
+                              className="w-32"
+                            />
+                            {(() => {
+                              const sugestao = getValorSugeridoItem(it)
+                              if (!Number.isFinite(sugestao) || sugestao <= 0 || it.valor_individual === sugestao) return null
+                              return (
+                                <div className="flex items-center justify-between rounded-md border border-dashed px-3 py-2 text-xs text-muted-foreground">
+                                  <span>Sugestão: {formatCurrency(sugestao)}</span>
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => {
+                                      const items = getEstruturaItens()
+                                      items[idx] = { ...items[idx], valor_individual: sugestao }
+                                      setEstruturaItens(items)
+                                    }}
+                                  >
+                                    Aplicar sugestão
+                                  </Button>
+                                </div>
+                              )
+                            })()}
+                          </div>
+
+                          <div className="grid gap-2">
+                            <Label>Cronograma recomendado *</Label>
+                            <Textarea
+                              value={it.cronograma_recomendado || ''}
+                              onChange={(e) => {
+                                const items = getEstruturaItens()
+                                items[idx] = { ...items[idx], cronograma_recomendado: e.target.value }
+                                setEstruturaItens(items)
+                              }}
+                              placeholder="Descreva o cronograma recomendado para este tratamento..."
+                              rows={3}
+                            />
                           </div>
 
                           <div className="flex justify-end">
@@ -1655,150 +1693,6 @@ export function ProtocolosPacotesPage() {
                 <div className="space-y-4">
                   <div className="grid gap-4 md:grid-cols-2">
                     <div className="grid gap-2">
-                      <ListEditor
-                        label="Complementos sugeridos"
-                        placeholder="Adicione complementos"
-                        items={normalizeStringList(getC('upsell.complementos', []))}
-                        onChange={(items) => setC('upsell.complementos', items)}
-                      />
-                    </div>
-                    <div className="grid gap-2">
-                      <Label>Quando sugerir</Label>
-                      <Select value={getC('upsell.quando', 'no_fechamento')} onValueChange={(v) => setC('upsell.quando', v)}>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="no_fechamento">No fechamento</SelectItem>
-                          <SelectItem value="primeira_sessao">Na 1ª sessão</SelectItem>
-                          <SelectItem value="metade">Metade do pacote</SelectItem>
-                          <SelectItem value="ultima">Última sessão</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="grid gap-2 md:col-span-2">
-                      <Label>Motivo / argumento principal</Label>
-                      <Textarea value={getC('upsell.argumento', '')} onChange={(e) => setC('upsell.argumento', e.target.value)} rows={3} />
-                    </div>
-                    <div className="grid gap-2 md:col-span-2">
-                      <Label>Mídias de reforço</Label>
-                      <div className="space-y-3">
-                        {(normalizeMidiasReforco(getC('upsell.midias_reforco', [])) as any[]).map((m, idx) => (
-                          <div
-                            key={idx}
-                            className="rounded-lg border border-border/60 bg-background p-3"
-                            draggable
-                            onDragStart={() => {
-                              ;(window as any).__midias_reforco_drag_index__ = idx
-                            }}
-                            onDragOver={(e) => {
-                              e.preventDefault()
-                            }}
-                            onDrop={() => {
-                              const from = (window as any).__midias_reforco_drag_index__
-                              ;(window as any).__midias_reforco_drag_index__ = null
-                              if (typeof from !== 'number') return
-                              const current = normalizeMidiasReforco(getC('upsell.midias_reforco', []))
-                              setC('upsell.midias_reforco', reorder(current, from, idx))
-                            }}
-                          >
-                            <div className="flex items-center justify-between gap-3">
-                              <div className="inline-flex items-center gap-2 text-xs text-muted-foreground">
-                                <GripVertical className="h-4 w-4" />
-                                <span>Arraste para reordenar</span>
-                              </div>
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                onClick={() => {
-                                  const current = normalizeMidiasReforco(getC('upsell.midias_reforco', []))
-                                  current.splice(idx, 1)
-                                  setC('upsell.midias_reforco', current)
-                                }}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </div>
-
-                            <div className="mt-3 grid gap-3 md:grid-cols-2">
-                              <div className="grid gap-2">
-                                <Label>Tipo</Label>
-                                <Select
-                                  value={m.tipo || 'imagem'}
-                                  onValueChange={(v) => {
-                                    const current = normalizeMidiasReforco(getC('upsell.midias_reforco', []))
-                                    current[idx] = { ...current[idx], tipo: v }
-                                    setC('upsell.midias_reforco', current)
-                                  }}
-                                >
-                                  <SelectTrigger>
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="imagem">Imagem</SelectItem>
-                                    <SelectItem value="video">Vídeo</SelectItem>
-                                    <SelectItem value="link">Link</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                              </div>
-                              <div className="grid gap-2">
-                                <Label>URL</Label>
-                                <Input
-                                  value={m.url || ''}
-                                  onChange={(e) => {
-                                    const current = normalizeMidiasReforco(getC('upsell.midias_reforco', []))
-                                    current[idx] = { ...current[idx], url: e.target.value }
-                                    setC('upsell.midias_reforco', current)
-                                  }}
-                                  placeholder="https://..."
-                                />
-                              </div>
-                              <div className="grid gap-2 md:col-span-2">
-                                <Label>Título (opcional)</Label>
-                                <Input
-                                  value={m.titulo || ''}
-                                  onChange={(e) => {
-                                    const current = normalizeMidiasReforco(getC('upsell.midias_reforco', []))
-                                    current[idx] = { ...current[idx], titulo: e.target.value }
-                                    setC('upsell.midias_reforco', current)
-                                  }}
-                                />
-                              </div>
-                              <div className="grid gap-2 md:col-span-2">
-                                <Label>Descrição (opcional)</Label>
-                                <Textarea
-                                  value={m.descricao || ''}
-                                  onChange={(e) => {
-                                    const current = normalizeMidiasReforco(getC('upsell.midias_reforco', []))
-                                    current[idx] = { ...current[idx], descricao: e.target.value }
-                                    setC('upsell.midias_reforco', current)
-                                  }}
-                                  rows={3}
-                                />
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-
-                        <Button
-                          type="button"
-                          variant="outline"
-                          onClick={() => {
-                            const current = normalizeMidiasReforco(getC('upsell.midias_reforco', []))
-                            current.push({ tipo: 'imagem', url: '', titulo: '', descricao: '' })
-                            setC('upsell.midias_reforco', current)
-                          }}
-                        >
-                          <Plus className="mr-2 h-4 w-4" />
-                          Adicionar mídia
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <div className="grid gap-2">
                       <Label>Procedimentos complementares</Label>
                       <div className="flex gap-2">
                         <Select value={getC('upsell._ui_add_procedimento', 'none')} onValueChange={(v) => setC('upsell._ui_add_procedimento', v)}>
@@ -1855,7 +1749,7 @@ export function ProtocolosPacotesPage() {
                     </div>
 
                     <div className="grid gap-2">
-                      <Label>Upgrade via pacotes</Label>
+                      <Label>Upgrade para Pacotes Premium</Label>
                       <div className="flex gap-2">
                         <Select value={getC('upsell._ui_add_pacote', 'none')} onValueChange={(v) => setC('upsell._ui_add_pacote', v)}>
                           <SelectTrigger>
@@ -1913,77 +1807,98 @@ export function ProtocolosPacotesPage() {
                     </div>
                   </div>
 
-                  <div className="grid gap-2">
-                    <Label>Adicionais por sessão</Label>
-                    <div className="space-y-3">
-                      {(((getC('upsell.adicionais_por_sessao', []) as any[]) || []) as any[]).map((a: any, idx: number) => (
-                        <div key={idx} className="rounded-lg border p-3 space-y-3">
-                          <div className="grid gap-3 md:grid-cols-3">
-                            <div className="grid gap-2">
-                              <Label>Nome</Label>
-                              <Input
-                                value={a?.nome || ''}
-                                onChange={(e) => {
-                                  const items = [ ...(((getC('upsell.adicionais_por_sessao', []) as any[]) || []) as any[]) ]
-                                  items[idx] = { ...(items[idx] || {}), nome: e.target.value }
-                                  setC('upsell.adicionais_por_sessao', items)
-                                }}
-                              />
-                            </div>
-                            <div className="grid gap-2">
-                              <Label>Valor (R$)</Label>
-                              <Input
-                                type="number"
-                                step="0.01"
-                                value={a?.valor ?? ''}
-                                onChange={(e) => {
-                                  const items = [ ...(((getC('upsell.adicionais_por_sessao', []) as any[]) || []) as any[]) ]
-                                  items[idx] = { ...(items[idx] || {}), valor: e.target.value === '' ? null : Number(e.target.value) }
-                                  setC('upsell.adicionais_por_sessao', items)
-                                }}
-                              />
-                            </div>
-                            <div className="flex items-end">
-                              <Button
-                                type="button"
-                                variant="outline"
-                                className="w-full"
-                                onClick={() => {
-                                  const items = [ ...(((getC('upsell.adicionais_por_sessao', []) as any[]) || []) as any[]) ]
-                                  items.splice(idx, 1)
-                                  setC('upsell.adicionais_por_sessao', items)
-                                }}
-                              >
-                                Remover
-                              </Button>
-                            </div>
-                          </div>
-                          <div className="grid gap-2">
-                            <Label>Motivo</Label>
-                            <Textarea
-                              value={a?.motivo || ''}
-                              onChange={(e) => {
-                                const items = [ ...(((getC('upsell.adicionais_por_sessao', []) as any[]) || []) as any[]) ]
-                                items[idx] = { ...(items[idx] || {}), motivo: e.target.value }
-                                setC('upsell.adicionais_por_sessao', items)
-                              }}
-                              rows={2}
-                            />
-                          </div>
-                        </div>
-                      ))}
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => {
-                          const items = [ ...(((getC('upsell.adicionais_por_sessao', []) as any[]) || []) as any[]) ]
-                          items.push({ nome: '', valor: null, motivo: '' })
-                          setC('upsell.adicionais_por_sessao', items)
-                        }}
-                      >
-                        Adicionar adicional
-                      </Button>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="grid gap-2">
+                      <Label>Quando sugerir</Label>
+                      <Select value={getC('upsell.quando', 'no_fechamento')} onValueChange={(v) => setC('upsell.quando', v)}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="no_fechamento">No fechamento</SelectItem>
+                          <SelectItem value="primeira_sessao">Na 1ª sessão</SelectItem>
+                          <SelectItem value="metade">Metade do pacote</SelectItem>
+                          <SelectItem value="ultima">Última sessão</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
+                    <div className="grid gap-2">
+                      <Label>Adicionais por sessão</Label>
+                      <div className="space-y-3">
+                        {(((getC('upsell.adicionais_por_sessao', []) as any[]) || []) as any[]).map((a: any, idx: number) => (
+                          <div key={idx} className="rounded-lg border p-3 space-y-3">
+                            <div className="grid gap-3 md:grid-cols-3">
+                              <div className="grid gap-2">
+                                <Label>Nome</Label>
+                                <Input
+                                  value={a?.nome || ''}
+                                  onChange={(e) => {
+                                    const items = [ ...(((getC('upsell.adicionais_por_sessao', []) as any[]) || []) as any[]) ]
+                                    items[idx] = { ...(items[idx] || {}), nome: e.target.value }
+                                    setC('upsell.adicionais_por_sessao', items)
+                                  }}
+                                />
+                              </div>
+                              <div className="grid gap-2">
+                                <Label>Valor (R$)</Label>
+                                <Input
+                                  type="number"
+                                  step="0.01"
+                                  value={a?.valor ?? ''}
+                                  onChange={(e) => {
+                                    const items = [ ...(((getC('upsell.adicionais_por_sessao', []) as any[]) || []) as any[]) ]
+                                    items[idx] = { ...(items[idx] || {}), valor: e.target.value === '' ? null : Number(e.target.value) }
+                                    setC('upsell.adicionais_por_sessao', items)
+                                  }}
+                                />
+                              </div>
+                              <div className="flex items-end">
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  className="w-full"
+                                  onClick={() => {
+                                    const items = [ ...(((getC('upsell.adicionais_por_sessao', []) as any[]) || []) as any[]) ]
+                                    items.splice(idx, 1)
+                                    setC('upsell.adicionais_por_sessao', items)
+                                  }}
+                                >
+                                  Remover
+                                </Button>
+                              </div>
+                            </div>
+                            <div className="grid gap-2">
+                              <Label>Motivo</Label>
+                              <Textarea
+                                value={a?.motivo || ''}
+                                onChange={(e) => {
+                                  const items = [ ...(((getC('upsell.adicionais_por_sessao', []) as any[]) || []) as any[]) ]
+                                  items[idx] = { ...(items[idx] || {}), motivo: e.target.value }
+                                  setC('upsell.adicionais_por_sessao', items)
+                                }}
+                                rows={2}
+                              />
+                            </div>
+                          </div>
+                        ))}
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => {
+                            const items = [ ...(((getC('upsell.adicionais_por_sessao', []) as any[]) || []) as any[]) ]
+                            items.push({ nome: '', valor: null, motivo: '' })
+                            setC('upsell.adicionais_por_sessao', items)
+                          }}
+                        >
+                          Adicionar adicional
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid gap-2">
+                    <Label>Argumento de venda</Label>
+                    <Textarea value={getC('upsell.argumento', '')} onChange={(e) => setC('upsell.argumento', e.target.value)} rows={3} />
                   </div>
                 </div>
               </div>
@@ -2054,6 +1969,65 @@ export function ProtocolosPacotesPage() {
               </div>
             </div>
 
+            <div className="rounded-xl border p-4 space-y-3">
+              <Label className="text-base font-semibold">FAQ - Perguntas Frequentes</Label>
+              {(getC('faq', []) as any[]).map((faq: any, idx: number) => (
+                <div key={idx} className="rounded-lg border p-3 space-y-3">
+                  <div className="grid gap-2">
+                    <Label>Pergunta</Label>
+                    <Input
+                      value={faq?.pergunta || ''}
+                      onChange={(e) => {
+                        const items = [...((getC('faq', []) as any[]) || [])]
+                        items[idx] = { ...(items[idx] || {}), pergunta: e.target.value }
+                        setC('faq', items)
+                      }}
+                      placeholder="Ex: Quantas sessões são necessárias?"
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label>Resposta</Label>
+                    <Textarea
+                      value={faq?.resposta || ''}
+                      onChange={(e) => {
+                        const items = [...((getC('faq', []) as any[]) || [])]
+                        items[idx] = { ...(items[idx] || {}), resposta: e.target.value }
+                        setC('faq', items)
+                      }}
+                      placeholder="Digite a resposta detalhada..."
+                      rows={3}
+                    />
+                  </div>
+                  <div className="flex justify-end">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const items = [...((getC('faq', []) as any[]) || [])]
+                        items.splice(idx, 1)
+                        setC('faq', items)
+                      }}
+                    >
+                      Remover FAQ
+                    </Button>
+                  </div>
+                </div>
+              ))}
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  const items = [...((getC('faq', []) as any[]) || [])]
+                  items.push({ pergunta: '', resposta: '' })
+                  setC('faq', items)
+                }}
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                Adicionar FAQ
+              </Button>
+            </div>
+
             <div className="space-y-2">
               <Label>Status</Label>
               <Select value={formState.ativo ? 'ativo' : 'inativo'} onValueChange={(v) => setFormState({ ...formState, ativo: v === 'ativo' })}>
@@ -2114,6 +2088,22 @@ export function ProtocolosPacotesPage() {
                       >
                         Aplicar sugestão
                       </Button>
+                    </div>
+                  )
+                })()}
+                {(() => {
+                  const valorIndividualTotal = getValorTotalSugerido(getEstruturaItens())
+                  const valorPacote = formState.preco
+                  if (!Number.isFinite(valorIndividualTotal) || valorIndividualTotal <= 0 || !Number.isFinite(valorPacote) || valorPacote <= 0) return null
+                  const economia = valorIndividualTotal - valorPacote
+                  if (economia <= 0) return null
+                  const percentualEconomia = Math.round((economia / valorIndividualTotal) * 100)
+                  return (
+                    <div className="rounded-md border border-green-200 bg-green-50 px-3 py-2 text-sm">
+                      <div className="font-medium text-green-800">Economia gerada</div>
+                      <div className="text-green-700">
+                        {formatCurrency(economia)} ({percentualEconomia}% de desconto)
+                      </div>
                     </div>
                   )
                 })()}
@@ -2252,7 +2242,7 @@ export function ProtocolosPacotesPage() {
                             </div>
                           )}
 
-                          <div className="grid gap-3 md:grid-cols-2">
+                          <div className="grid gap-3 md:grid-cols-3">
                             <div className="grid gap-2">
                               <Label>Quantidade de sessões</Label>
                               <Input
@@ -2263,18 +2253,7 @@ export function ProtocolosPacotesPage() {
                                   items[idx] = { ...items[idx], sessoes_qtd: e.target.value === '' ? null : Number(e.target.value) }
                                   setEstruturaItens(items)
                                 }}
-                              />
-                            </div>
-                            <div className="grid gap-2">
-                              <Label>Intervalo recomendado</Label>
-                              <Input
-                                value={it.intervalo_recomendado || ''}
-                                onChange={(e) => {
-                                  const items = getEstruturaItens()
-                                  items[idx] = { ...items[idx], intervalo_recomendado: e.target.value }
-                                  setEstruturaItens(items)
-                                }}
-                                placeholder="Ex: 7 dias / 2x por semana"
+                                className="w-32"
                               />
                             </div>
                             <div className="grid gap-2">
@@ -2287,42 +2266,72 @@ export function ProtocolosPacotesPage() {
                                   items[idx] = { ...items[idx], duracao_sessao_min: e.target.value === '' ? null : Number(e.target.value) }
                                   setEstruturaItens(items)
                                 }}
+                                className="w-32"
                               />
                             </div>
                             <div className="grid gap-2">
-                              <Label>Valor individual (R$)</Label>
+                              <Label>Intervalo recomendado</Label>
                               <Input
-                                type="number"
-                                step="0.01"
-                                value={it.valor_individual ?? ''}
+                                value={it.intervalo_recomendado || ''}
                                 onChange={(e) => {
                                   const items = getEstruturaItens()
-                                  items[idx] = { ...items[idx], valor_individual: e.target.value === '' ? null : Number(e.target.value) }
+                                  items[idx] = { ...items[idx], intervalo_recomendado: e.target.value }
                                   setEstruturaItens(items)
                                 }}
+                                placeholder="Ex: 7 dias / 2x por semana"
+                                className="w-48"
                               />
-                              {(() => {
-                                const sugestao = getValorSugeridoItem(it)
-                                if (!Number.isFinite(sugestao) || sugestao <= 0 || it.valor_individual === sugestao) return null
-                                return (
-                                  <div className="flex items-center justify-between rounded-md border border-dashed px-3 py-2 text-xs text-muted-foreground">
-                                    <span>Sugestão: {formatCurrency(sugestao)}</span>
-                                    <Button
-                                      type="button"
-                                      variant="ghost"
-                                      size="sm"
-                                      onClick={() => {
-                                        const items = getEstruturaItens()
-                                        items[idx] = { ...items[idx], valor_individual: sugestao }
-                                        setEstruturaItens(items)
-                                      }}
-                                    >
-                                      Aplicar sugestão
-                                    </Button>
-                                  </div>
-                                )
-                              })()}
                             </div>
+                          </div>
+
+                          <div className="grid gap-2">
+                            <Label>Valor individual (R$)</Label>
+                            <Input
+                              type="number"
+                              step="0.01"
+                              value={it.valor_individual ?? ''}
+                              onChange={(e) => {
+                                const items = getEstruturaItens()
+                                items[idx] = { ...items[idx], valor_individual: e.target.value === '' ? null : Number(e.target.value) }
+                                setEstruturaItens(items)
+                              }}
+                              className="w-32"
+                            />
+                            {(() => {
+                              const sugestao = getValorSugeridoItem(it)
+                              if (!Number.isFinite(sugestao) || sugestao <= 0 || it.valor_individual === sugestao) return null
+                              return (
+                                <div className="flex items-center justify-between rounded-md border border-dashed px-3 py-2 text-xs text-muted-foreground">
+                                  <span>Sugestão: {formatCurrency(sugestao)}</span>
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => {
+                                      const items = getEstruturaItens()
+                                      items[idx] = { ...items[idx], valor_individual: sugestao }
+                                      setEstruturaItens(items)
+                                    }}
+                                  >
+                                    Aplicar sugestão
+                                  </Button>
+                                </div>
+                              )
+                            })()}
+                          </div>
+
+                          <div className="grid gap-2">
+                            <Label>Cronograma recomendado *</Label>
+                            <Textarea
+                              value={it.cronograma_recomendado || ''}
+                              onChange={(e) => {
+                                const items = getEstruturaItens()
+                                items[idx] = { ...items[idx], cronograma_recomendado: e.target.value }
+                                setEstruturaItens(items)
+                              }}
+                              placeholder="Descreva o cronograma recomendado para este tratamento..."
+                              rows={3}
+                            />
                           </div>
 
                           <div className="flex justify-end">
@@ -2526,147 +2535,215 @@ export function ProtocolosPacotesPage() {
 
               <div className="space-y-3 pt-4 border-t">
                 <Label className="text-base font-semibold">Upsell dentro do pacote</Label>
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div className="grid gap-2">
-                    <ListEditor
-                      label="Complementos sugeridos"
-                      placeholder="Adicione complementos"
-                      items={normalizeStringList(getC('upsell.complementos', []))}
-                      onChange={(items) => setC('upsell.complementos', items)}
-                    />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label>Quando sugerir</Label>
-                    <Select value={getC('upsell.quando', 'no_fechamento')} onValueChange={(v) => setC('upsell.quando', v)}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="no_fechamento">No fechamento</SelectItem>
-                        <SelectItem value="primeira_sessao">Na 1ª sessão</SelectItem>
-                        <SelectItem value="metade">Metade do pacote</SelectItem>
-                        <SelectItem value="ultima">Última sessão</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="grid gap-2">
-                    <Label>Argumento comercial</Label>
-                    <Textarea value={getC('upsell.argumento', '')} onChange={(e) => setC('upsell.argumento', e.target.value)} rows={3} />
-                  </div>
-                  <div className="grid gap-2 md:col-span-2">
-                    <Label>Mídias de reforço</Label>
-                    <div className="space-y-3">
-                      {(normalizeMidiasReforco(getC('upsell.midias_reforco', [])) as any[]).map((m, idx) => (
-                        <div
-                          key={idx}
-                          className="rounded-lg border border-border/60 bg-background p-3"
-                          draggable
-                          onDragStart={() => {
-                            ;(window as any).__midias_reforco_drag_index__ = idx
-                          }}
-                          onDragOver={(e) => {
-                            e.preventDefault()
-                          }}
-                          onDrop={() => {
-                            const from = (window as any).__midias_reforco_drag_index__
-                            ;(window as any).__midias_reforco_drag_index__ = null
-                            if (typeof from !== 'number') return
-                            const current = normalizeMidiasReforco(getC('upsell.midias_reforco', []))
-                            setC('upsell.midias_reforco', reorder(current, from, idx))
+                <div className="space-y-4">
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="grid gap-2">
+                      <Label>Procedimentos complementares</Label>
+                      <div className="flex gap-2">
+                        <Select value={getC('upsell._ui_add_procedimento', 'none')} onValueChange={(v) => setC('upsell._ui_add_procedimento', v)}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">Selecione</SelectItem>
+                            {procedimentos.map((p: any) => (
+                              <SelectItem key={p.id} value={p.id}>
+                                {p.nome}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => {
+                            const selectedId = String(getC('upsell._ui_add_procedimento', 'none') || 'none')
+                            if (selectedId === 'none') return
+                            const prev = ((getC('upsell.procedimentos', []) as any[]) || []) as any[]
+                            if (prev.includes(selectedId)) return
+                            setC('upsell.procedimentos', [...prev, selectedId])
+                            setC('upsell._ui_add_procedimento', 'none')
                           }}
                         >
-                          <div className="flex items-center justify-between gap-3">
-                            <div className="inline-flex items-center gap-2 text-xs text-muted-foreground">
-                              <GripVertical className="h-4 w-4" />
-                              <span>Arraste para reordenar</span>
-                            </div>
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              onClick={() => {
-                                const current = normalizeMidiasReforco(getC('upsell.midias_reforco', []))
-                                current.splice(idx, 1)
-                                setC('upsell.midias_reforco', current)
-                              }}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-
-                          <div className="mt-3 grid gap-3 md:grid-cols-2">
-                            <div className="grid gap-2">
-                              <Label>Tipo</Label>
-                              <Select
-                                value={m.tipo || 'imagem'}
-                                onValueChange={(v) => {
-                                  const current = normalizeMidiasReforco(getC('upsell.midias_reforco', []))
-                                  current[idx] = { ...current[idx], tipo: v }
-                                  setC('upsell.midias_reforco', current)
-                                }}
-                              >
-                                <SelectTrigger>
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="imagem">Imagem</SelectItem>
-                                  <SelectItem value="video">Vídeo</SelectItem>
-                                  <SelectItem value="link">Link</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </div>
-                            <div className="grid gap-2">
-                              <Label>URL</Label>
-                              <Input
-                                value={m.url || ''}
-                                onChange={(e) => {
-                                  const current = normalizeMidiasReforco(getC('upsell.midias_reforco', []))
-                                  current[idx] = { ...current[idx], url: e.target.value }
-                                  setC('upsell.midias_reforco', current)
-                                }}
-                                placeholder="https://..."
-                              />
-                            </div>
-                            <div className="grid gap-2 md:col-span-2">
-                              <Label>Título (opcional)</Label>
-                              <Input
-                                value={m.titulo || ''}
-                                onChange={(e) => {
-                                  const current = normalizeMidiasReforco(getC('upsell.midias_reforco', []))
-                                  current[idx] = { ...current[idx], titulo: e.target.value }
-                                  setC('upsell.midias_reforco', current)
-                                }}
-                              />
-                            </div>
-                            <div className="grid gap-2 md:col-span-2">
-                              <Label>Descrição (opcional)</Label>
-                              <Textarea
-                                value={m.descricao || ''}
-                                onChange={(e) => {
-                                  const current = normalizeMidiasReforco(getC('upsell.midias_reforco', []))
-                                  current[idx] = { ...current[idx], descricao: e.target.value }
-                                  setC('upsell.midias_reforco', current)
-                                }}
-                                rows={3}
-                              />
-                            </div>
-                          </div>
+                          Adicionar
+                        </Button>
+                      </div>
+                      {(((getC('upsell.procedimentos', []) as any[]) || []) as any[]).length > 0 ? (
+                        <div className="space-y-2">
+                          {(((getC('upsell.procedimentos', []) as any[]) || []) as any[]).map((id: any) => {
+                            const proc = procedimentos.find((p: any) => p.id === id)
+                            return (
+                              <div key={String(id)} className="flex items-center justify-between gap-2 rounded-md border p-2">
+                                <div className="text-sm text-foreground">{proc?.nome || String(id)}</div>
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => {
+                                    const prev = ((getC('upsell.procedimentos', []) as any[]) || []) as any[]
+                                    setC('upsell.procedimentos', prev.filter((x) => x !== id))
+                                  }}
+                                >
+                                  Remover
+                                </Button>
+                              </div>
+                            )
+                          })}
                         </div>
-                      ))}
-
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => {
-                          const current = normalizeMidiasReforco(getC('upsell.midias_reforco', []))
-                          current.push({ tipo: 'imagem', url: '', titulo: '', descricao: '' })
-                          setC('upsell.midias_reforco', current)
-                        }}
-                      >
-                        <Plus className="mr-2 h-4 w-4" />
-                        Adicionar mídia
-                      </Button>
+                      ) : null}
                     </div>
+
+                    <div className="grid gap-2">
+                      <Label>Upgrade para Pacotes Premium</Label>
+                      <div className="flex gap-2">
+                        <Select value={getC('upsell._ui_add_pacote', 'none')} onValueChange={(v) => setC('upsell._ui_add_pacote', v)}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">Selecione</SelectItem>
+                            {itens
+                              .filter((p: any) => Boolean(p?.ativo))
+                              .map((p: any) => (
+                                <SelectItem key={p.id} value={p.id}>
+                                  {p.nome}
+                                </SelectItem>
+                              ))}
+                          </SelectContent>
+                        </Select>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => {
+                            const selectedId = String(getC('upsell._ui_add_pacote', 'none') || 'none')
+                            if (selectedId === 'none') return
+                            const prev = ((getC('upsell.upgrades_pacotes', []) as any[]) || []) as any[]
+                            if (prev.includes(selectedId)) return
+                            setC('upsell.upgrades_pacotes', [...prev, selectedId])
+                            setC('upsell._ui_add_pacote', 'none')
+                          }}
+                        >
+                          Adicionar
+                        </Button>
+                      </div>
+                      {(((getC('upsell.upgrades_pacotes', []) as any[]) || []) as any[]).length > 0 ? (
+                        <div className="space-y-2">
+                          {(((getC('upsell.upgrades_pacotes', []) as any[]) || []) as any[]).map((id: any) => {
+                            const pack = itens.find((p: any) => p.id === id)
+                            return (
+                              <div key={String(id)} className="flex items-center justify-between gap-2 rounded-md border p-2">
+                                <div className="text-sm text-foreground">{pack?.nome || String(id)}</div>
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => {
+                                    const prev = ((getC('upsell.upgrades_pacotes', []) as any[]) || []) as any[]
+                                    setC('upsell.upgrades_pacotes', prev.filter((x) => x !== id))
+                                  }}
+                                >
+                                  Remover
+                                </Button>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      ) : null}
+                    </div>
+                  </div>
+
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="grid gap-2">
+                      <Label>Quando sugerir</Label>
+                      <Select value={getC('upsell.quando', 'no_fechamento')} onValueChange={(v) => setC('upsell.quando', v)}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="no_fechamento">No fechamento</SelectItem>
+                          <SelectItem value="primeira_sessao">Na 1ª sessão</SelectItem>
+                          <SelectItem value="metade">Metade do pacote</SelectItem>
+                          <SelectItem value="ultima">Última sessão</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="grid gap-2">
+                      <Label>Adicionais por sessão</Label>
+                      <div className="space-y-3">
+                        {(((getC('upsell.adicionais_por_sessao', []) as any[]) || []) as any[]).map((a: any, idx: number) => (
+                          <div key={idx} className="rounded-lg border p-3 space-y-3">
+                            <div className="grid gap-3 md:grid-cols-3">
+                              <div className="grid gap-2">
+                                <Label>Nome</Label>
+                                <Input
+                                  value={a?.nome || ''}
+                                  onChange={(e) => {
+                                    const items = [ ...(((getC('upsell.adicionais_por_sessao', []) as any[]) || []) as any[]) ]
+                                    items[idx] = { ...(items[idx] || {}), nome: e.target.value }
+                                    setC('upsell.adicionais_por_sessao', items)
+                                  }}
+                                />
+                              </div>
+                              <div className="grid gap-2">
+                                <Label>Valor (R$)</Label>
+                                <Input
+                                  type="number"
+                                  step="0.01"
+                                  value={a?.valor ?? ''}
+                                  onChange={(e) => {
+                                    const items = [ ...(((getC('upsell.adicionais_por_sessao', []) as any[]) || []) as any[]) ]
+                                    items[idx] = { ...(items[idx] || {}), valor: e.target.value === '' ? null : Number(e.target.value) }
+                                    setC('upsell.adicionais_por_sessao', items)
+                                  }}
+                                />
+                              </div>
+                              <div className="flex items-end">
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  className="w-full"
+                                  onClick={() => {
+                                    const items = [ ...(((getC('upsell.adicionais_por_sessao', []) as any[]) || []) as any[]) ]
+                                    items.splice(idx, 1)
+                                    setC('upsell.adicionais_por_sessao', items)
+                                  }}
+                                >
+                                  Remover
+                                </Button>
+                              </div>
+                            </div>
+                            <div className="grid gap-2">
+                              <Label>Motivo</Label>
+                              <Textarea
+                                value={a?.motivo || ''}
+                                onChange={(e) => {
+                                  const items = [ ...(((getC('upsell.adicionais_por_sessao', []) as any[]) || []) as any[]) ]
+                                  items[idx] = { ...(items[idx] || {}), motivo: e.target.value }
+                                  setC('upsell.adicionais_por_sessao', items)
+                                }}
+                                rows={2}
+                              />
+                            </div>
+                          </div>
+                        ))}
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => {
+                            const items = [ ...(((getC('upsell.adicionais_por_sessao', []) as any[]) || []) as any[]) ]
+                            items.push({ nome: '', valor: null, motivo: '' })
+                            setC('upsell.adicionais_por_sessao', items)
+                          }}
+                        >
+                          Adicionar adicional
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid gap-2">
+                    <Label>Argumento de venda</Label>
+                    <Textarea value={getC('upsell.argumento', '')} onChange={(e) => setC('upsell.argumento', e.target.value)} rows={3} />
                   </div>
                 </div>
               </div>
@@ -2719,6 +2796,65 @@ export function ProtocolosPacotesPage() {
                   {renderMidiaUploader({ tipo: 'videos', label: 'Vídeos do pacote', accept: 'video/*', allowWhenCreating: false })}
                 </div>
               </div>
+            </div>
+
+            <div className="rounded-xl border p-4 space-y-3">
+              <Label className="text-base font-semibold">FAQ - Perguntas Frequentes</Label>
+              {(getC('faq', []) as any[]).map((faq: any, idx: number) => (
+                <div key={idx} className="rounded-lg border p-3 space-y-3">
+                  <div className="grid gap-2">
+                    <Label>Pergunta</Label>
+                    <Input
+                      value={faq?.pergunta || ''}
+                      onChange={(e) => {
+                        const items = [...((getC('faq', []) as any[]) || [])]
+                        items[idx] = { ...(items[idx] || {}), pergunta: e.target.value }
+                        setC('faq', items)
+                      }}
+                      placeholder="Ex: Quantas sessões são necessárias?"
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label>Resposta</Label>
+                    <Textarea
+                      value={faq?.resposta || ''}
+                      onChange={(e) => {
+                        const items = [...((getC('faq', []) as any[]) || [])]
+                        items[idx] = { ...(items[idx] || {}), resposta: e.target.value }
+                        setC('faq', items)
+                      }}
+                      placeholder="Digite a resposta detalhada..."
+                      rows={3}
+                    />
+                  </div>
+                  <div className="flex justify-end">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const items = [...((getC('faq', []) as any[]) || [])]
+                        items.splice(idx, 1)
+                        setC('faq', items)
+                      }}
+                    >
+                      Remover FAQ
+                    </Button>
+                  </div>
+                </div>
+              ))}
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  const items = [...((getC('faq', []) as any[]) || [])]
+                  items.push({ pergunta: '', resposta: '' })
+                  setC('faq', items)
+                }}
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                Adicionar FAQ
+              </Button>
             </div>
 
             <div className="space-y-2">

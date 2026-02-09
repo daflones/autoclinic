@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { Loader2, Plus, Search, Users, UserPlus, Activity, Ban, Trash2 } from 'lucide-react'
+import { Loader2, Plus, Search, Users, UserPlus, Activity, Ban, Trash2, Pencil } from 'lucide-react'
 import { useQueryClient } from '@tanstack/react-query'
 
 import { Button } from '@/components/ui/button'
@@ -231,10 +231,25 @@ export function PacientesPage() {
     [],
   )
 
-  const openPacienteDetails = (id: string) => {
+  const openPacienteDetails = (id: string, options?: { edit?: boolean; paciente?: any }) => {
     setSelectedPacienteId(id)
     setIsDetailsOpen(true)
     setTabPacientePerfil('geral')
+
+    if (options?.edit && options?.paciente) {
+      const paciente = options.paciente
+      setIsEditingPaciente(true)
+      setEditingPacienteDraft({
+        cpf: (paciente as any).cpf ?? '',
+        rg: (paciente as any).rg ?? '',
+        email: paciente.email ?? '',
+        telefone: paciente.telefone ?? '',
+        whatsapp: paciente.whatsapp ?? '',
+        endereco: (paciente as any).endereco ?? {},
+        analise_cliente: (paciente as any).analise_cliente ?? '',
+        produto_interesse: (paciente as any).produto_interesse ?? '',
+      })
+    }
   }
 
   const getKanbanStatusLabel = (key?: string | null) => {
@@ -728,6 +743,19 @@ export function PacientesPage() {
                           )}
                         </td>
                         <td className="px-5 py-4 align-top text-right">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="text-primary hover:text-primary hover:bg-primary/10"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              openPacienteDetails(paciente.id, { edit: true, paciente })
+                            }}
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+
                           <AlertDialog
                             open={deletePacienteId === paciente.id}
                             onOpenChange={(open) => setDeletePacienteId(open ? paciente.id : null)}
@@ -1243,7 +1271,7 @@ export function PacientesPage() {
                   <TabsList className="w-full justify-start">
                     <TabsTrigger value="geral">Geral</TabsTrigger>
                     <TabsTrigger value="agendamentos">Agendamentos</TabsTrigger>
-                    <TabsTrigger value="pacotes">Pacotes</TabsTrigger>
+                    <TabsTrigger value="pacotes">Planos de Tratamento</TabsTrigger>
                     <TabsTrigger value="fotos">Fotos</TabsTrigger>
                   </TabsList>
 
@@ -1508,8 +1536,26 @@ export function PacientesPage() {
                                   )}
                                 </div>
                                 <div className="text-right">
-                                  <span className="inline-flex rounded-full bg-muted px-3 py-1 text-xs font-medium text-foreground">
-                                    {String(a.status || '').replace(/_/g, ' ')}
+                                  <span className={`inline-flex items-center rounded-lg px-4 py-2 text-sm font-semibold ${
+                                    a.status === 'agendado' ? 'bg-blue-100 text-blue-800 border border-blue-200' :
+                                    a.status === 'confirmado' ? 'bg-cyan-100 text-cyan-800 border border-cyan-200' :
+                                    a.status === 'check_in' ? 'bg-indigo-100 text-indigo-800 border border-indigo-200' :
+                                    a.status === 'em_andamento' ? 'bg-yellow-100 text-yellow-800 border border-yellow-200' :
+                                    a.status === 'concluido' ? 'bg-green-100 text-green-800 border border-green-200' :
+                                    a.status === 'cancelado' ? 'bg-red-100 text-red-800 border border-red-200' :
+                                    a.status === 'nao_compareceu' ? 'bg-orange-100 text-orange-800 border border-orange-200' :
+                                    a.status === 'remarcado' ? 'bg-purple-100 text-purple-800 border border-purple-200' :
+                                    'bg-gray-100 text-gray-800 border border-gray-200'
+                                  }`}>
+                                    {a.status === 'agendado' ? 'Agendado' :
+                                     a.status === 'confirmado' ? 'Confirmado' :
+                                     a.status === 'check_in' ? 'Check-in' :
+                                     a.status === 'em_andamento' ? 'Em Andamento' :
+                                     a.status === 'concluido' ? 'Concluído' :
+                                     a.status === 'cancelado' ? 'Cancelado' :
+                                     a.status === 'nao_compareceu' ? 'Não Compareceu' :
+                                     a.status === 'remarcado' ? 'Remarcado' :
+                                     String(a.status || '').replace(/_/g, ' ')}
                                   </span>
                                   <div className="mt-2 flex justify-end">
                                     {editingAgendamentoId === a.id ? (
@@ -1615,9 +1661,9 @@ export function PacientesPage() {
                   <TabsContent value="pacotes">
                     <div className="rounded-xl border border-border/60 bg-background p-4">
                       {isLoadingPlanos || isLoadingSessoes ? (
-                        <div className="text-sm text-muted-foreground">Carregando pacotes e sessões...</div>
+                        <div className="text-sm text-muted-foreground">Carregando planos de tratamento...</div>
                       ) : planosAtivos.length === 0 ? (
-                        <div className="text-sm text-muted-foreground">Nenhum pacote ativo encontrado.</div>
+                        <div className="text-sm text-muted-foreground">Nenhum plano de tratamento ativo encontrado.</div>
                       ) : (
                         <div className="space-y-4">
                           {planosAtivos.map((plano: any) => {

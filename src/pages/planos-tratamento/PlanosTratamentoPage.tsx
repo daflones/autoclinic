@@ -21,6 +21,8 @@ import {
 import { usePacientes } from '@/hooks/usePacientes'
 import { useProfissionaisClinica } from '@/hooks/useProfissionaisClinica'
 import { useProtocolosPacotes } from '@/hooks/useProtocolosPacotes'
+import { useProcedimentos } from '@/hooks/useProcedimentos'
+import type { PlanoTratamentoItemInput } from '@/services/api/planos-tratamento'
 import {
   useCreateSessoesTratamento,
   useDeleteSessaoTratamento,
@@ -99,6 +101,11 @@ export function PlanosTratamentoPage() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [editFormState, setEditFormState] = useState<PlanoFormState | null>(null)
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false)
+  const [pendingDeletePlanoId, setPendingDeletePlanoId] = useState<string | null>(null)
+  const [openEditAfterDetailsLoad, setOpenEditAfterDetailsLoad] = useState(false)
+
+  const [createItens, setCreateItens] = useState<PlanoTratamentoItemInput[]>([])
+  const [editItens, setEditItens] = useState<PlanoTratamentoItemInput[]>([])
 
   const { data: planos = [], count = 0, isLoading } = usePlanosTratamento({
     page,
@@ -112,6 +119,11 @@ export function PlanosTratamentoPage() {
   const { data: pacientes = [] } = usePacientes({ limit: 100 })
   const { data: profissionais = [] } = useProfissionaisClinica()
   const { data: pacotes = [] } = useProtocolosPacotes({ status: 'ativo', limit: 1000 } as any)
+  const { data: procedimentosList = [] } = useProcedimentos({} as any)
+
+  const procedimentosMap = useMemo(() => {
+    return new Map((procedimentosList as any[]).map((p: any) => [p.id, p]))
+  }, [procedimentosList])
 
   const { data: sessoesPlano = [] } = useSessoesTratamento({
     plano_tratamento_id: isDetailsOpen ? selectedPlanoId ?? undefined : undefined,
@@ -150,6 +162,7 @@ export function PlanosTratamentoPage() {
 
   const handleOpenCreateModal = () => {
     setFormState(initialFormState)
+    setCreateItens([])
     setIsCreateModalOpen(true)
   }
 
@@ -171,12 +184,14 @@ export function PlanosTratamentoPage() {
         total_previsto: Number(formState.total_previsto) || 0,
         total_pago: Number(formState.total_pago) || 0,
         observacoes: formState.observacoes || undefined,
+        itens: createItens.length > 0 ? createItens : undefined,
       },
       {
         onSuccess: () => {
           toast.success('Plano de tratamento criado com sucesso!')
           setIsCreateModalOpen(false)
           setFormState(initialFormState)
+          setCreateItens([])
           setPage(1)
         },
         onError: (error) => {
@@ -202,10 +217,29 @@ export function PlanosTratamentoPage() {
     setIsDetailsOpen(true)
   }
 
+  const handleOpenEditFromList = (plano: PlanoTratamento) => {
+    setSelectedPlanoId(plano.id)
+    setOpenEditAfterDetailsLoad(true)
+    setIsDetailsOpen(true)
+  }
+
+  const handleRequestDeleteFromList = (plano: PlanoTratamento) => {
+    setPendingDeletePlanoId(plano.id)
+    setIsDeleteConfirmOpen(true)
+  }
+
   const handleCloseDetails = () => {
     setIsDetailsOpen(false)
     setSelectedPlanoId(null)
   }
+
+  useEffect(() => {
+    if (!openEditAfterDetailsLoad) return
+    if (!isDetailsOpen) return
+    if (!planoDetalhes) return
+    setOpenEditAfterDetailsLoad(false)
+    handleOpenEditModal()
+  }, [openEditAfterDetailsLoad, isDetailsOpen, planoDetalhes])
 
   const handleOpenEditModal = () => {
     if (!planoDetalhes) return
@@ -224,6 +258,18 @@ export function PlanosTratamentoPage() {
       data_prevista_inicio: '',
       data_prevista_conclusao: '',
     })
+
+    setEditItens(
+      (planoDetalhes.itens || []).map((it) => ({
+        procedimento_id: it.procedimento_id ?? null,
+        descricao_personalizada: it.descricao_personalizada ?? null,
+        quantidade: it.quantidade ?? 1,
+        ordem: it.ordem ?? 0,
+        valor_unitario: it.valor_unitario ?? 0,
+        desconto_percentual: it.desconto_percentual ?? 0,
+        observacoes: it.observacoes ?? null,
+      }))
+    )
 
     setIsEditModalOpen(true)
   }
@@ -245,12 +291,14 @@ export function PlanosTratamentoPage() {
           total_previsto: Number(editFormState.total_previsto) || 0,
           total_pago: Number(editFormState.total_pago) || 0,
           observacoes: editFormState.observacoes || undefined,
+          itens: editItens,
         },
       },
       {
         onSuccess: () => {
           setIsEditModalOpen(false)
           setEditFormState(null)
+          setEditItens([])
         },
       },
     )
@@ -258,16 +306,20 @@ export function PlanosTratamentoPage() {
 
   const handleRequestDeletePlano = () => {
     if (!planoDetalhes) return
+    setPendingDeletePlanoId(planoDetalhes.id)
     setIsDeleteConfirmOpen(true)
   }
 
   const handleConfirmDeletePlano = () => {
-    if (!planoDetalhes) return
+    if (!pendingDeletePlanoId) return
 
-    deletePlano.mutate(planoDetalhes.id, {
+    deletePlano.mutate(pendingDeletePlanoId, {
       onSuccess: () => {
         setIsDeleteConfirmOpen(false)
-        handleCloseDetails()
+        setPendingDeletePlanoId(null)
+        if (selectedPlanoId === pendingDeletePlanoId) {
+          handleCloseDetails()
+        }
       },
     })
   }
@@ -282,11 +334,11 @@ export function PlanosTratamentoPage() {
 
   return (
     <div className="w-full h-full space-y-6">
-      <header className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+      <header className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Planos de Tratamento</h1>
-          <p className="text-gray-600 dark:text-gray-400 mt-1 max-w-2xl">
-            Centralize diagnósticos, protocolos e acompanhamentos clínicos em planos personalizados para cada paciente.
+          <h1 className="text-3xl font-semibold tracking-tight text-foreground">Planos de Tratamento</h1>
+          <p className="text-sm text-muted-foreground">
+            Centralize diagnósticos, protocolos e acompanhamentos clínicos em planos personalizados.
           </p>
         </div>
         <PlanoAtivoButton
@@ -300,127 +352,126 @@ export function PlanosTratamentoPage() {
       </header>
 
       <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Card className="bg-gradient-to-br from-primary-500/90 to-primary-600 text-white shadow-lg">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-semibold uppercase tracking-wide">
-              Planos ativos
-            </CardTitle>
-            <CardDescription className="text-primary-100">Monitoramento clínico em tempo real</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">
-              {planos.filter((plano) => ['aprovado', 'em_execucao'].includes(plano.status)).length}
+        <div className="rounded-2xl border border-border/60 bg-gradient-to-br from-primary/10 via-background to-background p-5 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Planos Ativos</p>
+              <h3 className="mt-2 text-2xl font-semibold text-foreground">
+                {planos.filter((plano) => ['aprovado', 'em_execucao'].includes(plano.status)).length}
+              </h3>
             </div>
-            <p className="text-xs text-primary-100 mt-2">
-              {count} planos no total
-            </p>
-          </CardContent>
-        </Card>
-        <Card className="dark:bg-gray-800">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-semibold uppercase tracking-wide text-gray-600 dark:text-gray-300">
-              Em aprovação
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-amber-600 dark:text-amber-400">
-              {planos.filter((plano) => plano.status === 'em_aprovacao').length}
+            <div className="rounded-full bg-primary/10 p-2 text-primary">
+              <ClipboardList className="h-5 w-5" />
             </div>
-            <p className="text-xs text-muted-foreground mt-2">
-              Protocolos aguardando confirmação clínica
-            </p>
-          </CardContent>
-        </Card>
-        <Card className="dark:bg-gray-800">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-semibold uppercase tracking-wide text-gray-600 dark:text-gray-300">
-              Concluídos no mês
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-emerald-600 dark:text-emerald-400">
-              {planos.filter((plano) => {
-                if (plano.status !== 'concluido') return false
-                const createdAt = new Date(plano.updated_at || plano.created_at)
-                const now = new Date()
-                return createdAt.getMonth() === now.getMonth() && createdAt.getFullYear() === now.getFullYear()
-              }).length}
+          </div>
+          <p className="mt-2 text-xs text-muted-foreground">{count} planos no total</p>
+        </div>
+
+        <div className="rounded-2xl border border-border/60 bg-gradient-to-br from-amber-500/10 via-background to-background p-5 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Em Aprovação</p>
+              <h3 className="mt-2 text-2xl font-semibold text-foreground">
+                {planos.filter((plano) => plano.status === 'em_aprovacao').length}
+              </h3>
             </div>
-            <p className="text-xs text-muted-foreground mt-2">
-              Protocolos finalizados neste mês
-            </p>
-          </CardContent>
-        </Card>
-        <Card className="dark:bg-gray-800">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-semibold uppercase tracking-wide text-gray-600 dark:text-gray-300">
-              Receita prevista
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-primary-600 dark:text-primary-400">
-              {formatCurrency(
-                planos.reduce((total, plano) => total + Number(plano.total_previsto || 0), 0),
-              )}
+            <div className="rounded-full bg-amber-500/10 p-2 text-amber-500">
+              <Calendar className="h-5 w-5" />
             </div>
-            <p className="text-xs text-muted-foreground mt-2">
-              Considera os planos listados nesta página
-            </p>
-          </CardContent>
-        </Card>
+          </div>
+          <p className="mt-2 text-xs text-muted-foreground">Protocolos aguardando confirmação</p>
+        </div>
+
+        <div className="rounded-2xl border border-border/60 bg-gradient-to-br from-emerald-500/10 via-background to-background p-5 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Concluídos no Mês</p>
+              <h3 className="mt-2 text-2xl font-semibold text-foreground">
+                {planos.filter((plano) => {
+                  if (plano.status !== 'concluido') return false
+                  const createdAt = new Date(plano.updated_at || plano.created_at)
+                  const now = new Date()
+                  return createdAt.getMonth() === now.getMonth() && createdAt.getFullYear() === now.getFullYear()
+                }).length}
+              </h3>
+            </div>
+            <div className="rounded-full bg-emerald-500/10 p-2 text-emerald-500">
+              <CheckCircle2 className="h-5 w-5" />
+            </div>
+          </div>
+          <p className="mt-2 text-xs text-muted-foreground">Protocolos finalizados neste mês</p>
+        </div>
+
+        <div className="rounded-2xl border border-border/60 bg-gradient-to-br from-sky-500/10 via-background to-background p-5 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Receita Prevista</p>
+              <h3 className="mt-2 text-2xl font-semibold text-foreground">
+                {formatCurrency(
+                  planos.reduce((total, plano) => total + Number(plano.total_previsto || 0), 0),
+                )}
+              </h3>
+            </div>
+            <div className="rounded-full bg-sky-500/10 p-2 text-sky-500">
+              <Coins className="h-5 w-5" />
+            </div>
+          </div>
+          <p className="mt-2 text-xs text-muted-foreground">Considera os planos listados nesta página</p>
+        </div>
       </section>
 
-      <section className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div className="flex flex-1 flex-col gap-4 md:flex-row md:items-center">
-          <div className="relative md:max-w-xs">
-            <Input
-              placeholder="Buscar por título, paciente ou observações"
-              value={searchTerm}
-              onChange={(event) => setSearchTerm(event.target.value)}
-              className="pl-3"
-            />
+      <section className="rounded-3xl border border-border/60 bg-background/80 p-6 shadow-lg backdrop-blur">
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between mb-6">
+          <div className="flex flex-1 flex-col gap-4 md:flex-row md:items-center">
+            <div className="relative flex-1 md:max-w-xs">
+              <Input
+                placeholder="Buscar por título, paciente ou observações"
+                value={searchTerm}
+                onChange={(event) => setSearchTerm(event.target.value)}
+                className="pl-3"
+              />
+            </div>
+
+            <Select
+              value={statusFilter}
+              onValueChange={(value) => setStatusFilter(value)}
+            >
+              <SelectTrigger className="w-full md:w-48">
+                <SelectValue placeholder="Filtrar por status" />
+              </SelectTrigger>
+              <SelectContent>
+                {statusFilterOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
-          <Select
-            value={statusFilter}
-            onValueChange={(value) => setStatusFilter(value)}
-          >
-            <SelectTrigger className="w-full md:w-56">
-              <SelectValue placeholder="Filtrar por status" />
-            </SelectTrigger>
-            <SelectContent>
-              {statusFilterOptions.map((option) => (
-                <SelectItem key={option.value} value={option.value}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <span>Página {page} de {totalPages}</span>
+            <Separator orientation="vertical" className="h-6" />
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage((prev) => Math.max(1, prev - 1))}
+              disabled={page === 1}
+            >
+              Anterior
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
+              disabled={page === totalPages}
+            >
+              Próxima
+            </Button>
+          </div>
         </div>
 
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <span>Página {page} de {totalPages}</span>
-          <Separator orientation="vertical" className="h-6" />
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setPage((prev) => Math.max(1, prev - 1))}
-            disabled={page === 1}
-          >
-            Anterior
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
-            disabled={page === totalPages}
-          >
-            Próxima
-          </Button>
-        </div>
-      </section>
-
-      <section className="grid gap-6 lg:grid-cols-2 xl:grid-cols-3">
+        <div className="grid gap-6 lg:grid-cols-2 xl:grid-cols-3">
         {isLoading ? (
           <div className="col-span-full flex flex-col items-center justify-center py-12 text-muted-foreground">
             <Loader2 className="h-10 w-10 animate-spin" />
@@ -449,7 +500,11 @@ export function PlanosTratamentoPage() {
             const statusMeta = statusOptions.find((option) => option.value === plano.status)
 
             return (
-              <Card key={plano.id} className="group relative border border-gray-100 shadow-sm transition-all hover:shadow-lg dark:border-gray-800">
+              <Card
+                key={plano.id}
+                className="group relative rounded-2xl border border-border/60 shadow-sm transition-all hover:shadow-lg cursor-pointer"
+                onClick={() => handleOpenDetails(plano)}
+              >
                 <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-primary-400 to-secondary-500 opacity-0 transition-opacity group-hover:opacity-100" />
                 <CardHeader>
                   <div className="flex items-start justify-between gap-3">
@@ -462,9 +517,35 @@ export function PlanosTratamentoPage() {
                         {pacienteNome ?? 'Paciente não encontrado'}
                       </CardDescription>
                     </div>
-                    {statusMeta && (
-                      <Badge className={statusMeta.badgeClass}>{statusMeta.label}</Badge>
-                    )}
+                    <div className="flex items-center gap-2">
+                      {statusMeta && <Badge className={statusMeta.badgeClass}>{statusMeta.label}</Badge>}
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        title="Editar"
+                        aria-label="Editar"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleOpenEditFromList(plano)
+                        }}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="icon"
+                        title="Excluir"
+                        aria-label="Excluir"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleRequestDeleteFromList(plano)
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -482,7 +563,12 @@ export function PlanosTratamentoPage() {
                         value={plano.status}
                         onValueChange={(value) => handleStatusUpdate(plano.id, value as StatusPlanoTratamento)}
                       >
-                        <SelectTrigger className="h-9">
+                        <SelectTrigger
+                          className="h-9"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                          }}
+                        >
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -520,7 +606,14 @@ export function PlanosTratamentoPage() {
                     <p className="text-xs text-muted-foreground">
                       Atualizado em {new Date(plano.updated_at).toLocaleDateString('pt-BR')} às {new Date(plano.updated_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
                     </p>
-                    <Button variant="outline" size="sm" onClick={() => handleOpenDetails(plano)}>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleOpenDetails(plano)
+                      }}
+                    >
                       Detalhes do plano
                     </Button>
                   </div>
@@ -529,6 +622,7 @@ export function PlanosTratamentoPage() {
             )
           })
         )}
+        </div>
       </section>
 
       {/* Criação de plano */}
@@ -628,6 +722,141 @@ export function PlanosTratamentoPage() {
                 </SelectContent>
               </Select>
             </div>
+
+            <Separator />
+            <div className="space-y-3">
+              <Label className="text-base font-semibold">Procedimentos do plano</Label>
+              <p className="text-xs text-muted-foreground">Adicione procedimentos que farão parte deste plano de tratamento.</p>
+              {createItens.map((item, idx) => {
+                const proc = item.procedimento_id ? procedimentosMap.get(item.procedimento_id) : null
+                return (
+                  <div key={idx} className="rounded-lg border p-3 space-y-3">
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <div className="space-y-2">
+                        <Label>Procedimento</Label>
+                        <Select
+                          value={item.procedimento_id || 'none'}
+                          onValueChange={(v) => {
+                            setCreateItens((prev) => {
+                              const next = [...prev]
+                              const selectedProc: any = v !== 'none' ? procedimentosMap.get(v) : null
+                              next[idx] = {
+                                ...next[idx],
+                                procedimento_id: v === 'none' ? null : v,
+                                descricao_personalizada: selectedProc?.nome || next[idx].descricao_personalizada,
+                                valor_unitario: selectedProc?.valor_base ?? next[idx].valor_unitario ?? 0,
+                              }
+                              return next
+                            })
+                          }}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione um procedimento" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">Nenhum (item manual)</SelectItem>
+                            {(procedimentosList as any[]).map((p: any) => (
+                              <SelectItem key={p.id} value={p.id}>{p.nome}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>{item.procedimento_id ? 'Descrição personalizada' : 'Descrição do item *'}</Label>
+                        <Input
+                          value={item.descricao_personalizada || ''}
+                          onChange={(e) => {
+                            setCreateItens((prev) => {
+                              const next = [...prev]
+                              next[idx] = { ...next[idx], descricao_personalizada: e.target.value }
+                              return next
+                            })
+                          }}
+                          placeholder={proc ? proc.nome : 'Ex: Limpeza de pele'}
+                        />
+                      </div>
+                    </div>
+                    <div className="grid gap-3 sm:grid-cols-3">
+                      <div className="space-y-2">
+                        <Label>Quantidade</Label>
+                        <Input
+                          type="number"
+                          min={1}
+                          value={item.quantidade ?? 1}
+                          onChange={(e) => {
+                            setCreateItens((prev) => {
+                              const next = [...prev]
+                              next[idx] = { ...next[idx], quantidade: Number(e.target.value) || 1 }
+                              return next
+                            })
+                          }}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Valor unitário (R$)</Label>
+                        <Input
+                          type="number"
+                          min={0}
+                          step="0.01"
+                          value={item.valor_unitario ?? 0}
+                          onChange={(e) => {
+                            setCreateItens((prev) => {
+                              const next = [...prev]
+                              next[idx] = { ...next[idx], valor_unitario: Number(e.target.value) || 0 }
+                              return next
+                            })
+                          }}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Desconto (%)</Label>
+                        <Input
+                          type="number"
+                          min={0}
+                          max={100}
+                          value={item.desconto_percentual ?? 0}
+                          onChange={(e) => {
+                            setCreateItens((prev) => {
+                              const next = [...prev]
+                              next[idx] = { ...next[idx], desconto_percentual: Number(e.target.value) || 0 }
+                              return next
+                            })
+                          }}
+                        />
+                      </div>
+                    </div>
+                    <div className="flex justify-end">
+                      <Button type="button" variant="outline" size="sm" onClick={() => {
+                        setCreateItens((prev) => prev.filter((_, i) => i !== idx))
+                      }}>
+                        Remover
+                      </Button>
+                    </div>
+                  </div>
+                )
+              })}
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setCreateItens((prev) => [
+                    ...prev,
+                    {
+                      procedimento_id: null,
+                      descricao_personalizada: '',
+                      quantidade: 1,
+                      ordem: prev.length,
+                      valor_unitario: 0,
+                      desconto_percentual: 0,
+                      observacoes: null,
+                    },
+                  ])
+                }}
+              >
+                + Adicionar procedimento / item
+              </Button>
+            </div>
+            <Separator />
 
             <div className="space-y-2">
               <Label>Título *</Label>
@@ -810,6 +1039,33 @@ export function PlanosTratamentoPage() {
                   </p>
                 </div>
               </div>
+
+              {planoDetalhes.itens && planoDetalhes.itens.length > 0 && (
+                <div className="rounded-lg border border-dashed border-gray-200 p-4 dark:border-gray-800">
+                  <p className="text-xs font-semibold uppercase text-muted-foreground mb-3">Procedimentos / Itens do plano</p>
+                  <div className="space-y-2">
+                    {planoDetalhes.itens.map((item, idx) => {
+                      const proc: any = item.procedimento_id ? procedimentosMap.get(item.procedimento_id) : null
+                      const nome = proc?.nome || item.descricao_personalizada || '—'
+                      const subtotal = (item.valor_unitario ?? 0) * (item.quantidade ?? 1) * (1 - (item.desconto_percentual ?? 0) / 100)
+                      return (
+                        <div key={item.id || idx} className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
+                          <div className="min-w-0 flex-1">
+                            <span className="font-medium">{nome}</span>
+                            {item.procedimento_id && <Badge variant="secondary" className="ml-2 text-[10px]">Procedimento</Badge>}
+                            {!item.procedimento_id && <Badge variant="outline" className="ml-2 text-[10px]">Manual</Badge>}
+                            <span className="ml-2 text-muted-foreground">
+                              {item.quantidade ?? 1}x {formatCurrency(item.valor_unitario ?? 0)}
+                              {(item.desconto_percentual ?? 0) > 0 ? ` (-${item.desconto_percentual}%)` : ''}
+                            </span>
+                          </div>
+                          <span className="font-medium text-foreground">{formatCurrency(subtotal)}</span>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
 
               <div className="rounded-lg border border-dashed border-gray-200 p-4 dark:border-gray-800">
                 <p className="text-xs font-semibold uppercase text-muted-foreground">Sessões</p>
@@ -1120,7 +1376,7 @@ export function PlanosTratamentoPage() {
 
       {/* Edição de plano */}
       <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
-        <DialogContent className="max-w-4xl">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Editar plano de tratamento</DialogTitle>
             <DialogDescription>
@@ -1226,6 +1482,141 @@ export function PlanosTratamentoPage() {
                   </SelectContent>
                 </Select>
               </div>
+
+              <Separator />
+              <div className="space-y-3">
+                <Label className="text-base font-semibold">Procedimentos do plano</Label>
+                <p className="text-xs text-muted-foreground">Gerencie os procedimentos incluídos neste plano de tratamento.</p>
+                {editItens.map((item, idx) => {
+                  const proc = item.procedimento_id ? procedimentosMap.get(item.procedimento_id) : null
+                  return (
+                    <div key={idx} className="rounded-lg border p-3 space-y-3">
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <div className="space-y-2">
+                          <Label>Procedimento</Label>
+                          <Select
+                            value={item.procedimento_id || 'none'}
+                            onValueChange={(v) => {
+                              setEditItens((prev) => {
+                                const next = [...prev]
+                                const selectedProc: any = v !== 'none' ? procedimentosMap.get(v) : null
+                                next[idx] = {
+                                  ...next[idx],
+                                  procedimento_id: v === 'none' ? null : v,
+                                  descricao_personalizada: selectedProc?.nome || next[idx].descricao_personalizada,
+                                  valor_unitario: selectedProc?.valor_base ?? next[idx].valor_unitario ?? 0,
+                                }
+                                return next
+                              })
+                            }}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Selecione um procedimento" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="none">Nenhum (item manual)</SelectItem>
+                              {(procedimentosList as any[]).map((p: any) => (
+                                <SelectItem key={p.id} value={p.id}>{p.nome}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label>{item.procedimento_id ? 'Descrição personalizada' : 'Descrição do item *'}</Label>
+                          <Input
+                            value={item.descricao_personalizada || ''}
+                            onChange={(e) => {
+                              setEditItens((prev) => {
+                                const next = [...prev]
+                                next[idx] = { ...next[idx], descricao_personalizada: e.target.value }
+                                return next
+                              })
+                            }}
+                            placeholder={proc ? proc.nome : 'Ex: Limpeza de pele'}
+                          />
+                        </div>
+                      </div>
+                      <div className="grid gap-3 sm:grid-cols-3">
+                        <div className="space-y-2">
+                          <Label>Quantidade</Label>
+                          <Input
+                            type="number"
+                            min={1}
+                            value={item.quantidade ?? 1}
+                            onChange={(e) => {
+                              setEditItens((prev) => {
+                                const next = [...prev]
+                                next[idx] = { ...next[idx], quantidade: Number(e.target.value) || 1 }
+                                return next
+                              })
+                            }}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Valor unitário (R$)</Label>
+                          <Input
+                            type="number"
+                            min={0}
+                            step="0.01"
+                            value={item.valor_unitario ?? 0}
+                            onChange={(e) => {
+                              setEditItens((prev) => {
+                                const next = [...prev]
+                                next[idx] = { ...next[idx], valor_unitario: Number(e.target.value) || 0 }
+                                return next
+                              })
+                            }}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Desconto (%)</Label>
+                          <Input
+                            type="number"
+                            min={0}
+                            max={100}
+                            value={item.desconto_percentual ?? 0}
+                            onChange={(e) => {
+                              setEditItens((prev) => {
+                                const next = [...prev]
+                                next[idx] = { ...next[idx], desconto_percentual: Number(e.target.value) || 0 }
+                                return next
+                              })
+                            }}
+                          />
+                        </div>
+                      </div>
+                      <div className="flex justify-end">
+                        <Button type="button" variant="outline" size="sm" onClick={() => {
+                          setEditItens((prev) => prev.filter((_, i) => i !== idx))
+                        }}>
+                          Remover
+                        </Button>
+                      </div>
+                    </div>
+                  )
+                })}
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setEditItens((prev) => [
+                      ...prev,
+                      {
+                        procedimento_id: null,
+                        descricao_personalizada: '',
+                        quantidade: 1,
+                        ordem: prev.length,
+                        valor_unitario: 0,
+                        desconto_percentual: 0,
+                        observacoes: null,
+                      },
+                    ])
+                  }}
+                >
+                  + Adicionar procedimento / item
+                </Button>
+              </div>
+              <Separator />
 
               <div className="space-y-2">
                 <Label>Título *</Label>
@@ -1380,7 +1771,13 @@ export function PlanosTratamentoPage() {
       </Dialog>
 
       {/* Confirmação de exclusão */}
-      <Dialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
+      <Dialog
+        open={isDeleteConfirmOpen}
+        onOpenChange={(open) => {
+          setIsDeleteConfirmOpen(open)
+          if (!open) setPendingDeletePlanoId(null)
+        }}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Excluir plano de tratamento</DialogTitle>

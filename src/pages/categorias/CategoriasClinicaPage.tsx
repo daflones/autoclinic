@@ -1,8 +1,6 @@
 import { useState } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Badge } from '@/components/ui/badge'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import {
@@ -20,7 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Plus, Palette, Edit, Trash2, Layers } from 'lucide-react'
+import { Plus, Edit, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import {
   useCategoriasProcedimento,
@@ -129,87 +127,83 @@ export function CategoriasClinicaPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <header className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Categorias de Procedimentos</h1>
-          <p className="text-muted-foreground">Organize os procedimentos por categorias</p>
+          <h1 className="text-3xl font-semibold tracking-tight text-foreground">Categorias de Procedimentos</h1>
+          <p className="text-sm text-muted-foreground">Organize os procedimentos por categorias</p>
         </div>
         <Button onClick={() => setIsCreateModalOpen(true)}>
           <Plus className="mr-2 h-4 w-4" />
           Nova Categoria
         </Button>
-      </div>
+      </header>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Layers className="h-5 w-5" />
-            Categorias ({categorias.length})
-          </CardTitle>
-          <CardDescription>Lista de todas as categorias cadastradas</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <div className="flex items-center justify-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-            </div>
-          ) : categorias.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              Nenhuma categoria encontrada
-            </div>
-          ) : (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {categorias.map((categoria) => {
-                const statusConfig = STATUS_CONFIG[categoria.status]
+      <section className="rounded-3xl border border-border/60 bg-background/80 p-6 shadow-lg backdrop-blur">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold text-foreground">Categorias ({categorias.length})</h2>
+          <span className="text-sm text-muted-foreground">Exibindo {categorias.length} registros</span>
+        </div>
 
-                return (
-                  <Card key={categoria.id} className="hover:shadow-md transition-shadow">
-                    <CardHeader className="pb-3">
-                      <div className="flex items-start justify-between">
-                        <div className="flex items-center gap-2">
-                          <div
-                            className="w-4 h-4 rounded-full"
-                            style={{ backgroundColor: categoria.cor || '#3b82f6' }}
-                          />
-                          <CardTitle className="text-base">{categoria.nome}</CardTitle>
-                        </div>
-                        <Badge variant={statusConfig.variant} className="text-xs">
-                          {statusConfig.label}
-                        </Badge>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                      {categoria.descricao && (
-                        <p className="text-sm text-muted-foreground line-clamp-2">
-                          {categoria.descricao}
-                        </p>
-                      )}
-                      <div className="flex gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="flex-1"
-                          onClick={() => handleOpenEdit(categoria)}
-                        >
-                          <Edit className="mr-1 h-3 w-3" />
-                          Editar
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleRequestDelete(categoria)}
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                )
-              })}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+        {isLoading ? (
+          <div className="flex items-center justify-center py-12 text-muted-foreground">
+            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+          </div>
+        ) : categorias.length === 0 ? (
+          <div className="text-center py-12 text-muted-foreground">
+            Nenhuma categoria encontrada
+          </div>
+        ) : (
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {categorias.map((categoria) => {
+              const statusConfig = STATUS_CONFIG[categoria.status]
+
+              return (
+                <div key={categoria.id} className="rounded-2xl border border-border/60 p-4 hover:shadow-md transition-shadow">
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <div
+                        className="w-4 h-4 rounded-full"
+                        style={{ backgroundColor: categoria.cor || '#3b82f6' }}
+                      />
+                      <span className="font-medium text-foreground">{categoria.nome}</span>
+                    </div>
+                    <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-medium ${
+                      categoria.status === 'ativa' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300'
+                      : 'bg-amber-100 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300'
+                    }`}>
+                      {statusConfig.label}
+                    </span>
+                  </div>
+                  {categoria.descricao && (
+                    <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
+                      {categoria.descricao}
+                    </p>
+                  )}
+                  <div className="flex gap-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="flex-1 text-primary hover:text-primary hover:bg-primary/10"
+                      onClick={() => handleOpenEdit(categoria)}
+                    >
+                      <Edit className="mr-1 h-3 w-3" />
+                      Editar
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-rose-600 hover:text-rose-700 hover:bg-rose-500/10"
+                      onClick={() => handleRequestDelete(categoria)}
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </section>
 
       {/* Modal de Criação */}
       <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>

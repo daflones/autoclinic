@@ -66,7 +66,7 @@ export function PairsEditor({
 
   return (
     <div className="space-y-2">
-      <div className="flex items-center justify-between gap-3">
+      <div className="space-y-2">
         <div className="text-sm font-medium text-foreground">{title}</div>
         <Button type="button" variant="outline" disabled={disabled} onClick={addItem}>
           <Plus className="mr-2 h-4 w-4" />

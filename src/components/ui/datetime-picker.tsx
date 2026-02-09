@@ -17,7 +17,6 @@ export function DateTimePicker({ value, onChange, label, required, min }: DateTi
   const [showPicker, setShowPicker] = useState(false)
   const [selectedDate, setSelectedDate] = useState<Date>(value ? new Date(value) : new Date())
   const rootRef = useRef<HTMLDivElement | null>(null)
-  const [openUp, setOpenUp] = useState(false)
 
   const formatLocalDateTime = (date: Date) => {
     const pad = (n: number) => String(n).padStart(2, '0')
@@ -61,15 +60,8 @@ export function DateTimePicker({ value, onChange, label, required, min }: DateTi
   }, [showPicker])
 
   useEffect(() => {
-    if (!showPicker) return
-    const root = rootRef.current
-    if (!root) return
-
-    const rect = root.getBoundingClientRect()
-    const estimatedHeight = 340
-    const spaceBelow = window.innerHeight - rect.bottom
-    const spaceAbove = rect.top
-    setOpenUp(spaceBelow < estimatedHeight && spaceAbove > spaceBelow)
+    if (!showPicker || !rootRef.current) return
+    // Calendar now always appears below, no positioning calculation needed
   }, [showPicker])
 
   const formatDisplayValue = (dateTime: string) => {
@@ -155,7 +147,7 @@ export function DateTimePicker({ value, onChange, label, required, min }: DateTi
 
         {showPicker && (
           <Card
-            className={`absolute left-0 z-[999] w-[320px] max-w-[92vw] ${openUp ? 'bottom-full mb-2' : 'top-full mt-2'}`}
+            className="absolute left-0 top-full mt-2 z-[999] w-[320px] max-w-[92vw]"
           >
             <CardContent className="p-2">
               {/* Header do calendário */}

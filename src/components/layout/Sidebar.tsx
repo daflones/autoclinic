@@ -7,16 +7,19 @@ import {
   Sparkles,
   CalendarDays,
   ScrollText,
-  FolderOpen,
   Settings2,
   Package,
   Palette,
   LogOut,
   Bot,
   MessageCircle,
+  Send,
   CreditCard,
   QrCode,
-  BarChart3
+  BarChart3,
+  Clock,
+  AlertTriangle,
+  RefreshCw
 } from 'lucide-react'
 
 type AppRole = 'clinica' | 'admin' | 'profissional' | 'recepcao' | 'gestor'
@@ -44,7 +47,6 @@ const ADMIN_GESTOR: AppRole[] = ['clinica', 'admin', 'gestor']
 const menuItems: MenuItem[] = [
   {
     label: 'Dashboard Inteligente',
-    description: 'Indicadores clínicos em tempo real',
     icon: LayoutDashboard,
     href: '/app/dashboard',
     color: 'from-primary-400 to-primary-600',
@@ -52,16 +54,22 @@ const menuItems: MenuItem[] = [
   },
   {
     label: 'Pacientes',
-    description: 'Histórico, fichas e prontuários',
     icon: Users,
     href: '/app/pacientes',
     color: 'from-secondary-400 to-secondary-600',
     allowedRoles: ['clinica', 'admin', 'profissional', 'recepcao', 'gestor'],
-    subItems: []
+    subItems: [
+      {
+        label: 'Planos Ativos',
+        icon: ScrollText,
+        href: '/app/pacientes/planos-ativos',
+        color: 'from-tertiary-300 to-primary-400',
+        allowedRoles: ['clinica', 'admin', 'profissional', 'recepcao', 'gestor'],
+      },
+    ]
   },
   {
     label: 'Profissionais',
-    description: 'Equipe clínica, agendas e metas',
     icon: UserSquare,
     href: '/app/profissionais',
     color: 'from-primary-500 to-primary-700',
@@ -69,49 +77,63 @@ const menuItems: MenuItem[] = [
   },
   {
     label: 'Procedimentos',
-    description: 'Catálogo de tratamentos e protocolos',
     icon: Sparkles,
     href: '/app/procedimentos',
     color: 'from-secondary-300 to-secondary-500',
     allowedRoles: ADMIN_GESTOR,
-  },
-  {
-    label: 'Categorias de Tratamento',
-    icon: Palette,
-    href: '/app/categorias',
-    color: 'from-primary-300 to-primary-500',
-    allowedRoles: ADMIN_GESTOR,
-  },
-  {
-    label: 'Protocolos/Pacotes',
-    description: 'Biblioteca de pacotes e protocolos',
-    icon: Package,
-    href: '/app/protocolos-pacotes',
-    color: 'from-secondary-300 to-primary-300',
-    allowedRoles: ADMIN_GESTOR,
-  },
-  {
-    label: 'Agenda Inteligente',
-    description: 'Agendamentos e salas simultâneas',
-    icon: CalendarDays,
-    href: '/app/agendamentos',
-    color: 'from-primary-400 to-secondary-400',
-    allowedRoles: ALL_ROLES,
+    subItems: [
+      {
+        label: 'Categorias de Tratamento',
+        icon: Palette,
+        href: '/app/categorias',
+        color: 'from-primary-300 to-primary-500',
+        allowedRoles: ADMIN_GESTOR,
+      },
+      {
+        label: 'Protocolos/Pacotes',
+        icon: Package,
+        href: '/app/protocolos-pacotes',
+        color: 'from-secondary-300 to-primary-300',
+        allowedRoles: ADMIN_GESTOR,
+      },
+    ],
   },
   {
     label: 'Planos de Tratamento',
-    description: 'Protocolos clínicos e acompanhamento',
     icon: ScrollText,
     href: '/app/planos-tratamento',
     color: 'from-tertiary-300 to-primary-400',
     allowedRoles: ['clinica', 'admin', 'profissional', 'gestor'],
   },
   {
-    label: 'Arquivos Clínicos',
-    icon: FolderOpen,
-    href: '/app/arquivos',
-    color: 'from-primary-200 to-primary-400',
-    allowedRoles: ['clinica', 'admin', 'profissional', 'gestor'],
+    label: 'Agenda Inteligente',
+    icon: CalendarDays,
+    href: '/app/agendamentos',
+    color: 'from-primary-400 to-secondary-400',
+    allowedRoles: ALL_ROLES,
+    subItems: [
+      {
+        label: 'Lista de Espera',
+        icon: Clock,
+        href: '/app/agendamentos/lista-espera',
+        color: 'from-primary-300 to-secondary-300',
+        allowedRoles: ALL_ROLES,
+      },
+      {
+        label: 'No-Shows',
+        icon: AlertTriangle,
+        href: '/app/agendamentos/no-shows',
+        color: 'from-primary-300 to-secondary-300',
+        allowedRoles: ALL_ROLES,
+      },
+      {
+        label: 'Sugestões de Retorno',
+        icon: RefreshCw,
+        href: '/app/agendamentos/sugestoes-retorno',
+        color: 'from-primary-300 to-secondary-300',
+        allowedRoles: ALL_ROLES,
+      },
+    ],
   },
   {
     label: 'Biblioteca IA',
@@ -121,20 +143,27 @@ const menuItems: MenuItem[] = [
     allowedRoles: ADMIN_ROLES,
   },
   {
-    label: 'Automação & Disparos',
-    description: 'Disparador e evolução omnichannel',
+    label: 'WhatsApp/Automação',
     icon: MessageCircle,
     href: '/app/whatsapp',
     color: 'from-primary-400 to-secondary-400',
     allowedRoles: ADMIN_ROLES,
-  },
-  {
-    label: 'Chat WhatsApp',
-    description: 'Conversas e atendimento em tempo real',
-    icon: MessageCircle,
-    href: '/app/chat',
-    color: 'from-green-400 to-green-600',
-    allowedRoles: ALL_ROLES,
+    subItems: [
+      {
+        label: 'Chat WhatsApp',
+        icon: MessageCircle,
+        href: '/app/chat',
+        color: 'from-green-400 to-green-600',
+        allowedRoles: ALL_ROLES,
+      },
+      {
+        label: 'Disparos',
+        icon: Send,
+        href: '/app/whatsapp?section=disparos',
+        color: 'from-primary-400 to-secondary-400',
+        allowedRoles: ADMIN_ROLES,
+      },
+    ],
   },
   {
     label: 'Configurações da Clínica',
@@ -142,17 +171,18 @@ const menuItems: MenuItem[] = [
     href: '/app/configuracoes',
     color: 'from-neutral-200 to-neutral-400',
     allowedRoles: ADMIN_ROLES,
-  },
-  {
-    label: 'Configurações de IA',
-    icon: QrCode,
-    href: '/app/configuracoes-ia',
-    color: 'from-primary-500 to-secondary-500',
-    allowedRoles: ADMIN_ROLES,
+    subItems: [
+      {
+        label: 'Configurações de IA',
+        icon: QrCode,
+        href: '/app/configuracoes-ia',
+        color: 'from-primary-500 to-secondary-500',
+        allowedRoles: ADMIN_ROLES,
+      },
+    ],
   },
   {
     label: 'Relatórios',
-    description: 'Análises e métricas da clínica',
     icon: BarChart3,
     href: '/app/relatorios',
     color: 'from-purple-400 to-pink-500',
@@ -173,6 +203,8 @@ export function Sidebar() {
   const { user, signOut } = useAuthStore()
   const { planoAtivo } = usePlanoAtivo()
   const { data: iaConfigData } = useIAConfig() as any
+
+  const ACTIVE_GRADIENT_CLASS = 'bg-gradient-to-r from-primary-400 to-secondary-400'
 
   const handleDashboardClick = (e: React.MouseEvent) => {
     e.preventDefault()
@@ -221,42 +253,32 @@ export function Sidebar() {
       </div>
 
       {/* Navigation */}
-      <nav className="mt-6 flex-1 space-y-2 overflow-y-auto pr-2">
+      <nav className="mt-4 flex-1 space-y-1.5 overflow-y-auto pr-2">
         {filteredMenuItems.map((item) => {
           const Icon = item.icon
           const isActive = location.pathname === item.href || location.pathname.startsWith(`${item.href}/`)
           const hasSubItems = item.subItems && item.subItems.length > 0
           const isParentActive = hasSubItems && item.subItems?.some(sub => location.pathname === sub.href || location.pathname.startsWith(`${sub.href}/`))
 
-          const gradientClass = `bg-gradient-to-r ${item.color}`
-
           const baseClasses = cn(
-            'group relative flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-sm transition-all duration-200',
+            'group relative flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm transition-all duration-200 focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0',
             isActive || isParentActive
-              ? `${gradientClass} text-white shadow-[0_16px_32px_-22px_rgba(49,17,72,0.65)]`
+              ? `${ACTIVE_GRADIENT_CLASS} text-white shadow-[0_16px_32px_-22px_rgba(49,17,72,0.65)]`
               : 'bg-white/55 text-neutral-600 hover:bg-white/80 dark:bg-neutral-900/55 dark:text-neutral-200 dark:hover:bg-neutral-900/80 border border-white/30 dark:border-white/10 shadow-[0_12px_30px_-28px_rgba(49,17,72,0.55)]'
           )
 
           const content = (
             <>
               <div className={cn(
-                'flex h-11 w-11 items-center justify-center rounded-xl border border-white/30 bg-white/30 text-primary-600 shadow-sm backdrop-blur-sm transition-transform group-hover:scale-[1.08]',
+                'flex h-9 w-9 items-center justify-center rounded-lg border border-white/30 bg-white/30 text-primary-600 shadow-sm backdrop-blur-sm transition-transform group-hover:scale-[1.06]',
                 isActive || isParentActive ? 'border-white/50 text-white bg-white/15 shadow-white/25' : 'dark:text-primary-200'
               )}>
-                <Icon className="h-5 w-5" />
+                <Icon className="h-4 w-4" />
               </div>
               <div className="flex flex-1 flex-col">
                 <span className="font-medium text-neutral-800 dark:text-neutral-100 group-hover:translate-x-[1px]">
                   {item.label}
                 </span>
-                {item.description && (
-                  <span className={cn(
-                    'text-xs text-neutral-500 transition-opacity duration-200',
-                    isActive || isParentActive ? 'text-white/80' : 'group-hover:opacity-90'
-                  )}>
-                    {item.description}
-                  </span>
-                )}
               </div>
             </>
           )
@@ -289,11 +311,14 @@ export function Sidebar() {
                 {content}
               </Link>
 
-              {hasSubItems && (
+              {hasSubItems && (isActive || isParentActive) && (
                 <div className="ml-5 mt-2 space-y-1.5 border-l border-white/30 pl-4">
                   {item.subItems!.map((subItem) => {
                     const SubIcon = subItem.icon
-                    const isSubActive = location.pathname === subItem.href || location.pathname.startsWith(`${subItem.href}/`)
+                    const currentFullPath = `${location.pathname}${location.search || ''}`
+                    const isSubActive = subItem.href.includes('?')
+                      ? currentFullPath === subItem.href
+                      : location.pathname === subItem.href || location.pathname.startsWith(`${subItem.href}/`)
 
                     return (
                       <Link

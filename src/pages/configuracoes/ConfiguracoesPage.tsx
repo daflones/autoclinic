@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+// Card components no longer used after style standardization
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -137,32 +137,30 @@ export function ConfiguracoesPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight flex items-center gap-3">
+      <header>
+        <h1 className="text-3xl font-semibold tracking-tight text-foreground flex items-center gap-3">
           <Settings className="h-8 w-8 text-primary" />
           Configurações da Clínica
         </h1>
-        <p className="text-muted-foreground mt-1">
+        <p className="text-sm text-muted-foreground mt-1">
           Gerencie as configurações do sistema e preferências da clínica
         </p>
-      </div>
+      </header>
 
-      <div className="grid gap-6 grid-cols-1 lg:grid-cols-3 xl:grid-cols-4">
+      <div className="flex gap-6">
         {/* Left sidebar - Navigation */}
-        <div className="lg:col-span-1">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Settings className="w-5 h-5" />
-                Categorias
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
+        <div className="w-72 flex-shrink-0">
+          <div className="rounded-3xl border border-border/60 bg-background/80 p-4 shadow-lg backdrop-blur">
+            <h2 className="text-base font-semibold text-foreground flex items-center gap-2 mb-3">
+              <Settings className="w-4 h-4" />
+              Categorias
+            </h2>
+            <div className="space-y-1">
               <Button 
                 variant={activeSection === 'perfil' ? 'default' : 'ghost'} 
+                size="sm"
                 className={cn(
-                  "w-full justify-start",
+                  "w-full justify-start text-sm",
                   activeSection === 'perfil' && "bg-primary text-white"
                 )}
                 onClick={() => setActiveSection('perfil')}
@@ -172,8 +170,9 @@ export function ConfiguracoesPage() {
               </Button>
               <Button 
                 variant={activeSection === 'empresa' ? 'default' : 'ghost'} 
+                size="sm"
                 className={cn(
-                  "w-full justify-start",
+                  "w-full justify-start text-sm",
                   activeSection === 'empresa' && "bg-primary text-white"
                 )}
                 onClick={() => setActiveSection('empresa')}
@@ -181,26 +180,26 @@ export function ConfiguracoesPage() {
                 <Building2 className="w-4 h-4 mr-2" />
                 Detalhes da Empresa
               </Button>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </div>
 
         {/* Right content - Settings panels */}
-        <div className="lg:col-span-2 xl:col-span-3 2xl:col-span-4 space-y-6">
+        <div className="flex-1 space-y-6">
           
           {/* Profile Settings */}
           {activeSection === 'perfil' && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
+            <div className="rounded-3xl border border-border/60 bg-background/80 p-6 shadow-lg backdrop-blur">
+              <div className="mb-4">
+                <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
                   <User className="w-5 h-5" />
                   Perfil
-                </CardTitle>
-                <CardDescription>
+                </h2>
+                <p className="text-sm text-muted-foreground">
                   Gerencie suas informações pessoais e dados do perfil.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
+                </p>
+              </div>
+              <div className="space-y-6">
                 {loading ? (
                   <div className="flex items-center justify-center py-8">
                     <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
@@ -265,23 +264,23 @@ export function ConfiguracoesPage() {
                     </Button>
                   </>
                 )}
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           )}
 
           {/* Company Details Settings */}
           {activeSection === 'empresa' && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
+            <div className="rounded-3xl border border-border/60 bg-background/80 p-6 shadow-lg backdrop-blur">
+              <div className="mb-4">
+                <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
                   <Building2 className="w-5 h-5" />
                   Detalhes da Empresa
-                </CardTitle>
-                <CardDescription>
+                </h2>
+                <p className="text-sm text-muted-foreground">
                   Configure as informações da sua empresa para uso na IA.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
+                </p>
+              </div>
+              <div className="space-y-6">
                 <div className="space-y-4">
                   <div>
                     <h4 className="font-semibold mb-3">Contatos</h4>
@@ -405,8 +404,8 @@ export function ConfiguracoesPage() {
                     </>
                   )}
                 </Button>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           )}
 
         </div>

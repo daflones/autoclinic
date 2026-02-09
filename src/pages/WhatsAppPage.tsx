@@ -78,6 +78,56 @@ function getWhatsAppServerBaseUrl() {
   return raw ? raw.replace(/\/+$/, '') : ''
 }
 
+function formatConnectionName(raw?: string | null) {
+  const s = String(raw || '').trim()
+  if (!s) return ''
+  return s
+    .replace(/[-_]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .split(' ')
+    .map((p) => (p ? p[0].toUpperCase() + p.slice(1) : p))
+    .join(' ')
+}
+
+function formatConnectedNumber(raw?: string | null) {
+  const stripped = String(raw || '').replace(/@s\.whatsapp\.net$/i, '').trim()
+  const digits = stripped.replace(/\D/g, '')
+  if (!digits) return ''
+
+  // Brasil: +55 (DD) 9XXXX-XXXX
+  if (digits.length === 13 && digits.startsWith('55')) {
+    const cc = digits.slice(0, 2)
+    const ddd = digits.slice(2, 4)
+    const part1 = digits.slice(4, 9)
+    const part2 = digits.slice(9)
+    return `+${cc} (${ddd}) ${part1}-${part2}`
+  }
+
+  if (digits.length === 12 && digits.startsWith('55')) {
+    const cc = digits.slice(0, 2)
+    const ddd = digits.slice(2, 4)
+    const part1 = digits.slice(4, 8)
+    const part2 = digits.slice(8)
+    return `+${cc} (${ddd}) ${part1}-${part2}`
+  }
+
+  if (digits.length === 11) {
+    const ddd = digits.slice(0, 2)
+    const part1 = digits.slice(2, 7)
+    const part2 = digits.slice(7)
+    return `(${ddd}) ${part1}-${part2}`
+  }
+
+  if (digits.length === 10) {
+    const ddd = digits.slice(0, 2)
+    const part1 = digits.slice(2, 6)
+    const part2 = digits.slice(6)
+    return `(${ddd}) ${part1}-${part2}`
+  }
+
+  return digits
+}
+
 export default function WhatsAppPage() {
   const [searchParams, setSearchParams] = useSearchParams()
 
@@ -137,6 +187,12 @@ export default function WhatsAppPage() {
     next.delete('autoConfigure')
     setSearchParams(next, { replace: true })
   }, [searchParams, setSearchParams])
+
+  useEffect(() => {
+    const section = String(searchParams.get('section') || '').trim().toLowerCase()
+    if (section === 'disparos') setActiveSection('disparos')
+    else setActiveSection('status')
+  }, [searchParams])
 
   useEffect(() => {
     const saved = (clinicaIAConfig as any)?.extra?.disparos_ai_options
@@ -687,50 +743,27 @@ export default function WhatsAppPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight flex items-center gap-3">
+          <h1 className="text-3xl font-semibold tracking-tight text-foreground flex items-center gap-3">
             <MessageCircle className="h-8 w-8 text-primary" />
-            Automação & Disparos
+            WhatsApp/Automação
           </h1>
-          <p className="text-muted-foreground mt-1">
-            Configure sua integração com WhatsApp Business
+          <p className="text-sm text-muted-foreground mt-1">
+            Importante: Faça a conexão da IA ao WhatsApp que será utilizado para rodar a automação.
           </p>
         </div>
       </div>
 
-      {isConnected && (
-        <div className="flex items-center gap-2">
-          <Button
-            type="button"
-            size="sm"
-            variant={activeSection === 'status' ? 'default' : 'outline'}
-            onClick={() => setActiveSection('status')}
-          >
-            Status
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            variant={activeSection === 'disparos' ? 'default' : 'outline'}
-            onClick={() => setActiveSection('disparos')}
-          >
-            Disparos
-          </Button>
-        </div>
-      )}
-
       {!instance?.instanceName ? (
         // Nenhuma instância configurada
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Smartphone className="w-5 h-5" />
-              Configurar WhatsApp
-            </CardTitle>
-            <CardDescription>
-              Configure uma instância do WhatsApp Business para sua empresa
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
+        <div className="rounded-3xl border border-border/60 bg-background/80 p-6 shadow-lg backdrop-blur">
+          <div className="flex items-center gap-2 mb-4">
+            <Smartphone className="w-5 h-5 text-primary" />
+            <h2 className="text-lg font-semibold text-foreground">Configurar WhatsApp</h2>
+          </div>
+          <p className="text-sm text-muted-foreground mb-6">
+            Configure uma instância do WhatsApp Business para sua empresa
+          </p>
+          <div className="space-y-4">
             {!showCreateForm ? (
               <div className="text-center py-8">
                 <MessageCircle className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
@@ -745,7 +778,7 @@ export default function WhatsAppPage() {
             ) : (
               <div className="space-y-4">
                 <div>
-                  <Label htmlFor="instanceName">Nome da Instância</Label>
+                  <Label htmlFor="instanceName">Nome da Conexão</Label>
                   <Input
                     id="instanceName"
                     placeholder="Nome gerado automaticamente"
@@ -800,20 +833,18 @@ export default function WhatsAppPage() {
                 </div>
               </div>
             )}
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       ) : activeSection === 'disparos' && isConnected ? (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Send className="w-5 h-5" />
-              Disparos
-            </CardTitle>
-            <CardDescription>
-              A mensagem será sempre variada automaticamente pela IA antes do envio. Os envios são agendados em intervalos aleatórios entre 5 e 30 minutos.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
+        <div className="rounded-3xl border border-border/60 bg-background/80 p-6 shadow-lg backdrop-blur">
+          <div className="flex items-center gap-2 mb-4">
+            <Send className="w-5 h-5 text-primary" />
+            <h2 className="text-lg font-semibold text-foreground">Disparos</h2>
+          </div>
+          <p className="text-sm text-muted-foreground mb-6">
+            A mensagem será sempre variada automaticamente pela IA antes do envio. Os envios são agendados em intervalos aleatórios entre 5 e 30 minutos.
+          </p>
+          <div className="space-y-6">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-2">
                 <div className="text-sm font-medium">Sessão</div>
@@ -1257,8 +1288,8 @@ export default function WhatsAppPage() {
               </div>
             )}
 
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       ) : (
         // Instância configurada
         <div className={`grid gap-6 ${status?.status === 'open' ? 'md:grid-cols-1' : 'md:grid-cols-2'}`}>
@@ -1268,7 +1299,7 @@ export default function WhatsAppPage() {
               <CardTitle className="flex items-center justify-between">
                 <span className="flex items-center gap-2">
                   <Smartphone className="w-5 h-5" />
-                  Status da Instância
+                  Status de Conexão
                 </span>
                 {statusLoading ? (
                   <RefreshCw className="w-4 h-4 animate-spin" />
@@ -1310,15 +1341,15 @@ export default function WhatsAppPage() {
               {/* Informações Adicionais */}
               <div className="space-y-3 pt-2">
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600 dark:text-gray-400">Nome da Instância</span>
-                  <span className="text-sm font-medium text-gray-900 dark:text-white">{instance.instanceName}</span>
+                  <span className="text-sm text-gray-600 dark:text-gray-400">Nome da Conexão</span>
+                  <span className="text-sm font-medium text-gray-900 dark:text-white">{formatConnectionName(instance.instanceName)}</span>
                 </div>
                 {status?.owner && (
                   <>
                     <Separator />
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-gray-600 dark:text-gray-400">Número</span>
-                      <span className="text-sm font-medium text-gray-900 dark:text-white">{status.owner}</span>
+                      <span className="text-sm font-medium text-gray-900 dark:text-white">{formatConnectedNumber(status.owner)}</span>
                     </div>
                   </>
                 )}
@@ -1350,20 +1381,20 @@ export default function WhatsAppPage() {
                       ) : (
                         <Trash2 className="w-4 h-4 mr-2" />
                       )}
-                      Remover Instância
+                      Desativar Conexão
                     </Button>
                   </AlertDialogTrigger>
                   <AlertDialogContent>
                     <AlertDialogHeader>
-                      <AlertDialogTitle>Remover instância do WhatsApp?</AlertDialogTitle>
+                      <AlertDialogTitle>Desativar conexão do WhatsApp?</AlertDialogTitle>
                       <AlertDialogDescription>
-                        Tem certeza que deseja remover completamente esta instância? Esta ação não pode ser desfeita.
+                        Tem certeza que deseja desativar esta conexão? Esta ação não pode ser desfeita.
                       </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                       <AlertDialogCancel disabled={deleteInstance.isPending}>Cancelar</AlertDialogCancel>
                       <AlertDialogAction disabled={deleteInstance.isPending} onClick={handleDelete}>
-                        Remover
+                        Desativar
                       </AlertDialogAction>
                     </AlertDialogFooter>
                   </AlertDialogContent>
@@ -1438,8 +1469,7 @@ export default function WhatsAppPage() {
       <Alert>
         <AlertTriangle className="h-4 w-4" />
         <AlertDescription>
-          <strong>Importante:</strong> Apenas uma instância WhatsApp pode ser configurada por empresa. 
-          Certifique-se de usar um número WhatsApp Business dedicado para esta integração.
+          <strong>Importante:</strong> Faça a conexão da IA ao WhatsApp que será utilizado para rodar a automação.
         </AlertDescription>
       </Alert>
     </div>

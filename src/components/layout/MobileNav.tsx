@@ -6,19 +6,21 @@ import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { useAuthStore } from '@/stores/authStore'
 import { useIAConfig } from '@/hooks/useIAConfig'
-import { 
-  LayoutDashboard, 
-  Users, 
-  Ticket, 
-  UserCheck, 
-  Package, 
-  Calendar, 
-  FileText, 
-  FolderOpen, 
-  BarChart3, 
-  Settings, 
-  Bot, 
-  LogOut 
+import {
+  LayoutDashboard,
+  Users,
+  Ticket,
+  UserCheck,
+  Package,
+  Calendar,
+  FolderOpen,
+  BarChart3,
+  Settings,
+  Bot,
+  LogOut,
+  Palette,
+  ScrollText,
+  MessageCircle,
 } from 'lucide-react'
 
 interface MobileNavProps {
@@ -28,25 +30,70 @@ interface MobileNavProps {
 
 const menuItems = [
   { label: 'Dashboard', icon: LayoutDashboard, href: '/app/dashboard', color: 'text-blue-600' },
-  { label: 'Pacientes', icon: Users, href: '/app/pacientes', color: 'text-green-600' },
+  {
+    label: 'Pacientes',
+    icon: Users,
+    href: '/app/pacientes',
+    color: 'text-green-600',
+    subItems: [
+      { label: 'Procedimentos Ativos', icon: Package, href: '/app/pacientes/procedimentos-ativos', color: 'text-green-600' },
+      { label: 'Protocolos Ativos', icon: Package, href: '/app/pacientes/protocolos-ativos', color: 'text-green-600' },
+    ],
+  },
   { label: 'Tickets de Suporte', icon: Ticket, href: '/app/tickets-suporte', color: 'text-blue-500' },
   { label: 'Profissionais', icon: UserCheck, href: '/app/profissionais', color: 'text-purple-600', adminOnly: true },
-  { label: 'Procedimentos', icon: Package, href: '/app/procedimentos', color: 'text-orange-600' },
-  { label: 'Categorias', icon: Package, href: '/app/categorias', color: 'text-pink-600' },
-  { label: 'Agendamentos', icon: Calendar, href: '/app/agendamentos', color: 'text-cyan-600' },
-  { label: 'Planos de Tratamento', icon: FileText, href: '/app/planos-tratamento', color: 'text-amber-600' },
-  { label: 'Arquivos', icon: FolderOpen, href: '/app/arquivos', color: 'text-teal-600' },
+  {
+    label: 'Procedimentos',
+    icon: Package,
+    href: '/app/procedimentos',
+    color: 'text-orange-600',
+    subItems: [
+      { label: 'Categorias de Tratamento', icon: Palette, href: '/app/categorias', color: 'text-pink-600' },
+      { label: 'Protocolos/Pacotes', icon: Package, href: '/app/protocolos-pacotes', color: 'text-orange-600' },
+    ],
+  },
+  { label: 'Planos de Tratamento', icon: ScrollText, href: '/app/planos-tratamento', color: 'text-amber-600' },
+  {
+    label: 'Agendamentos',
+    icon: Calendar,
+    href: '/app/agendamentos',
+    color: 'text-cyan-600',
+    subItems: [
+      { label: 'Lista de Espera', icon: Calendar, href: '/app/agendamentos/lista-espera', color: 'text-cyan-600' },
+      { label: 'No-Shows', icon: Calendar, href: '/app/agendamentos/no-shows', color: 'text-red-600' },
+      { label: 'Sugestões de Retorno', icon: Calendar, href: '/app/agendamentos/sugestoes-retorno', color: 'text-cyan-600' },
+    ],
+  },
   { label: 'Arquivos IA', icon: FolderOpen, href: '/app/arquivos-ia', color: 'text-violet-600' },
+  {
+    label: 'WhatsApp/Automação',
+    icon: MessageCircle,
+    href: '/app/whatsapp',
+    color: 'text-green-600',
+    adminOnly: true,
+    subItems: [
+      { label: 'Chat WhatsApp', icon: MessageCircle, href: '/app/chat', color: 'text-green-600' },
+      { label: 'Disparos', icon: MessageCircle, href: '/app/whatsapp?section=disparos', color: 'text-green-600', adminOnly: true },
+    ],
+  },
   { label: 'Relatórios', icon: BarChart3, href: '/app/relatorios', color: 'text-red-600', hideOnMobile: true },
-  { label: 'Configurações', icon: Settings, href: '/app/configuracoes', color: 'text-gray-600', adminOnly: true },
-  { label: 'Configurações IA', icon: Bot, href: '/app/configuracoes-ia', color: 'text-purple-600', adminOnly: true },
+  {
+    label: 'Configurações',
+    icon: Settings,
+    href: '/app/configuracoes',
+    color: 'text-gray-600',
+    adminOnly: true,
+    subItems: [
+      { label: 'Configurações IA', icon: Bot, href: '/app/configuracoes-ia', color: 'text-purple-600', adminOnly: true },
+    ],
+  },
 ]
 
 export function MobileNav({ open, onClose }: MobileNavProps) {
   const location = useLocation()
   const navigate = useNavigate()
   const { user, signOut } = useAuthStore()
-  const { data: iaConfigData } = useIAConfig()
+  const { data: iaConfigData } = useIAConfig() as any
   const isAdmin = user?.role === 'admin'
 
   // Handler para navegar para o dashboard com refresh
@@ -123,9 +170,15 @@ export function MobileNav({ open, onClose }: MobileNavProps) {
                   <ul role="list" className="flex flex-1 flex-col gap-y-7">
                     <li>
                       <ul role="list" className="-mx-2 space-y-1">
-                        {filteredMenuItems.map((item) => {
+                        {filteredMenuItems.map((item: any) => {
                           const Icon = item.icon
                           const isActive = location.pathname === item.href
+                          const hasSubItems = Array.isArray(item.subItems) && item.subItems.length > 0
+                          const currentFullPath = `${location.pathname}${location.search || ''}`
+                          const isParentActive = hasSubItems && item.subItems.some((sub: any) => {
+                            const href = String(sub?.href || '')
+                            return href.includes('?') ? currentFullPath === href : location.pathname === href
+                          })
                           
                           // Se for o dashboard, usar o handler especial
                           if (item.href === '/app/dashboard') {
@@ -155,14 +208,41 @@ export function MobileNav({ open, onClose }: MobileNavProps) {
                                 onClick={onClose}
                                 className={cn(
                                   'group flex gap-x-3 rounded-md p-2 text-sm leading-6 font-semibold',
-                                  isActive
+                                  isActive || isParentActive
                                     ? 'bg-primary-100 text-primary-700 dark:bg-primary-900/20 dark:text-primary-400'
                                     : 'text-gray-700 hover:bg-gray-100 hover:text-primary-600 dark:text-gray-300 dark:hover:bg-gray-700'
                                 )}
                               >
-                                <Icon className={cn('h-6 w-6 shrink-0', isActive ? 'text-primary-600' : item.color)} />
+                                <Icon className={cn('h-6 w-6 shrink-0', (isActive || isParentActive) ? 'text-primary-600' : item.color)} />
                                 {item.label}
                               </Link>
+
+                              {hasSubItems && (isActive || isParentActive) && (
+                                <ul role="list" className="mt-1 space-y-1 pl-9">
+                                  {item.subItems.map((sub: any) => {
+                                    const SubIcon = sub.icon
+                                    const href = String(sub?.href || '')
+                                    const isSubActive = href.includes('?') ? currentFullPath === href : location.pathname === href
+                                    return (
+                                      <li key={sub.href}>
+                                        <Link
+                                          to={sub.href}
+                                          onClick={onClose}
+                                          className={cn(
+                                            'group flex gap-x-3 rounded-md p-2 text-sm leading-6 font-medium',
+                                            isSubActive
+                                              ? 'bg-primary-100 text-primary-700 dark:bg-primary-900/20 dark:text-primary-400'
+                                              : 'text-gray-700 hover:bg-gray-100 hover:text-primary-600 dark:text-gray-300 dark:hover:bg-gray-700'
+                                          )}
+                                        >
+                                          <SubIcon className={cn('h-5 w-5 shrink-0', isSubActive ? 'text-primary-600' : sub.color)} />
+                                          {sub.label}
+                                        </Link>
+                                      </li>
+                                    )
+                                  })}
+                                </ul>
+                              )}
                             </li>
                           )
                         })}

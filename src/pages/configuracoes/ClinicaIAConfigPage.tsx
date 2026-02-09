@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+// Card components removed after style standardization
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -474,13 +474,13 @@ export function ClinicaIAConfigPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <header className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight flex items-center gap-3">
+          <h1 className="text-3xl font-semibold tracking-tight text-foreground flex items-center gap-3">
             <Bot className="h-8 w-8 text-primary" />
             Configurações de IA
           </h1>
-          <p className="text-muted-foreground mt-1">Configure o comportamento e personalidade do assistente de IA da sua clínica</p>
+          <p className="text-sm text-muted-foreground mt-1">Configure o comportamento e personalidade do assistente de IA da sua clínica</p>
         </div>
         <Button onClick={handleSaveConfig} disabled={updateClinicaConfig.isPending}>
           {updateClinicaConfig.isPending ? (
@@ -495,15 +495,15 @@ export function ClinicaIAConfigPage() {
             </>
           )}
         </Button>
-      </div>
+      </header>
 
       <div className="space-y-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Identidade da Clínica</CardTitle>
-            <CardDescription>Informações básicas e operacionais da clínica.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
+        <section className="rounded-3xl border border-border/60 bg-background/80 p-6 shadow-lg backdrop-blur">
+          <div className="mb-4">
+            <h2 className="text-lg font-semibold text-foreground">Identidade da Clínica</h2>
+            <p className="text-sm text-muted-foreground">Informações básicas e operacionais da clínica.</p>
+          </div>
+          <div className="space-y-4">
             <div className="grid gap-4 md:grid-cols-2">
               <div className="grid gap-2">
                 <Label>Nome da clínica</Label>
@@ -654,15 +654,15 @@ export function ClinicaIAConfigPage() {
                 )
               })}
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </section>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Perfil e posicionamento</CardTitle>
-            <CardDescription>Defina nicho, posicionamento e estilo de comunicação.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
+        <section className="rounded-3xl border border-border/60 bg-background/80 p-6 shadow-lg backdrop-blur">
+          <div className="mb-4">
+            <h2 className="text-lg font-semibold text-foreground">Perfil e posicionamento</h2>
+            <p className="text-sm text-muted-foreground">Defina nicho, posicionamento e estilo de comunicação.</p>
+          </div>
+          <div className="space-y-4">
             <div className="grid gap-4 md:grid-cols-2">
               <div className="grid gap-2">
                 <Label>Nicho</Label>
@@ -740,17 +740,15 @@ export function ClinicaIAConfigPage() {
                 <Textarea value={posicionamento.slogan || ''} onChange={(e) => setPosicionamento({ ...posicionamento, slogan: e.target.value })} rows={3} />
               </div>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </section>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Profissionais</CardTitle>
-            <CardDescription>
-              Selecione profissionais já cadastrados. A criação/edição fica na área de Profissionais.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
+        <section className="rounded-3xl border border-border/60 bg-background/80 p-6 shadow-lg backdrop-blur">
+          <div className="mb-4">
+            <h2 className="text-lg font-semibold text-foreground">Profissionais</h2>
+            <p className="text-sm text-muted-foreground">Selecione profissionais já cadastrados. A criação/edição fica na área de Profissionais.</p>
+          </div>
+          <div className="space-y-4">
             <div className="grid gap-2">
               <Label>Selecionar profissionais (IDs)</Label>
               <Select
@@ -791,15 +789,15 @@ export function ClinicaIAConfigPage() {
                 })}
               </div>
             )}
-          </CardContent>
-        </Card>
+          </div>
+        </section>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Políticas</CardTitle>
-            <CardDescription>Regras que impactam a conversa e conversão.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
+        <section className="rounded-3xl border border-border/60 bg-background/80 p-6 shadow-lg backdrop-blur">
+          <div className="mb-4">
+            <h2 className="text-lg font-semibold text-foreground">Políticas</h2>
+            <p className="text-sm text-muted-foreground">Regras que impactam a conversa e conversão.</p>
+          </div>
+          <div className="space-y-6">
             <div className="space-y-3">
               <Label className="text-base font-semibold">Avaliação</Label>
               <div className="grid gap-4 md:grid-cols-2">
@@ -941,15 +939,15 @@ export function ClinicaIAConfigPage() {
                 </div>
               </div>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </section>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Prova social / autoridade</CardTitle>
-            <CardDescription>Dados para reforçar confiança.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
+        <section className="rounded-3xl border border-border/60 bg-background/80 p-6 shadow-lg backdrop-blur">
+          <div className="mb-4">
+            <h2 className="text-lg font-semibold text-foreground">Prova social / autoridade</h2>
+            <p className="text-sm text-muted-foreground">Dados para reforçar confiança.</p>
+          </div>
+          <div className="space-y-4">
             <div className="grid gap-4 md:grid-cols-2">
               <div className="grid gap-2">
                 <Label>Clientes atendidos (estimado)</Label>
@@ -1144,15 +1142,15 @@ export function ClinicaIAConfigPage() {
                 </div>
               </div>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </section>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Mídias</CardTitle>
-            <CardDescription>Faça upload e gerencie as mídias gerais da clínica.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
+        <section className="rounded-3xl border border-border/60 bg-background/80 p-6 shadow-lg backdrop-blur">
+          <div className="mb-4">
+            <h2 className="text-lg font-semibold text-foreground">Mídias</h2>
+            <p className="text-sm text-muted-foreground">Faça upload e gerencie as mídias gerais da clínica.</p>
+          </div>
+          <div className="space-y-4">
             <div className="grid gap-4 md:grid-cols-2">
               <div className="grid gap-2">
                 <Label>Imagem de apresentação</Label>
@@ -1273,15 +1271,15 @@ export function ClinicaIAConfigPage() {
                 </div>
               </div>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </section>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Regras internas</CardTitle>
-            <CardDescription>Restrições e diretrizes para a IA.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
+        <section className="rounded-3xl border border-border/60 bg-background/80 p-6 shadow-lg backdrop-blur">
+          <div className="mb-4">
+            <h2 className="text-lg font-semibold text-foreground">Regras internas</h2>
+            <p className="text-sm text-muted-foreground">Restrições e diretrizes para a IA.</p>
+          </div>
+          <div className="space-y-4">
             <div className="grid gap-4 md:grid-cols-2">
               <div className="grid gap-2">
                 <Label>Tempo médio de resposta humana</Label>
@@ -1304,15 +1302,15 @@ export function ClinicaIAConfigPage() {
                 <Textarea value={regrasInternas.quando_transferir_humano || ''} onChange={(e) => setRegrasInternas({ ...regrasInternas, quando_transferir_humano: e.target.value })} rows={3} />
               </div>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </section>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Diferenciais / gatilhos</CardTitle>
-            <CardDescription>Pontos de valor e gatilhos de conversão.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
+        <section className="rounded-3xl border border-border/60 bg-background/80 p-6 shadow-lg backdrop-blur">
+          <div className="mb-4">
+            <h2 className="text-lg font-semibold text-foreground">Diferenciais / gatilhos</h2>
+            <p className="text-sm text-muted-foreground">Pontos de valor e gatilhos de conversão.</p>
+          </div>
+          <div className="space-y-4">
             <div className="grid gap-4 md:grid-cols-2">
               <div className="grid gap-2">
                 <Label>Diferenciais</Label>
@@ -1331,17 +1329,15 @@ export function ClinicaIAConfigPage() {
                 <Textarea value={gatilhos.garantias || ''} onChange={(e) => setGatilhos({ ...gatilhos, garantias: e.target.value })} rows={3} />
               </div>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </section>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Protocolos/Pacotes</CardTitle>
-            <CardDescription>
-              Selecione protocolos/pacotes já cadastrados.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
+        <section className="rounded-3xl border border-border/60 bg-background/80 p-6 shadow-lg backdrop-blur">
+          <div className="mb-4">
+            <h2 className="text-lg font-semibold text-foreground">Protocolos/Pacotes</h2>
+            <p className="text-sm text-muted-foreground">Selecione protocolos/pacotes já cadastrados.</p>
+          </div>
+          <div className="space-y-4">
             <div className="grid gap-2">
               <Label>Selecionar protocolo/pacote</Label>
               <Select
@@ -1382,8 +1378,8 @@ export function ClinicaIAConfigPage() {
                 })}
               </div>
             )}
-          </CardContent>
-        </Card>
+          </div>
+        </section>
       </div>
     </div>
   )

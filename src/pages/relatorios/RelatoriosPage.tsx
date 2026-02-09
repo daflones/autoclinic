@@ -17,6 +17,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Input } from '@/components/ui/input'
+import { DateTimePicker } from '@/components/ui/datetime-picker'
 import { useRelatoriosClinica } from '@/hooks/useRelatoriosClinica'
 import type { RelatoriosPeriodo, RelatoriosCustomRange } from '@/services/api/relatorios-clinica'
 import { downloadRelatoriosClinicaPDF, type RelatorioTipo } from '@/services/pdf/relatoriosClinicaGenerator'
@@ -364,52 +365,61 @@ export function RelatoriosPage() {
     }
     return labels[periodo] || periodo
   }
-  
+
   const relatoriosDisponiveis = [
     {
       id: 1,
-      titulo: 'Relatório de Vendas',
-      descricao: 'Análise completa das vendas realizadas',
+      titulo: 'Relatório de Procedimentos Realizados',
+      descricao: 'Análise completa dos procedimentos realizados',
       tipo: 'vendas',
       icon: ShoppingCart,
-      color: 'text-green-600',
-      bgColor: 'bg-green-100 dark:bg-green-900/20',
+      color: 'from-green-400 to-green-600',
+      bgColor: 'bg-green-50',
+    },
+    {
+      id: 7,
+      titulo: 'Procedimentos Realizados / Agendamentos Realizados',
+      descricao: 'Lista detalhada de todos os procedimentos e agendamentos concluídos',
+      tipo: 'agendamentos_realizados',
+      icon: BarChart3,
+      color: 'from-teal-400 to-teal-600',
+      bgColor: 'bg-teal-50',
     },
     {
       id: 2,
-      titulo: 'Performance de Vendedores',
+      titulo: 'Performance de Profissionais',
       descricao: 'Desempenho individual e metas atingidas',
       tipo: 'vendedores',
       icon: Users,
-      color: 'text-blue-600',
-      bgColor: 'bg-blue-100 dark:bg-blue-900/20',
+      color: 'from-blue-400 to-blue-600',
+      bgColor: 'bg-blue-50',
     },
     {
       id: 3,
-      titulo: 'Análise de Produtos',
-      descricao: 'Produtos mais vendidos e estoque',
+      titulo: 'Análise de Procedimentos',
+      descricao: 'Procedimentos mais realizados e análise',
       tipo: 'produtos',
       icon: Package,
-      color: 'text-purple-600',
-      bgColor: 'bg-purple-100 dark:bg-purple-900/20',
+      color: 'from-purple-400 to-purple-600',
+      bgColor: 'bg-purple-50',
     },
     {
       id: 4,
-      titulo: 'Relatório Financeiro',
-      descricao: 'Receitas, despesas e lucratividade',
+      titulo: 'Relatório de Pacotes Vendidos',
+      descricao: 'Receitas, pacotes vendidos e lucratividade',
       tipo: 'financeiro',
       icon: DollarSign,
-      color: 'text-amber-600',
-      bgColor: 'bg-amber-100 dark:bg-amber-900/20',
+      color: 'from-yellow-400 to-yellow-600',
+      bgColor: 'bg-yellow-50',
     },
     {
       id: 5,
-      titulo: 'Pipeline de Vendas',
-      descricao: 'Status de oportunidades e conversão',
+      titulo: 'Relatórios de Planos de Tratamento Criados',
+      descricao: 'Status de planos criados e conversão',
       tipo: 'pipeline',
       icon: TrendingUp,
-      color: 'text-indigo-600',
-      bgColor: 'bg-indigo-100 dark:bg-indigo-900/20',
+      color: 'from-indigo-400 to-indigo-600',
+      bgColor: 'bg-indigo-50',
     },
     {
       id: 6,
@@ -441,12 +451,13 @@ export function RelatoriosPage() {
   }, [relatorios])
 
   const reportTitle = useMemo(() => {
-    if (activeReportType === 'vendas') return 'Relatório de Vendas'
-    if (activeReportType === 'vendedores') return 'Performance de Vendedores'
-    if (activeReportType === 'produtos') return 'Análise de Produtos'
-    if (activeReportType === 'financeiro') return 'Relatório Financeiro'
-    if (activeReportType === 'pipeline') return 'Pipeline de Vendas'
+    if (activeReportType === 'vendas') return 'Relatório de Procedimentos Realizados'
+    if (activeReportType === 'vendedores') return 'Performance de Profissionais'
+    if (activeReportType === 'produtos') return 'Análise de Procedimentos'
+    if (activeReportType === 'financeiro') return 'Relatório de Pacotes Vendidos'
+    if (activeReportType === 'pipeline') return 'Relatórios de Planos de Tratamento Criados'
     if (activeReportType === 'clientes') return 'Análise de Clientes'
+    if (activeReportType === 'agendamentos_realizados') return 'Procedimentos Realizados / Agendamentos Realizados'
     return 'Relatório'
   }, [activeReportType])
 
@@ -550,38 +561,29 @@ export function RelatoriosPage() {
           <PopoverContent className="w-80 bg-white dark:bg-gray-800" align="start">
             <div className="space-y-4">
               <div className="space-y-2">
-                <h4 className="font-semibold text-base text-gray-900 dark:text-white">Período Personalizado</h4>
-                <p className="text-sm text-gray-600 dark:text-gray-300">Selecione a data e hora de início e fim</p>
+                <h4 className="font-semibold text-base text-black dark:text-white">Período Personalizado</h4>
+                <p className="text-sm text-black dark:text-gray-300">Selecione a data e hora de início e fim</p>
               </div>
               <div className="space-y-4">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-900 dark:text-white block">Data e Hora de Início</label>
-                  <Input
-                    type="datetime-local"
-                    value={formatDateTimeLocal(customRange.startDate)}
-                    onChange={(e) => {
-                      const newDate = new Date(e.target.value)
-                      if (!isNaN(newDate.getTime())) {
-                        setCustomRange((prev) => ({ ...prev, startDate: newDate.toISOString() }))
-                      }
-                    }}
-                    className="w-full text-base"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-900 dark:text-white block">Data e Hora de Fim</label>
-                  <Input
-                    type="datetime-local"
-                    value={formatDateTimeLocal(customRange.endDate)}
-                    onChange={(e) => {
-                      const newDate = new Date(e.target.value)
-                      if (!isNaN(newDate.getTime())) {
-                        setCustomRange((prev) => ({ ...prev, endDate: newDate.toISOString() }))
-                      }
-                    }}
-                    className="w-full text-base"
-                  />
-                </div>
+                <DateTimePicker
+                  value={customRange.startDate}
+                  onChange={(value) => {
+                    if (value) {
+                      setCustomRange((prev) => ({ ...prev, startDate: value }))
+                    }
+                  }}
+                  label="Data e Hora de Início"
+                />
+                <DateTimePicker
+                  value={customRange.endDate}
+                  onChange={(value) => {
+                    if (value) {
+                      setCustomRange((prev) => ({ ...prev, endDate: value }))
+                    }
+                  }}
+                  label="Data e Hora de Fim"
+                  min={customRange.startDate}
+                />
               </div>
               <div className="flex gap-2 justify-end pt-2">
                 <Button
@@ -638,9 +640,9 @@ export function RelatoriosPage() {
       <div className="w-full grid gap-4 grid-cols-1 lg:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Vendas por Período</CardTitle>
+            <CardTitle>Procedimentos realizados por Período</CardTitle>
             <CardDescription>
-              Evolução das vendas nos últimos 12 meses
+              Evolução dos procedimentos realizados nos últimos 12 meses
             </CardDescription>
           </CardHeader>
           <CardContent>

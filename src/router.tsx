@@ -11,10 +11,14 @@ const ConfirmationPage = lazy(() => import('./pages/auth/ConfirmationPage').then
 const ResetPasswordPage = lazy(() => import('./pages/auth/ResetPasswordPage').then(m => ({ default: m.ResetPasswordPage })))
 const DashboardPage = lazy(() => import('./pages/dashboard/DashboardPage').then(m => ({ default: m.DashboardPage })))
 const PacientesPage = lazy(() => import('./pages/pacientes/PacientesPage').then(m => ({ default: m.PacientesPage })))
+const PacientesPlanosAtivosPage = lazy(() => import('./pages/pacientes/PacientesPlanosAtivosPage').then(m => ({ default: m.PacientesPlanosAtivosPage })))
 const ProfissionaisPage = lazy(() => import('./pages/profissionais/ProfissionaisClinicaPage').then(m => ({ default: m.ProfissionaisClinicaPage })))
 const ProcedimentosPage = lazy(() => import('./pages/procedimentos/ProcedimentosPage').then(m => ({ default: m.ProcedimentosPage })))
 const CategoriasPage = lazy(() => import('./pages/categorias/CategoriasClinicaPage').then(m => ({ default: m.CategoriasClinicaPage })))
 const AgendamentosPage = lazy(() => import('./pages/agendamentos/AgendamentosClinicaPage').then(m => ({ default: m.AgendamentosClinicaPage })))
+const ListaEsperaPage = lazy(() => import('./pages/agendamentos/ListaEsperaPage').then(m => ({ default: m.ListaEsperaPage })))
+const NoShowsPage = lazy(() => import('./pages/agendamentos/NoShowsPage').then(m => ({ default: m.NoShowsPage })))
+const SugestoesRetornoPage = lazy(() => import('./pages/agendamentos/SugestoesRetornoPage').then(m => ({ default: m.SugestoesRetornoPage })))
 const PlanosTratamentoPage = lazy(() => import('./pages/planos-tratamento/PlanosTratamentoPage').then(m => ({ default: m.PlanosTratamentoPage })))
 const ArquivosPage = lazy(() => import('./pages/arquivos/ArquivosPage').then(m => ({ default: m.ArquivosPage })))
 const ArquivosIAPage = lazy(() => import('./pages/arquivos-ia/ArquivosIAPage').then(m => ({ default: m.default })))
@@ -98,6 +102,10 @@ export const router = createBrowserRouter([
         element: withSuspense(PacientesPage),
       },
       {
+        path: 'pacientes/planos-ativos',
+        element: withSuspense(PacientesPlanosAtivosPage),
+      },
+      {
         path: 'tickets-suporte',
         element: <Navigate to="/app/dashboard" replace />,
       },
@@ -136,6 +144,18 @@ export const router = createBrowserRouter([
       {
         path: 'agendamentos',
         element: withSuspense(AgendamentosPage),
+      },
+      {
+        path: 'agendamentos/lista-espera',
+        element: withSuspense(ListaEsperaPage),
+      },
+      {
+        path: 'agendamentos/no-shows',
+        element: withSuspense(NoShowsPage),
+      },
+      {
+        path: 'agendamentos/sugestoes-retorno',
+        element: withSuspense(SugestoesRetornoPage),
       },
       {
         path: 'planos-tratamento',

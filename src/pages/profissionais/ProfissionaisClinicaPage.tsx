@@ -57,6 +57,7 @@ export function ProfissionaisClinicaPage() {
   const [procedimentosSearch, setProcedimentosSearch] = useState('')
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false)
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false)
   const [selectedProfissional, setSelectedProfissional] = useState<ProfissionalClinica | null>(null)
   const [uploadingFoto, setUploadingFoto] = useState(false)
@@ -244,17 +245,20 @@ export function ProfissionaisClinicaPage() {
     }
   }
 
+  const handleOpenDetails = (profissional: ProfissionalClinica) => {
+    setSelectedProfissional(profissional)
+    setIsDetailsModalOpen(true)
+  }
+
   const handleOpenEdit = (profissional: ProfissionalClinica) => {
     setSelectedProfissional(profissional)
     setFormState({
       nome: profissional.nome,
       cargo: profissional.cargo || '',
-      documento: profissional.documento || '',
+      senha: '',
       email: profissional.email || '',
       telefone: profissional.telefone || '',
-      whatsapp: profissional.whatsapp || '',
       conselho: profissional.conselho || '',
-      registro_profissional: profissional.registro_profissional || '',
       especialidades: profissional.especialidades || [],
       experiencia: profissional.experiencia || '',
       certificacoes: profissional.certificacoes || '',
@@ -328,10 +332,10 @@ export function ProfissionaisClinicaPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <header className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Profissionais da Clínica</h1>
-          <p className="text-muted-foreground">Gerencie a equipe clínica e suas especialidades</p>
+          <h1 className="text-3xl font-semibold tracking-tight text-foreground">Profissionais da Clínica</h1>
+          <p className="text-sm text-muted-foreground">Gerencie a equipe clínica e suas especialidades</p>
         </div>
         <Button
           onClick={() => {
@@ -342,158 +346,153 @@ export function ProfissionaisClinicaPage() {
           <Plus className="mr-2 h-4 w-4" />
           Novo Profissional
         </Button>
-      </div>
+      </header>
 
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total</CardTitle>
-            <UserSquare className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.total}</div>
-            <p className="text-xs text-muted-foreground">Profissionais cadastrados</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Ativos</CardTitle>
-            <Award className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.ativos}</div>
-            <p className="text-xs text-muted-foreground">Em atividade</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Inativos</CardTitle>
-            <UserSquare className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.inativos}</div>
-            <p className="text-xs text-muted-foreground">Temporariamente indisponíveis</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Filter className="h-5 w-5" />
-            Filtros
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="search">Buscar</Label>
-              <div className="relative">
-                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="search"
-                  placeholder="Nome, email ou documento..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-8"
-                />
-              </div>
+      <section className="grid gap-4 md:grid-cols-3">
+        <div className="rounded-2xl border border-border/60 bg-gradient-to-br from-primary/10 via-background to-background p-5 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Total</p>
+              <h3 className="mt-2 text-2xl font-semibold text-foreground">{stats.total}</h3>
             </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="status-filter">Status</Label>
-              <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as any)}>
-                <SelectTrigger id="status-filter">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos</SelectItem>
-                  {Object.entries(STATUS_CONFIG).map(([key, config]) => (
-                    <SelectItem key={key} value={key}>
-                      {config.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <div className="rounded-full bg-primary/10 p-2 text-primary">
+              <UserSquare className="h-5 w-5" />
             </div>
           </div>
-        </CardContent>
-      </Card>
+          <p className="mt-2 text-xs text-muted-foreground">Profissionais cadastrados</p>
+        </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Profissionais ({profissionais.length})</CardTitle>
-          <CardDescription>Lista de todos os profissionais da clínica</CardDescription>
-        </CardHeader>
-        <CardContent>
+        <div className="rounded-2xl border border-border/60 bg-gradient-to-br from-emerald-500/10 via-background to-background p-5 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Ativos</p>
+              <h3 className="mt-2 text-2xl font-semibold text-foreground">{stats.ativos}</h3>
+            </div>
+            <div className="rounded-full bg-emerald-500/10 p-2 text-emerald-500">
+              <Award className="h-5 w-5" />
+            </div>
+          </div>
+          <p className="mt-2 text-xs text-muted-foreground">Em atividade</p>
+        </div>
+
+        <div className="rounded-2xl border border-border/60 bg-gradient-to-br from-rose-500/10 via-background to-background p-5 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Inativos</p>
+              <h3 className="mt-2 text-2xl font-semibold text-foreground">{stats.inativos}</h3>
+            </div>
+            <div className="rounded-full bg-rose-500/10 p-2 text-rose-500">
+              <UserSquare className="h-5 w-5" />
+            </div>
+          </div>
+          <p className="mt-2 text-xs text-muted-foreground">Temporariamente indisponíveis</p>
+        </div>
+      </section>
+
+      <section className="rounded-3xl border border-border/60 bg-background/80 p-6 shadow-lg backdrop-blur">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold text-foreground">Profissionais ({profissionais.length})</h2>
+          <span className="text-sm text-muted-foreground">Exibindo {profissionais.length} registros</span>
+        </div>
+
+        <div className="flex flex-col gap-4 md:flex-row md:items-center mb-6">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Nome, email ou documento..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+          <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as any)}>
+            <SelectTrigger className="w-full md:w-48">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos os status</SelectItem>
+              {Object.entries(STATUS_CONFIG).map(([key, config]) => (
+                <SelectItem key={key} value={key}>
+                  {config.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="overflow-hidden rounded-2xl border border-border/50">
           {isLoading ? (
-            <div className="flex items-center justify-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            <div className="flex items-center justify-center py-12 text-muted-foreground">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
             </div>
           ) : profissionais.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
+            <div className="text-center py-12 text-muted-foreground">
               Nenhum profissional encontrado
             </div>
           ) : (
-            <div className="space-y-4">
-              {profissionais.map((profissional) => {
-                const statusConfig = STATUS_CONFIG[profissional.status]
-
-                return (
-                  <div
-                    key={profissional.id}
-                    className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent transition-colors"
-                  >
-                    <div className="flex-1 space-y-1">
-                      <div className="flex items-center gap-2">
-                        <h3 className="font-semibold">{profissional.nome}</h3>
-                        <Badge variant={statusConfig.variant}>{statusConfig.label}</Badge>
+            <table className="min-w-full divide-y divide-border/60 text-sm">
+              <thead className="bg-muted/40 text-muted-foreground">
+                <tr>
+                  <th scope="col" className="px-5 py-3 text-left font-medium">Profissional</th>
+                  <th scope="col" className="px-5 py-3 text-left font-medium">Contato</th>
+                  <th scope="col" className="px-5 py-3 text-left font-medium">Especialidades</th>
+                  <th scope="col" className="px-5 py-3 text-left font-medium">Status</th>
+                  <th scope="col" className="px-5 py-3 text-right font-medium">Ações</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border/60 bg-background/40">
+                {profissionais.map((profissional) => {
+                  const statusConfig = STATUS_CONFIG[profissional.status]
+                  return (
+                    <tr key={profissional.id} className="hover:bg-muted/30 cursor-pointer transition-colors" onClick={() => handleOpenDetails(profissional)}>
+                      <td className="px-5 py-4 align-top">
+                        <div className="font-medium text-foreground">{profissional.nome}</div>
                         {profissional.conselho && (
-                          <Badge variant="outline">{profissional.conselho}</Badge>
+                          <p className="text-xs text-muted-foreground">{profissional.conselho}</p>
                         )}
-                      </div>
-                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                        {profissional.email && (
-                          <span className="flex items-center gap-1">
-                            <Mail className="h-3 w-3" />
-                            {profissional.email}
-                          </span>
+                      </td>
+                      <td className="px-5 py-4 align-top text-muted-foreground">
+                        <div className="flex flex-col gap-1 text-xs">
+                          {profissional.email && <span className="flex items-center gap-1"><Mail className="h-3 w-3" />{profissional.email}</span>}
+                          {profissional.telefone && <span className="flex items-center gap-1"><Phone className="h-3 w-3" />{profissional.telefone}</span>}
+                        </div>
+                      </td>
+                      <td className="px-5 py-4 align-top">
+                        {profissional.especialidades && profissional.especialidades.length > 0 ? (
+                          <div className="flex flex-wrap gap-1">
+                            {profissional.especialidades.map((esp) => (
+                              <span key={esp} className="rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-medium text-primary">{esp}</span>
+                            ))}
+                          </div>
+                        ) : (
+                          <span className="text-xs text-muted-foreground/60">—</span>
                         )}
-                        {profissional.telefone && (
-                          <span className="flex items-center gap-1">
-                            <Phone className="h-3 w-3" />
-                            {profissional.telefone}
-                          </span>
-                        )}
-                        {profissional.especialidades && profissional.especialidades.length > 0 && (
-                          <span className="flex items-center gap-1">
-                            <Award className="h-3 w-3" />
-                            {profissional.especialidades.join(', ')}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button variant="outline" size="sm" onClick={() => handleOpenEdit(profissional)}>
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleRequestDelete(profissional)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
+                      </td>
+                      <td className="px-5 py-4 align-top">
+                        <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ${
+                          profissional.status === 'ativo' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300'
+                          : profissional.status === 'inativo' ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300'
+                          : 'bg-rose-100 text-rose-700 dark:bg-rose-500/10 dark:text-rose-300'
+                        }`}>
+                          {statusConfig.label}
+                        </span>
+                      </td>
+                      <td className="px-5 py-4 align-top text-right">
+                        <Button variant="ghost" size="icon" className="text-primary hover:text-primary hover:bg-primary/10" onClick={(e) => { e.stopPropagation(); handleOpenEdit(profissional) }}>
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="text-rose-600 hover:text-rose-700 hover:bg-rose-500/10" onClick={(e) => { e.stopPropagation(); handleRequestDelete(profissional) }}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </section>
 
       {/* Modal de Criação */}
       <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
@@ -1100,6 +1099,103 @@ export function ProfissionaisClinicaPage() {
             </Button>
             <Button variant="destructive" onClick={handleConfirmDelete} disabled={deleteMutation.isPending}>
               {deleteMutation.isPending ? 'Excluindo...' : 'Excluir'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de Detalhes */}
+      <Dialog open={isDetailsModalOpen} onOpenChange={setIsDetailsModalOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Detalhes do Profissional</DialogTitle>
+            <DialogDescription>Informações completas sobre o profissional</DialogDescription>
+          </DialogHeader>
+
+          {selectedProfissional && (
+            <div className="space-y-6">
+              <div className="grid gap-4 md:grid-cols-2">
+                <div>
+                  <h4 className="font-semibold mb-2">Informações Básicas</h4>
+                  <div className="space-y-2 text-sm">
+                    <div><strong>Nome:</strong> {selectedProfissional.nome}</div>
+                    <div><strong>Cargo:</strong> {selectedProfissional.cargo || 'Não informado'}</div>
+                    <div><strong>Status:</strong> 
+                      <span className={`ml-2 inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${
+                        selectedProfissional.status === 'ativo' ? 'bg-emerald-100 text-emerald-700'
+                        : selectedProfissional.status === 'inativo' ? 'bg-amber-100 text-amber-700'
+                        : 'bg-rose-100 text-rose-700'
+                      }`}>
+                        {STATUS_CONFIG[selectedProfissional.status]?.label || selectedProfissional.status}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <h4 className="font-semibold mb-2">Contato</h4>
+                  <div className="space-y-2 text-sm">
+                    {selectedProfissional.email && (
+                      <div className="flex items-center gap-2">
+                        <Mail className="h-4 w-4 text-muted-foreground" />
+                        <span>{selectedProfissional.email}</span>
+                      </div>
+                    )}
+                    {selectedProfissional.telefone && (
+                      <div className="flex items-center gap-2">
+                        <Phone className="h-4 w-4 text-muted-foreground" />
+                        <span>{selectedProfissional.telefone}</span>
+                      </div>
+                    )}
+                    {selectedProfissional.whatsapp && (
+                      <div><strong>WhatsApp:</strong> {selectedProfissional.whatsapp}</div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {selectedProfissional.especialidades && selectedProfissional.especialidades.length > 0 && (
+                <div>
+                  <h4 className="font-semibold mb-2">Especialidades</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedProfissional.especialidades.map((esp) => (
+                      <span key={esp} className="rounded-full bg-primary/10 px-3 py-1 text-sm font-medium text-primary">
+                        {esp}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {selectedProfissional.conselho && (
+                <div>
+                  <h4 className="font-semibold mb-2">Informações Profissionais</h4>
+                  <div className="text-sm bg-muted p-3 rounded-md">
+                    <strong>Conselho:</strong> {selectedProfissional.conselho}
+                  </div>
+                </div>
+              )}
+
+              {(selectedProfissional as any).bio && (
+                <div>
+                  <h4 className="font-semibold mb-2">Biografia</h4>
+                  <p className="text-sm bg-muted p-3 rounded-md">
+                    {(selectedProfissional as any).bio}
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsDetailsModalOpen(false)}>
+              Fechar
+            </Button>
+            <Button onClick={() => {
+              setIsDetailsModalOpen(false)
+              if (selectedProfissional) handleOpenEdit(selectedProfissional)
+            }}>
+              Editar
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -131,14 +131,14 @@ export function DateTimePicker({ value, onChange, label, required, min }: DateTi
 
   return (
     <div className="space-y-2">
-      <Label>
+      {label && <Label className="text-foreground font-medium">
         {label} {required && <span className="text-red-500">*</span>}
-      </Label>
+      </Label>}
       <div className="relative" ref={rootRef}>
         <Button
           type="button"
           variant="outline"
-          className="w-full justify-start text-left font-normal"
+          className="w-full justify-start text-left font-normal text-foreground"
           onClick={() => setShowPicker(!showPicker)}
         >
           <CalendarIcon className="mr-2 h-4 w-4" />

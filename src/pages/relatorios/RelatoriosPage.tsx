@@ -583,7 +583,7 @@ export function RelatoriosPage() {
                     setIsCustomDateOpen(false)
                     setSelectedPeriod('mes')
                   }}
-                  className="text-sm"
+                  className="text-sm text-foreground border-border"
                 >
                   Cancelar
                 </Button>

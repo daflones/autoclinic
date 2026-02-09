@@ -326,25 +326,32 @@ export default function WhatsAppPage() {
     if (localStorageBatchKey) window.localStorage.removeItem(localStorageBatchKey)
   }
 
-  // Build a valid remoteJid from patient data: use remotejid if available, otherwise format whatsapp field
+  // Build a valid remoteJid from patient data: use remotejid if available, otherwise format whatsapp/telefone field
+  const formatPhoneToRemoteJid = (phone: string): string => {
+    if (!phone) return ''
+    // Remove non-digit characters
+    let digits = phone.replace(/\D/g, '')
+    if (!digits) return ''
+    // Add country code (55 for Brazil) if not already present
+    if (digits.length <= 11) {
+      digits = '55' + digits
+    }
+    return digits + '@s.whatsapp.net'
+  }
+
   const getRemoteJid = (p: any): string => {
     const existing = String(p?.remotejid ?? p?.remoteJid ?? '').trim()
     if (existing) return existing
 
     // Fallback: build from whatsapp field
-    let whatsapp = String(p?.whatsapp ?? '').trim()
-    if (!whatsapp) return ''
+    const whatsapp = String(p?.whatsapp ?? '').trim()
+    if (whatsapp) return formatPhoneToRemoteJid(whatsapp)
 
-    // Remove non-digit characters
-    whatsapp = whatsapp.replace(/\D/g, '')
-    if (!whatsapp) return ''
+    // Fallback: build from telefone field
+    const telefone = String(p?.telefone ?? '').trim()
+    if (telefone) return formatPhoneToRemoteJid(telefone)
 
-    // Add country code (55 for Brazil) if not already present
-    if (whatsapp.length <= 11) {
-      whatsapp = '55' + whatsapp
-    }
-
-    return whatsapp + '@s.whatsapp.net'
+    return ''
   }
 
   // Display formatter: strip @s.whatsapp.net and country code, show clean phone number
@@ -618,7 +625,7 @@ export default function WhatsAppPage() {
       const items = selectedPacientes
         .map((p: any) => {
           const number = getRemoteJid(p)
-          const sendNumber = String((p as any)?.telefone ?? (p as any)?.whatsapp ?? '').trim()
+          const sendNumber = number.replace(/@.*$/, '')
           const patientName = String(
             (p as any)?.nome_completo ?? (p as any)?.nome ?? (p as any)?.name ?? (p as any)?.full_name ?? ''
           ).trim()

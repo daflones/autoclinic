@@ -30,7 +30,6 @@ const ConfiguracoesPage = lazy(() => import('./pages/configuracoes/Configuracoes
 const ClinicaIAConfigPage = lazy(() => import('./pages/configuracoes/ClinicaIAConfigPage').then(m => ({ default: m.ClinicaIAConfigPage })))
 const WhatsAppPage = lazy(() => import('./pages/WhatsAppPage'))
 const WhatsAppWebPage = lazy(() => import('./pages/whatsapp-web/WhatsAppWebPage'))
-const DisparosPage = lazy(() => import('./pages/whatsapp/DisparosPage').then(m => ({ default: m.DisparosPage })))
 const ChatPage = lazy(() => import('./pages/chat/ChatPage').then(m => ({ default: m.ChatPage })))
 const LandingPage = lazy(() => import('./pages/landing/LandingPage').then(m => ({ default: m.LandingPage })))
 const PlanosPage = lazy(() => import('./pages/Planos'))

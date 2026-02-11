@@ -570,13 +570,6 @@ export function AgendamentosClinicaPage() {
           >
             Lista
           </Button>
-          <Button
-            type="button"
-            variant={agendaView === 'disponibilidade' ? 'default' : 'outline'}
-            onClick={() => setAgendaView('disponibilidade')}
-          >
-            Disponibilidade
-          </Button>
 
           <Button onClick={() => setIsCreateModalOpen(true)}>
             <Plus className="mr-2 h-4 w-4" />
@@ -693,13 +686,13 @@ export function AgendamentosClinicaPage() {
               <SelectContent>
                 <SelectItem value="all">Todos</SelectItem>
                 {(procedimentos || []).length > 0 && (
-                  <SelectItem value="__header_proc" disabled className="text-[10px] font-semibold text-muted-foreground uppercase">— Procedimentos —</SelectItem>
+                  <SelectItem value="__header_proc" disabled className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">— Procedimentos —</SelectItem>
                 )}
                 {(procedimentos || []).map((p: any) => (
                   <SelectItem key={p.id} value={p.id}>{p.nome}</SelectItem>
                 ))}
                 {(protocolosPacotes || []).length > 0 && (
-                  <SelectItem value="__header_pac" disabled className="text-[10px] font-semibold text-muted-foreground uppercase">— Pacotes —</SelectItem>
+                  <SelectItem value="__header_pac" disabled className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">— Pacotes —</SelectItem>
                 )}
                 {((protocolosPacotes || []) as any[]).map((p: any) => (
                   <SelectItem key={`pac_${p.id}`} value={p.id}>{p.nome}</SelectItem>

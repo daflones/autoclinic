@@ -75,6 +75,7 @@ interface AgendamentoModalsProps {
   updatePending: boolean
   deletePending: boolean
   updateStatusPending: boolean
+  agendamentos?: AgendamentoClinica[]
 }
 
 export function AgendamentoModals({
@@ -105,6 +106,7 @@ export function AgendamentoModals({
   updatePending,
   deletePending,
   updateStatusPending,
+  agendamentos = [],
 }: AgendamentoModalsProps) {
   const formatDateTime = (dateString: string) => {
     try {
@@ -117,6 +119,75 @@ export function AgendamentoModals({
   const normalizeIdArray = (v: any): string[] => {
     if (Array.isArray(v)) return v.filter(Boolean)
     return []
+  }
+
+  const getProfissionalProcedimentoIds = (profissionalId: string | null): string[] => {
+    if (!profissionalId) return []
+    const prof = profissionais.find((p) => p.id === profissionalId)
+    return (prof as any)?.procedimentos_ids || []
+  }
+
+  const getProfissionaisForProcedimento = (procedimentoId: string): ProfissionalClinica[] => {
+    return profissionais.filter((prof) => {
+      const procIds: string[] = (prof as any)?.procedimentos_ids || []
+      return procIds.includes(procedimentoId)
+    })
+  }
+
+  const DIAS_MAP: Record<number, string> = { 0: 'domingo', 1: 'segunda', 2: 'terca', 3: 'quarta', 4: 'quinta', 5: 'sexta', 6: 'sabado' }
+
+  const getHorariosDisponiveisProfissional = (profissionalId: string | null, date?: Date): { inicio: string; fim: string }[] => {
+    if (!profissionalId) return []
+    const prof = profissionais.find((p) => p.id === profissionalId)
+    const horarios = (prof as any)?.horarios_disponiveis
+    if (!horarios) return []
+    const targetDate = date || new Date()
+    const dayOfWeek = targetDate.getDay()
+    const dia = DIAS_MAP[dayOfWeek]
+    if (!dia) return []
+    const config = horarios[dia]
+    if (!config?.ativo) return []
+    const periodos = Array.isArray(config.periodos) ? config.periodos : (config.inicio && config.fim ? [{ inicio: config.inicio, fim: config.fim }] : [])
+    return periodos.filter((p: any) => p.inicio && p.fim)
+  }
+
+  const getOccupiedSlots = (profissionalId: string | null, date: Date): { startMin: number; endMin: number }[] => {
+    if (!profissionalId) return []
+    const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+    return (agendamentos || [])
+      .filter((ag: any) => {
+        if (ag.profissional_id !== profissionalId) return false
+        if (!ag.data_inicio) return false
+        const agDate = ag.data_inicio.slice(0, 10)
+        if (agDate !== dateStr) return false
+        const st = ag.status
+        return st !== 'cancelado' && st !== 'nao_compareceu'
+      })
+      .map((ag: any) => {
+        const start = new Date(ag.data_inicio)
+        const end = ag.data_fim ? new Date(ag.data_fim) : new Date(start.getTime() + 60 * 60000)
+        return { startMin: start.getHours() * 60 + start.getMinutes(), endMin: end.getHours() * 60 + end.getMinutes() }
+      })
+  }
+
+  const generateTimeSlots = (periodos: { inicio: string; fim: string }[], intervalMin: number = 30, occupiedSlots: { startMin: number; endMin: number }[] = []): string[] => {
+    const slots: string[] = []
+    for (const periodo of periodos) {
+      const [hi, mi] = periodo.inicio.split(':').map(Number)
+      const [hf, mf] = periodo.fim.split(':').map(Number)
+      let current = hi * 60 + mi
+      const end = hf * 60 + mf
+      while (current < end) {
+        const isOccupied = occupiedSlots.some((occ) => current >= occ.startMin && current < occ.endMin)
+        if (!isOccupied) {
+          const h = Math.floor(current / 60)
+          const m = current % 60
+          slots.push(`${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`)
+        }
+        current += intervalMin
+      }
+    }
+    return slots
   }
 
   const calcValor = (procedimentoIds: string[], pacoteIds: string[]) => {
@@ -523,7 +594,7 @@ export function AgendamentoModals({
           Configure as datas e horários para cada sessão dos procedimentos e protocolos/pacotes selecionados.
         </div>
         
-        {sessions.map((session: any, index: number) => {
+        {sessions.map((session: any) => {
           const sessionData = currentSessionData.find((s: any) => s.id === session.id) || session
           const startTime = sessionData.data_inicio
           const endTime = sessionData.data_fim || calculateSessionEndTime(startTime, session.duration)
@@ -683,14 +754,31 @@ export function AgendamentoModals({
                   value={formState.profissional_id || 'none'}
                   onValueChange={(v) => {
                     const newProfissionalId = v === 'none' ? null : v
+                    // Remove procedures that the new professional doesn't perform
+                    let currentProcIds = normalizeIdArray((formState as any).procedimentos_ids)
+                    if (newProfissionalId) {
+                      const allowedProcIds = getProfissionalProcedimentoIds(newProfissionalId)
+                      if (allowedProcIds.length > 0) {
+                        currentProcIds = currentProcIds.filter((id) => allowedProcIds.includes(id))
+                      }
+                    }
+                    const pacoteIds = normalizeIdArray((formState as any).protocolos_pacotes_ids)
+                    const valor = calcValor(currentProcIds, pacoteIds)
                     const newTitle = generateTitle(
                       Boolean(formState.is_avaliacao),
                       formState.paciente_id || null,
-                      normalizeIdArray((formState as any).procedimentos_ids),
-                      normalizeIdArray((formState as any).protocolos_pacotes_ids),
+                      currentProcIds,
+                      pacoteIds,
                       newProfissionalId
                     )
-                    setFormState({ ...formState, profissional_id: newProfissionalId, titulo: newTitle })
+                    setFormState({
+                      ...formState,
+                      profissional_id: newProfissionalId,
+                      procedimentos_ids: currentProcIds,
+                      procedimento_id: currentProcIds[0] ?? null,
+                      valor,
+                      titulo: newTitle,
+                    } as any)
                   }}
                 >
                   <SelectTrigger id="create-profissional">
@@ -711,47 +799,68 @@ export function AgendamentoModals({
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
                 <Label>Procedimentos</Label>
-                <Select
-                  value="none"
-                  onValueChange={(v) => {
-                    if (v !== 'none') {
-                      toggleCreateProcedimento(v)
-                    }
-                  }}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecionar procedimentos" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Selecionar procedimentos</SelectItem>
-                    {procedimentos.map((p: any) => (
-                      <SelectItem key={p.id} value={p.id}>
-                        {p.nome}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {normalizeIdArray((formState as any).procedimentos_ids).length > 0 && (
-                  <div className="space-y-2">
-                    {normalizeIdArray((formState as any).procedimentos_ids).map((id: string) => {
-                      const proc = procedimentos.find((p: any) => p.id === id)
-                      return (
-                        <div key={id} className="flex items-center justify-between gap-2 rounded-md border p-2 bg-muted/20">
-                          <span className="text-sm font-medium">{proc?.nome || id}</span>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => toggleCreateProcedimento(id)}
-                            className="h-6 w-6 p-0 hover:bg-destructive hover:text-destructive-foreground"
-                          >
-                            <X className="h-3 w-3" />
-                          </Button>
+                {(() => {
+                  const selectedProfId = formState.profissional_id || null
+                  const allowedProcIds = selectedProfId ? getProfissionalProcedimentoIds(selectedProfId) : []
+                  const hasFilter = selectedProfId && allowedProcIds.length > 0
+                  return (
+                    <>
+                      <Select
+                        value="none"
+                        onValueChange={(v) => {
+                          if (v !== 'none') {
+                            if (hasFilter && !allowedProcIds.includes(v)) return
+                            toggleCreateProcedimento(v)
+                          }
+                        }}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecionar procedimentos" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">Selecionar procedimentos</SelectItem>
+                          {procedimentos.map((p: any) => {
+                            const canDo = !hasFilter || allowedProcIds.includes(p.id)
+                            return (
+                              <SelectItem key={p.id} value={p.id} disabled={!canDo}>
+                                {p.nome}{!canDo ? ' (profissional não executa)' : ''}
+                              </SelectItem>
+                            )
+                          })}
+                        </SelectContent>
+                      </Select>
+                      {normalizeIdArray((formState as any).procedimentos_ids).length > 0 && (
+                        <div className="space-y-2">
+                          {normalizeIdArray((formState as any).procedimentos_ids).map((id: string) => {
+                            const proc = procedimentos.find((p: any) => p.id === id)
+                            const profQueExecutam = getProfissionaisForProcedimento(id)
+                            return (
+                              <div key={id} className="rounded-md border p-2 bg-muted/20">
+                                <div className="flex items-center justify-between gap-2">
+                                  <span className="text-sm font-medium">{proc?.nome || id}</span>
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => toggleCreateProcedimento(id)}
+                                    className="h-6 w-6 p-0 hover:bg-destructive hover:text-destructive-foreground"
+                                  >
+                                    <X className="h-3 w-3" />
+                                  </Button>
+                                </div>
+                                {!selectedProfId && profQueExecutam.length > 0 && (
+                                  <p className="text-xs text-blue-600 mt-1">
+                                    Sugestão: {profQueExecutam.map((pr) => pr.nome).join(', ')}
+                                  </p>
+                                )}
+                              </div>
+                            )
+                          })}
                         </div>
-                      )
-                    })}
-                  </div>
-                )}
+                      )}
+                    </>
+                  )
+                })()}
               </div>
 
               <div className="space-y-2">
@@ -811,6 +920,48 @@ export function AgendamentoModals({
                 </div>
               )}
             </div>
+
+            {/* Time slot suggestions */}
+            {formState.profissional_id && (() => {
+              const selectedDate = formState.data_inicio ? new Date(formState.data_inicio) : new Date()
+              const periodos = getHorariosDisponiveisProfissional(formState.profissional_id, selectedDate)
+              if (periodos.length === 0) return null
+              const occupied = getOccupiedSlots(formState.profissional_id, selectedDate)
+              const slots = generateTimeSlots(periodos, 30, occupied)
+              if (slots.length === 0) return null
+              const dateStr = selectedDate.toISOString().split('T')[0]
+              return (
+                <div className="rounded-lg border border-blue-200 bg-blue-50/50 p-3 space-y-2 dark:border-blue-800 dark:bg-blue-900/10">
+                  <p className="text-xs font-medium text-blue-800 dark:text-blue-300">Horários sugeridos do profissional para {selectedDate.toLocaleDateString('pt-BR')}</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {slots.map((slot) => {
+                      const isoValue = `${dateStr}T${slot}`
+                      const isSelected = formState.data_inicio?.includes(slot)
+                      return (
+                        <Button
+                          key={slot}
+                          type="button"
+                          variant={isSelected ? 'default' : 'outline'}
+                          size="sm"
+                          className="h-7 text-xs px-2.5"
+                          onClick={() => {
+                            const currentDuration = getDurationFromTimes(formState.data_inicio, formState.data_fim) || 60
+                            const newEndTime = calculateEndTime(isoValue, currentDuration)
+                            setFormState({
+                              ...formState,
+                              data_inicio: isoValue,
+                              data_fim: newEndTime || formState.data_fim,
+                            })
+                          }}
+                        >
+                          {slot}
+                        </Button>
+                      )
+                    })}
+                  </div>
+                </div>
+              )
+            })()}
 
             <div className="grid gap-4 md:grid-cols-3">
               <div className="space-y-2">

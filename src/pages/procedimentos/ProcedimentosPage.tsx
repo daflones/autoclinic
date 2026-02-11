@@ -1086,10 +1086,10 @@ export function ProcedimentosPage() {
             </div>
 
             <div className="space-y-3 pt-4 border-t">
-              <Label className="text-base font-semibold">Profissional</Label>
+              <Label className="text-sm font-semibold">Profissional</Label>
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
-                  <Label className="text-sm font-medium">Quem Executa</Label>
+                  <Label className="text-sm font-medium">Profissionais que executam o procedimento</Label>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button type="button" variant="outline" className="justify-between">
@@ -1153,7 +1153,7 @@ export function ProcedimentosPage() {
             </div>
 
             <div className="space-y-3 pt-4 border-t">
-              <Label className="text-base font-semibold">Valores</Label>
+              <Label className="text-sm font-semibold">Valores</Label>
 
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
@@ -1162,14 +1162,11 @@ export function ProcedimentosPage() {
                     value={getIA('valores.ia_pode_mostrar', 'nao')}
                     onValueChange={(v) => {
                       setIA('valores.ia_pode_mostrar', v)
-                      if (v === 'nao') {
-                        setFormState((prev) => ({ ...prev, valor_base: undefined, valor_minimo: undefined, valor_maximo: undefined }))
-                      }
-                      if (v === 'exato') {
+                      if (v === 'exato' || v === 'nao') {
                         setFormState((prev) => ({ ...prev, valor_minimo: undefined, valor_maximo: undefined }))
                       }
                       if (v === 'faixa') {
-                        setFormState((prev) => ({ ...prev, valor_base: undefined }))
+                        // Keep valor_base for system use, only clear range values
                       }
                     }}
                   >
@@ -1195,22 +1192,20 @@ export function ProcedimentosPage() {
                 </div>
               </div>
 
-              {getIA('valores.ia_pode_mostrar', 'nao') === 'exato' ? (
-                <div className="grid gap-4 md:grid-cols-3">
-                  <div className="space-y-2">
-                    <Label htmlFor="edit-valor-base">Valor (R$)</Label>
-                    <Input
-                      id="edit-valor-base"
-                      type="number"
-                      step="0.01"
-                      value={formState.valor_base || ''}
-                      onChange={(e) =>
-                        setFormState({ ...formState, valor_base: parseFloat(e.target.value) || undefined })
-                      }
-                    />
-                  </div>
+              <div className="grid gap-4 md:grid-cols-3">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-valor-base">Valor (R$)</Label>
+                  <Input
+                    id="edit-valor-base"
+                    type="number"
+                    step="0.01"
+                    value={formState.valor_base || ''}
+                    onChange={(e) =>
+                      setFormState({ ...formState, valor_base: parseFloat(e.target.value) || undefined })
+                    }
+                  />
                 </div>
-              ) : null}
+              </div>
 
               {getIA('valores.ia_pode_mostrar', 'nao') === 'faixa' ? (
                 <div className="grid gap-4 md:grid-cols-3">
@@ -1247,7 +1242,7 @@ export function ProcedimentosPage() {
               <div className="text-sm font-semibold">Configurações avançadas (IA) — Procedimento</div>
 
               <div className="space-y-3">
-                <Label className="text-base font-semibold">Agendamento</Label>
+                <Label className="text-sm font-semibold">Agendamento</Label>
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="flex items-center justify-between p-3 border rounded-lg">
                     <Label>Requer avaliação prévia?</Label>
@@ -1273,7 +1268,7 @@ export function ProcedimentosPage() {
               </div>
 
               <div className="space-y-3 pt-4 border-t">
-                <Label className="text-base font-semibold">Descrição técnica</Label>
+                <Label className="text-sm font-semibold">Descrição técnica</Label>
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="grid gap-2">
                     <Label className="text-xs">Descrição técnica</Label>
@@ -1327,7 +1322,7 @@ export function ProcedimentosPage() {
               </div>
 
               <div className="space-y-3 pt-4 border-t">
-                <Label className="text-base font-semibold">Benefícios</Label>
+                <Label className="text-sm font-semibold">Benefícios</Label>
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="grid gap-2">
                     <ListEditor
@@ -1357,7 +1352,7 @@ export function ProcedimentosPage() {
               </div>
 
               <div className="space-y-3 pt-4 border-t">
-                <Label className="text-base font-semibold">Persona ideal</Label>
+                <Label className="text-sm font-semibold">Persona ideal</Label>
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="grid gap-2">
                     <Label>Indicado para pessoas com...</Label>
@@ -1375,7 +1370,7 @@ export function ProcedimentosPage() {
               </div>
 
               <div className="space-y-3 pt-4 border-t">
-                <Label className="text-base font-semibold">Objeções e respostas</Label>
+                <Label className="text-sm font-semibold">Objeções e respostas</Label>
                 <div className="space-y-3">
                   {(((getIA('objecoes.itens', []) as any[]) || []) as any[]).map((it, idx) => (
                     <div key={idx} className="grid gap-3 md:grid-cols-2 border rounded-lg p-3">
@@ -1431,7 +1426,7 @@ export function ProcedimentosPage() {
               </div>
 
               <div className="space-y-3 pt-4 border-t">
-                <Label className="text-base font-semibold">Perguntas frequentes</Label>
+                <Label className="text-sm font-semibold">Perguntas frequentes</Label>
                 <PairsEditor
                   title="FAQ"
                   leftLabel="Pergunta"
@@ -1443,7 +1438,7 @@ export function ProcedimentosPage() {
               </div>
 
               <div className="space-y-3 pt-4 border-t">
-                <Label className="text-base font-semibold">Cuidados pré e pós</Label>
+                <Label className="text-sm font-semibold">Cuidados pré e pós</Label>
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="grid gap-2">
                     <ListEditor
@@ -1467,7 +1462,7 @@ export function ProcedimentosPage() {
               </div>
 
               <div className="space-y-3 pt-4 border-t">
-                <Label className="text-base font-semibold">Gatilhos de venda específicos</Label>
+                <Label className="text-sm font-semibold">Gatilhos de venda específicos</Label>
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="grid gap-2">
                     <Label className="text-xs">O que torna esse procedimento superior a outros</Label>
@@ -1577,7 +1572,7 @@ export function ProcedimentosPage() {
               </div>
 
               <div className="space-y-3 pt-4 border-t">
-                <Label className="text-base font-semibold">Fluxo emocional</Label>
+                <Label className="text-sm font-semibold">Fluxo emocional</Label>
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="grid gap-2">
                     <Label>Resultado final esperado</Label>
@@ -1595,7 +1590,7 @@ export function ProcedimentosPage() {
               </div>
 
               <div className="space-y-3 pt-4 border-t">
-                <Label className="text-base font-semibold">Retorno / manutenção</Label>
+                <Label className="text-sm font-semibold">Retorno / manutenção</Label>
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="grid gap-2">
                     <Label>Tempo ideal para retorno</Label>
@@ -1622,7 +1617,7 @@ export function ProcedimentosPage() {
               </div>
 
               <div className="space-y-3 pt-4 border-t">
-                <Label className="text-base font-semibold">Upsell inteligente</Label>
+                <Label className="text-sm font-semibold">Upsell inteligente</Label>
                 <div className="space-y-4">
                   <div className="grid gap-4 md:grid-cols-2">
                     <div className="grid gap-2">
@@ -1806,7 +1801,7 @@ export function ProcedimentosPage() {
               </div>
 
               <div className="space-y-3 pt-4 border-t">
-                <Label className="text-base font-semibold">Mídias</Label>
+                <Label className="text-sm font-semibold">Mídias</Label>
 
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="grid gap-2">

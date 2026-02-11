@@ -24,6 +24,7 @@ export interface ProfissionalClinica {
   percentual_comissao?: number | null
   meta_mensal?: number | null
   horario_atendimento?: Record<string, unknown> | null
+  horarios_disponiveis?: Record<string, any> | null
   status: StatusProfissional
   created_at: string
   updated_at: string
@@ -56,6 +57,7 @@ export interface ProfissionalCreateData {
   percentual_comissao?: number | null
   meta_mensal?: number | null
   horario_atendimento?: Record<string, unknown> | null
+  horarios_disponiveis?: Record<string, any> | null
   status?: StatusProfissional
 }
 

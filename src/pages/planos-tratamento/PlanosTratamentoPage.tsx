@@ -30,6 +30,7 @@ import {
   useUpdateSessaoTratamento,
 } from '@/hooks/useSessoesTratamento'
 import { type StatusPlanoTratamento, type PlanoTratamento } from '@/services/api/planos-tratamento'
+import { useAgendamentosClinica } from '@/hooks/useAgendamentosClinica'
 import { toast } from 'sonner'
 import {
   FileText,
@@ -128,6 +129,12 @@ export function PlanosTratamentoPage() {
   const { data: sessoesPlano = [] } = useSessoesTratamento({
     plano_tratamento_id: isDetailsOpen ? selectedPlanoId ?? undefined : undefined,
   })
+
+  const { data: agendamentosPaciente = [] } = useAgendamentosClinica(
+    isDetailsOpen && planoDetalhes?.paciente_id
+      ? { paciente_id: planoDetalhes.paciente_id, limit: 100 }
+      : { limit: 0 }
+  )
 
   const createSessoes = useCreateSessoesTratamento()
   const deleteSessao = useDeleteSessaoTratamento()
@@ -1279,6 +1286,43 @@ export function PlanosTratamentoPage() {
                   )
                 })()}
               </div>
+
+              {/* Agendamentos do paciente */}
+              {agendamentosPaciente.length > 0 && (
+                <div className="rounded-lg border border-dashed border-gray-200 p-4 dark:border-gray-800">
+                  <p className="text-xs font-semibold uppercase text-muted-foreground mb-3">Agendamentos do paciente</p>
+                  <div className="space-y-2">
+                    {agendamentosPaciente.slice(0, 20).map((ag: any) => {
+                      const dataStr = ag.data_inicio
+                        ? new Date(ag.data_inicio).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+                        : '—'
+                      const statusLabel = ag.status === 'concluido' ? 'Concluído'
+                        : ag.status === 'agendado' ? 'Agendado'
+                        : ag.status === 'confirmado' ? 'Confirmado'
+                        : ag.status === 'cancelado' ? 'Cancelado'
+                        : ag.status === 'remarcado' ? 'Remarcado'
+                        : ag.status || '—'
+                      const statusColor = ag.status === 'concluido' ? 'bg-green-100 text-green-800'
+                        : ag.status === 'agendado' ? 'bg-blue-100 text-blue-800'
+                        : ag.status === 'confirmado' ? 'bg-emerald-100 text-emerald-800'
+                        : ag.status === 'cancelado' ? 'bg-red-100 text-red-800'
+                        : 'bg-gray-100 text-gray-800'
+                      return (
+                        <div key={ag.id} className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
+                          <div className="min-w-0 flex-1">
+                            <span className="font-medium">{ag.titulo || 'Agendamento'}</span>
+                            <span className="ml-2 text-muted-foreground text-xs">{dataStr}</span>
+                          </div>
+                          <Badge className={statusColor + ' text-[10px]'}>{statusLabel}</Badge>
+                        </div>
+                      )
+                    })}
+                    {agendamentosPaciente.length > 20 && (
+                      <div className="text-xs text-muted-foreground">Mostrando 20 de {agendamentosPaciente.length} agendamentos.</div>
+                    )}
+                  </div>
+                </div>
+              )}
 
               {planoDetalhes.descricao && (
                 <div className="rounded-lg bg-gray-50 p-4 text-sm text-gray-700 dark:bg-gray-800/60 dark:text-gray-200">

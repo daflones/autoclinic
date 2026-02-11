@@ -1,5 +1,4 @@
 import { useState, useMemo } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
@@ -36,7 +35,7 @@ export function ProcedimentosRealizadosPage() {
   })
   const { data: profissionais = [] } = useProfissionaisClinica({ limit: 1000 })
   const { data: pacientes = [] } = usePacientes({ limit: 1000 })
-  const { data: procedimentos = [] } = useProcedimentos({ limit: 1000 })
+  const { data: procedimentos = [] } = useProcedimentos({ limit: 1000 } as any)
 
   // Create lookup maps
   const profissionaisMap = useMemo(() => {
@@ -359,7 +358,7 @@ export function ProcedimentosRealizadosPage() {
                         <div className="space-y-1">
                           <div className="text-xs font-medium text-muted-foreground">Procedimentos:</div>
                           <div className="flex flex-wrap gap-1">
-                            {procedimentosNomes.map((nome, index) => (
+                            {procedimentosNomes.map((nome: string, index: number) => (
                               <span key={index} className="rounded-full bg-primary/10 px-2 py-1 text-xs font-medium text-primary">
                                 {nome}
                               </span>

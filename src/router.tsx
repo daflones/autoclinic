@@ -180,6 +180,14 @@ export const router = createBrowserRouter([
         element: withSuspense(RelatoriosPage),
       },
       {
+        path: 'relatorios/procedimentos-realizados',
+        element: withSuspense(ProcedimentosRealizadosPage),
+      },
+      {
+        path: 'relatorios/agendamentos-realizados',
+        element: withSuspense(AgendamentosRealizadosPage),
+      },
+      {
         path: 'configuracoes',
         element: withSuspense(ConfiguracoesPage),
       },

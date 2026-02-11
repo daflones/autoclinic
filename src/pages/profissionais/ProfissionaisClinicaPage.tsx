@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -21,7 +20,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Plus, Search, Filter, UserSquare, Edit, Trash2, Mail, Phone, Award } from 'lucide-react'
+import { Switch } from '@/components/ui/switch'
+import { Plus, Search, UserSquare, Edit, Trash2, Mail, Phone, Award, Clock, Stethoscope, Calendar } from 'lucide-react'
 import { toast } from 'sonner'
 import { FileUploadButton } from '@/components/ui/file-upload-button'
 import { deleteMidia, getSignedMidiaUrl, uploadMidia } from '@/services/api/storage-midias'
@@ -42,6 +42,19 @@ import type {
   ProfissionalCreateData,
   StatusProfissional,
 } from '@/services/api/profissionais-clinica'
+
+const defaultHorariosProfissional: Record<string, any> = {
+  segunda: { ativo: true, periodos: [{ inicio: '08:00', fim: '18:00' }] },
+  terca: { ativo: true, periodos: [{ inicio: '08:00', fim: '18:00' }] },
+  quarta: { ativo: true, periodos: [{ inicio: '08:00', fim: '18:00' }] },
+  quinta: { ativo: true, periodos: [{ inicio: '08:00', fim: '18:00' }] },
+  sexta: { ativo: true, periodos: [{ inicio: '08:00', fim: '18:00' }] },
+  sabado: { ativo: false, periodos: [{ inicio: '08:00', fim: '12:00' }] },
+  domingo: { ativo: false, periodos: [{ inicio: '08:00', fim: '12:00' }] },
+}
+
+const DIAS_SEMANA = ['segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado', 'domingo'] as const
+const DIAS_LABEL: Record<string, string> = { segunda: 'Segunda', terca: 'Terça', quarta: 'Quarta', quinta: 'Quinta', sexta: 'Sexta', sabado: 'Sábado', domingo: 'Domingo' }
 
 const STATUS_CONFIG: Record<StatusProfissional, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
   ativo: { label: 'Ativo', variant: 'default' },
@@ -83,6 +96,7 @@ export function ProfissionaisClinicaPage() {
     foto_url: '',
     percentual_comissao: undefined,
     meta_mensal: undefined,
+    horarios_disponiveis: defaultHorariosProfissional,
     status: 'ativo',
   })
 
@@ -237,6 +251,7 @@ export function ProfissionaisClinicaPage() {
         foto_url: '',
         percentual_comissao: undefined,
         meta_mensal: undefined,
+        horarios_disponiveis: defaultHorariosProfissional,
         status: 'ativo',
       })
       setPendingCreateFotos([])
@@ -268,6 +283,7 @@ export function ProfissionaisClinicaPage() {
       foto_url: profissional.foto_url || '',
       percentual_comissao: profissional.percentual_comissao || undefined,
       meta_mensal: profissional.meta_mensal || undefined,
+      horarios_disponiveis: profissional.horarios_disponiveis || defaultHorariosProfissional,
       status: profissional.status,
     })
     setIsEditModalOpen(true)
@@ -305,6 +321,84 @@ export function ProfissionaisClinicaPage() {
         .filter(Boolean)
     }
     return []
+  }
+
+  const updateHorario = (dia: string, update: Record<string, any>) => {
+    const horarios = { ...(formState.horarios_disponiveis || defaultHorariosProfissional) }
+    horarios[dia] = { ...(horarios[dia] || defaultHorariosProfissional[dia]), ...update }
+    setFormState({ ...formState, horarios_disponiveis: horarios })
+  }
+
+  const updateHorarioPeriodo = (dia: string, idx: number, field: string, value: string) => {
+    const horarios = { ...(formState.horarios_disponiveis || defaultHorariosProfissional) }
+    const config = horarios[dia] || defaultHorariosProfissional[dia]
+    const periodos = Array.isArray(config.periodos) ? [...config.periodos] : [{ inicio: '08:00', fim: '18:00' }]
+    periodos[idx] = { ...periodos[idx], [field]: value }
+    horarios[dia] = { ...config, periodos }
+    setFormState({ ...formState, horarios_disponiveis: horarios })
+  }
+
+  const addHorarioPeriodo = (dia: string) => {
+    const horarios = { ...(formState.horarios_disponiveis || defaultHorariosProfissional) }
+    const config = horarios[dia] || defaultHorariosProfissional[dia]
+    const periodos = Array.isArray(config.periodos) ? [...config.periodos] : []
+    periodos.push({ inicio: '13:00', fim: '18:00' })
+    horarios[dia] = { ...config, periodos }
+    setFormState({ ...formState, horarios_disponiveis: horarios })
+  }
+
+  const removeHorarioPeriodo = (dia: string, idx: number) => {
+    const horarios = { ...(formState.horarios_disponiveis || defaultHorariosProfissional) }
+    const config = horarios[dia] || defaultHorariosProfissional[dia]
+    const periodos = (Array.isArray(config.periodos) ? [...config.periodos] : []).filter((_: any, i: number) => i !== idx)
+    horarios[dia] = { ...config, periodos }
+    setFormState({ ...formState, horarios_disponiveis: horarios })
+  }
+
+  const renderHorariosSelector = () => {
+    const horarios = formState.horarios_disponiveis || defaultHorariosProfissional
+    return (
+      <div className="space-y-3 pt-4 border-t">
+        <Label className="text-sm font-semibold flex items-center gap-2"><Clock className="h-4 w-4" /> Horários Disponíveis</Label>
+        <p className="text-xs text-muted-foreground">Configure os horários de atendimento deste profissional</p>
+        {DIAS_SEMANA.map((dia) => {
+          const config = (horarios as any)[dia] || defaultHorariosProfissional[dia]
+          const periodos = Array.isArray(config?.periodos) ? config.periodos : [{ inicio: config?.inicio || '08:00', fim: config?.fim || '18:00' }]
+          return (
+            <div key={dia} className="flex items-start gap-3 p-3 border rounded-lg">
+              <div className="w-20 pt-1">
+                <Label className="text-xs font-medium">{DIAS_LABEL[dia]}</Label>
+              </div>
+              <Switch
+                checked={config?.ativo || false}
+                onCheckedChange={(checked) => {
+                  const p = (!checked || periodos.length > 0) ? periodos : [{ inicio: '08:00', fim: '18:00' }]
+                  updateHorario(dia, { ativo: checked, periodos: p })
+                }}
+              />
+              {config?.ativo ? (
+                <div className="flex-1 space-y-2">
+                  {periodos.map((p: any, idx: number) => (
+                    <div key={idx} className="flex items-center gap-2">
+                      <span className="text-xs text-muted-foreground w-16">Período {idx + 1}</span>
+                      <Input type="time" value={p?.inicio || '08:00'} onChange={(e) => updateHorarioPeriodo(dia, idx, 'inicio', e.target.value)} className="w-24 h-8 text-xs" />
+                      <span className="text-xs text-muted-foreground">às</span>
+                      <Input type="time" value={p?.fim || '18:00'} onChange={(e) => updateHorarioPeriodo(dia, idx, 'fim', e.target.value)} className="w-24 h-8 text-xs" />
+                      {periodos.length > 1 && (
+                        <Button type="button" variant="outline" size="sm" className="h-8 text-xs" onClick={() => removeHorarioPeriodo(dia, idx)}>✕</Button>
+                      )}
+                    </div>
+                  ))}
+                  <Button type="button" variant="outline" size="sm" className="h-7 text-xs" onClick={() => addHorarioPeriodo(dia)}>+ Intervalo</Button>
+                </div>
+              ) : (
+                <span className="text-xs text-muted-foreground pt-1">Não atende</span>
+              )}
+            </div>
+          )
+        })}
+      </div>
+    )
   }
 
   const toggleProcedimento = (id: string) => {
@@ -764,6 +858,8 @@ export function ProfissionaisClinicaPage() {
               </div>
             </div>
 
+            {renderHorariosSelector()}
+
             <div className="space-y-2">
               <Label htmlFor="create-status">Status</Label>
               <Select
@@ -1051,6 +1147,8 @@ export function ProfissionaisClinicaPage() {
               </div>
             </div>
 
+            {renderHorariosSelector()}
+
             <div className="space-y-2">
               <Label htmlFor="edit-status">Status</Label>
               <Select
@@ -1106,23 +1204,51 @@ export function ProfissionaisClinicaPage() {
 
       {/* Modal de Detalhes */}
       <Dialog open={isDetailsModalOpen} onOpenChange={setIsDetailsModalOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Detalhes do Profissional</DialogTitle>
-            <DialogDescription>Informações completas sobre o profissional</DialogDescription>
+            <DialogTitle className="flex items-center gap-2">
+              <UserSquare className="h-5 w-5" />
+              {selectedProfissional?.nome || 'Detalhes do Profissional'}
+            </DialogTitle>
+            <DialogDescription>Informações completas do profissional</DialogDescription>
           </DialogHeader>
 
           {selectedProfissional && (
-            <div className="space-y-6">
+            <div className="space-y-5">
+              {/* Fotos */}
+              {(() => {
+                const detailMidias = profissionalMidias.filter((m: any) => true)
+                if (detailMidias.length === 0) return null
+                return (
+                  <div>
+                    <h4 className="text-sm font-semibold mb-2 flex items-center gap-2"><Calendar className="h-4 w-4" /> Fotos</h4>
+                    <div className="grid grid-cols-3 gap-2">
+                      {detailMidias.map((m: any) => (
+                        <div key={m.id} className="overflow-hidden rounded-lg border">
+                          {fotoPreviewUrlById[m.id] ? (
+                            <img src={fotoPreviewUrlById[m.id]} alt={m.label || 'Foto'} className="h-28 w-full object-cover" />
+                          ) : (
+                            <div className="flex h-28 items-center justify-center text-xs text-muted-foreground">Carregando...</div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )
+              })()}
+
+              {/* Info básica + Contato */}
               <div className="grid gap-4 md:grid-cols-2">
-                <div>
-                  <h4 className="font-semibold mb-2">Informações Básicas</h4>
-                  <div className="space-y-2 text-sm">
-                    <div><strong>Nome:</strong> {selectedProfissional.nome}</div>
-                    <div><strong>Cargo:</strong> {selectedProfissional.cargo || 'Não informado'}</div>
-                    <div><strong>Status:</strong> 
-                      <span className={`ml-2 inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${
-                        selectedProfissional.status === 'ativo' ? 'bg-emerald-100 text-emerald-700'
+                <div className="rounded-lg border p-4 space-y-2">
+                  <h4 className="text-sm font-semibold">Dados Pessoais</h4>
+                  <div className="space-y-1.5 text-sm">
+                    <div className="flex justify-between"><span className="text-muted-foreground">Nome</span><span className="font-medium">{selectedProfissional.nome}</span></div>
+                    <div className="flex justify-between"><span className="text-muted-foreground">Cargo</span><span className="font-medium">{selectedProfissional.cargo || '—'}</span></div>
+                    <div className="flex justify-between"><span className="text-muted-foreground">Documento</span><span className="font-medium">{selectedProfissional.documento || '—'}</span></div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-muted-foreground">Status</span>
+                      <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                        selectedProfissional.status === 'ativo' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300'
                         : selectedProfissional.status === 'inativo' ? 'bg-amber-100 text-amber-700'
                         : 'bg-rose-100 text-rose-700'
                       }`}>
@@ -1132,58 +1258,124 @@ export function ProfissionaisClinicaPage() {
                   </div>
                 </div>
 
-                <div>
-                  <h4 className="font-semibold mb-2">Contato</h4>
-                  <div className="space-y-2 text-sm">
-                    {selectedProfissional.email && (
-                      <div className="flex items-center gap-2">
-                        <Mail className="h-4 w-4 text-muted-foreground" />
-                        <span>{selectedProfissional.email}</span>
-                      </div>
-                    )}
-                    {selectedProfissional.telefone && (
-                      <div className="flex items-center gap-2">
-                        <Phone className="h-4 w-4 text-muted-foreground" />
-                        <span>{selectedProfissional.telefone}</span>
-                      </div>
-                    )}
-                    {selectedProfissional.whatsapp && (
-                      <div><strong>WhatsApp:</strong> {selectedProfissional.whatsapp}</div>
-                    )}
+                <div className="rounded-lg border p-4 space-y-2">
+                  <h4 className="text-sm font-semibold">Contato</h4>
+                  <div className="space-y-1.5 text-sm">
+                    <div className="flex items-center gap-2"><Mail className="h-3.5 w-3.5 text-muted-foreground" /><span>{selectedProfissional.email || '—'}</span></div>
+                    <div className="flex items-center gap-2"><Phone className="h-3.5 w-3.5 text-muted-foreground" /><span>{selectedProfissional.telefone || '—'}</span></div>
+                    {selectedProfissional.whatsapp && <div className="flex items-center gap-2"><Phone className="h-3.5 w-3.5 text-muted-foreground" /><span>WhatsApp: {selectedProfissional.whatsapp}</span></div>}
                   </div>
                 </div>
               </div>
 
-              {selectedProfissional.especialidades && selectedProfissional.especialidades.length > 0 && (
-                <div>
-                  <h4 className="font-semibold mb-2">Especialidades</h4>
+              {/* Registro profissional */}
+              {(selectedProfissional.conselho || selectedProfissional.registro_profissional) && (
+                <div className="rounded-lg border p-4 space-y-2">
+                  <h4 className="text-sm font-semibold">Registro Profissional</h4>
+                  <div className="grid gap-2 md:grid-cols-2 text-sm">
+                    <div><span className="text-muted-foreground">Conselho:</span> <span className="font-medium">{selectedProfissional.conselho || '—'}</span></div>
+                    <div><span className="text-muted-foreground">Registro:</span> <span className="font-medium">{selectedProfissional.registro_profissional || '—'}</span></div>
+                  </div>
+                </div>
+              )}
+
+              {/* Especialidades */}
+              <div className="rounded-lg border p-4 space-y-2">
+                <h4 className="text-sm font-semibold flex items-center gap-2"><Stethoscope className="h-4 w-4" /> Especialidades</h4>
+                {selectedProfissional.especialidades && selectedProfissional.especialidades.length > 0 ? (
                   <div className="flex flex-wrap gap-2">
                     {selectedProfissional.especialidades.map((esp) => (
-                      <span key={esp} className="rounded-full bg-primary/10 px-3 py-1 text-sm font-medium text-primary">
-                        {esp}
-                      </span>
+                      <span key={esp} className="rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">{esp}</span>
                     ))}
                   </div>
-                </div>
-              )}
+                ) : (
+                  <p className="text-xs text-muted-foreground">Nenhuma especialidade cadastrada</p>
+                )}
+              </div>
 
-              {selectedProfissional.conselho && (
-                <div>
-                  <h4 className="font-semibold mb-2">Informações Profissionais</h4>
-                  <div className="text-sm bg-muted p-3 rounded-md">
-                    <strong>Conselho:</strong> {selectedProfissional.conselho}
+              {/* Procedimentos */}
+              <div className="rounded-lg border p-4 space-y-2">
+                <h4 className="text-sm font-semibold flex items-center gap-2"><Stethoscope className="h-4 w-4" /> Procedimentos que realiza</h4>
+                {(selectedProfissional as any).procedimentos_ids && (selectedProfissional as any).procedimentos_ids.length > 0 ? (
+                  <div className="flex flex-wrap gap-1.5">
+                    {((selectedProfissional as any).procedimentos_ids as string[]).map((id: string) => {
+                      const proc = (procedimentos as any[]).find((p) => p.id === id)
+                      return <Badge key={id} variant="secondary" className="text-xs">{proc?.nome || id}</Badge>
+                    })}
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground">Nenhum procedimento vinculado</p>
+                )}
+              </div>
+
+              {/* Horários Disponíveis */}
+              <div className="rounded-lg border p-4 space-y-2">
+                <h4 className="text-sm font-semibold flex items-center gap-2"><Clock className="h-4 w-4" /> Horários Disponíveis</h4>
+                {(() => {
+                  const horarios = selectedProfissional.horarios_disponiveis || {}
+                  const dias = Object.keys(horarios)
+                  if (dias.length === 0) return <p className="text-xs text-muted-foreground">Nenhum horário configurado</p>
+                  return (
+                    <div className="grid gap-1.5">
+                      {DIAS_SEMANA.map((dia) => {
+                        const config = (horarios as any)[dia]
+                        if (!config?.ativo) return (
+                          <div key={dia} className="flex items-center gap-3 text-xs">
+                            <span className="w-16 font-medium text-muted-foreground">{DIAS_LABEL[dia]}</span>
+                            <span className="text-muted-foreground/60">Não atende</span>
+                          </div>
+                        )
+                        const periodos = Array.isArray(config.periodos) ? config.periodos : [{ inicio: config.inicio || '08:00', fim: config.fim || '18:00' }]
+                        return (
+                          <div key={dia} className="flex items-center gap-3 text-xs">
+                            <span className="w-16 font-medium">{DIAS_LABEL[dia]}</span>
+                            <div className="flex flex-wrap gap-2">
+                              {periodos.map((p: any, i: number) => (
+                                <span key={i} className="rounded bg-blue-50 px-2 py-0.5 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300">
+                                  {p.inicio} – {p.fim}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )
+                })()}
+              </div>
+
+              {/* Financeiro */}
+              {(selectedProfissional.percentual_comissao || selectedProfissional.meta_mensal) && (
+                <div className="rounded-lg border p-4 space-y-2">
+                  <h4 className="text-sm font-semibold">Financeiro</h4>
+                  <div className="grid gap-2 md:grid-cols-2 text-sm">
+                    {selectedProfissional.percentual_comissao != null && <div><span className="text-muted-foreground">Comissão:</span> <span className="font-medium">{selectedProfissional.percentual_comissao}%</span></div>}
+                    {selectedProfissional.meta_mensal != null && <div><span className="text-muted-foreground">Meta mensal:</span> <span className="font-medium">R$ {selectedProfissional.meta_mensal.toFixed(2)}</span></div>}
                   </div>
                 </div>
               )}
 
-              {(selectedProfissional as any).bio && (
-                <div>
-                  <h4 className="font-semibold mb-2">Biografia</h4>
-                  <p className="text-sm bg-muted p-3 rounded-md">
-                    {(selectedProfissional as any).bio}
-                  </p>
+              {/* Bio / Experiência */}
+              {((selectedProfissional as any).bio || selectedProfissional.experiencia || selectedProfissional.certificacoes) && (
+                <div className="rounded-lg border p-4 space-y-3">
+                  <h4 className="text-sm font-semibold">Sobre o profissional</h4>
+                  {(selectedProfissional as any).bio && (
+                    <div><p className="text-xs text-muted-foreground mb-1">Biografia</p><p className="text-sm">{(selectedProfissional as any).bio}</p></div>
+                  )}
+                  {selectedProfissional.experiencia && (
+                    <div><p className="text-xs text-muted-foreground mb-1">Experiência</p><p className="text-sm">{selectedProfissional.experiencia}</p></div>
+                  )}
+                  {selectedProfissional.certificacoes && (
+                    <div><p className="text-xs text-muted-foreground mb-1">Certificações</p><p className="text-sm">{selectedProfissional.certificacoes}</p></div>
+                  )}
                 </div>
               )}
+
+              {/* Datas */}
+              <div className="grid gap-2 md:grid-cols-2 text-xs text-muted-foreground">
+                <div>Criado em: {new Date(selectedProfissional.created_at).toLocaleString('pt-BR')}</div>
+                <div>Atualizado em: {new Date(selectedProfissional.updated_at).toLocaleString('pt-BR')}</div>
+              </div>
             </div>
           )}
 

@@ -312,14 +312,15 @@ export function ProtocolosPacotesPage() {
 
   const getValorTotalSugerido = (items: any[]) => {
     return (items || []).reduce((acc, item) => {
+      const sessoes = typeof item?.sessoes_qtd === 'number' && item.sessoes_qtd > 0 ? item.sessoes_qtd : 1
       const valorManual = typeof item?.valor_individual === 'number' && Number.isFinite(item.valor_individual)
         ? item.valor_individual
         : null
-      if (typeof valorManual === 'number') return acc + valorManual
+      if (typeof valorManual === 'number') return acc + (valorManual * sessoes)
 
       if (item?.tipo === 'procedimento') {
         const valorProc = getProcedimentoValor(item?.procedimento_id)
-        return acc + (typeof valorProc === 'number' ? valorProc : 0)
+        return acc + (typeof valorProc === 'number' ? valorProc * sessoes : 0)
       }
 
       return acc
@@ -918,7 +919,7 @@ export function ProtocolosPacotesPage() {
           {detailsItem ? (
             <div className="space-y-4">
               <div className="rounded-xl border p-4 space-y-3">
-                <Label className="text-base font-semibold">Informações principais</Label>
+                <Label className="text-sm font-semibold">Informações principais</Label>
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="grid gap-1">
                     <div className="text-sm text-muted-foreground">Nome</div>
@@ -950,7 +951,7 @@ export function ProtocolosPacotesPage() {
               </div>
 
               <div className="rounded-xl border p-4 space-y-3">
-                <Label className="text-base font-semibold">Dados básicos</Label>
+                <Label className="text-sm font-semibold">Dados básicos</Label>
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="grid gap-1">
                     <div className="text-sm text-muted-foreground">Categoria</div>
@@ -974,7 +975,7 @@ export function ProtocolosPacotesPage() {
               </div>
 
               <div className="rounded-xl border p-4 space-y-3">
-                <Label className="text-base font-semibold">Estrutura / Cronograma</Label>
+                <Label className="text-sm font-semibold">Estrutura / Cronograma</Label>
                 {(() => {
                   const items = Array.isArray(getDetails('estrutura.itens', [])) ? (getDetails('estrutura.itens', []) as any[]) : []
                   if (items.length === 0) {
@@ -1001,7 +1002,7 @@ export function ProtocolosPacotesPage() {
               </div>
 
               <div className="rounded-xl border p-4 space-y-3">
-                <Label className="text-base font-semibold">Valores e condições</Label>
+                <Label className="text-sm font-semibold">Valores e condições</Label>
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="text-sm"><span className="text-muted-foreground">IA pode informar valores:</span> {Boolean(getDetails('ia.pode_informar_valores', false)) ? 'Sim' : 'Não'}</div>
                   <div className="text-sm"><span className="text-muted-foreground">Pode parcelar:</span> {String(getDetails('valores.pode_parcelar', '') || '')}</div>
@@ -1019,7 +1020,7 @@ export function ProtocolosPacotesPage() {
               </div>
 
               <div className="rounded-xl border p-4 space-y-3">
-                <Label className="text-base font-semibold">Copy e narrativa</Label>
+                <Label className="text-sm font-semibold">Copy e narrativa</Label>
                 {(() => {
                   const mk = (label: string, path: string) => {
                     const arr = normalizeStringList(getDetails(path, []))
@@ -1050,7 +1051,7 @@ export function ProtocolosPacotesPage() {
               </div>
 
               <div className="rounded-xl border p-4 space-y-3">
-                <Label className="text-base font-semibold">Regras de agendamento do pacote</Label>
+                <Label className="text-sm font-semibold">Regras de agendamento do pacote</Label>
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="text-sm"><span className="text-muted-foreground">Avaliação primeiro:</span> {String(getDetails('agendamento.avaliacao_primeiro', '') || '')}</div>
                   <div className="text-sm"><span className="text-muted-foreground">IA pode agendar:</span> {String(getDetails('agendamento.ia_pode_agendar', '') || '')}</div>
@@ -1065,7 +1066,7 @@ export function ProtocolosPacotesPage() {
               </div>
 
               <div className="rounded-xl border p-4 space-y-3">
-                <Label className="text-base font-semibold">Objeções específicas do pacote</Label>
+                <Label className="text-sm font-semibold">Objeções específicas do pacote</Label>
                 {(() => {
                   const items = getDetails('objecoes.itens', [])
                   const normalized = Array.isArray(items)
@@ -1095,7 +1096,7 @@ export function ProtocolosPacotesPage() {
               </div>
 
               <div className="rounded-xl border p-4 space-y-3">
-                <Label className="text-base font-semibold">Upsell dentro do pacote</Label>
+                <Label className="text-sm font-semibold">Upsell dentro do pacote</Label>
                 {(() => {
                   const quando = String(getDetails('upsell.quando', '') || '')
                   const argumento = String(getDetails('upsell.argumento', '') || '')
@@ -1169,7 +1170,7 @@ export function ProtocolosPacotesPage() {
               </div>
 
               <div className="rounded-xl border p-4 space-y-3">
-                <Label className="text-base font-semibold">Retorno e manutenção pós-pacote</Label>
+                <Label className="text-sm font-semibold">Retorno e manutenção pós-pacote</Label>
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="text-sm"><span className="text-muted-foreground">Retorno (dias):</span> {String(getDetails('pos.retorno_dias', '') || '')}</div>
                   <div className="text-sm"><span className="text-muted-foreground">Manutenção (qtd):</span> {String(getDetails('pos.manutencao_sessoes_qtd', '') || '')}</div>
@@ -1256,7 +1257,7 @@ export function ProtocolosPacotesPage() {
 
             <div className="space-y-4">
               <div className="rounded-xl border p-4 space-y-3">
-                <Label className="text-base font-semibold">Dados básicos</Label>
+                <Label className="text-sm font-semibold">Dados básicos</Label>
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="grid gap-2">
                     <Label>Categoria</Label>
@@ -1300,7 +1301,7 @@ export function ProtocolosPacotesPage() {
               </div>
 
               <div className="rounded-xl border p-4 space-y-3">
-                <Label className="text-base font-semibold">Estrutura / Cronograma</Label>
+                <Label className="text-sm font-semibold">Estrutura / Cronograma</Label>
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="grid gap-2 md:col-span-2">
                     <Label>Itens do pacote</Label>
@@ -1459,20 +1460,6 @@ export function ProtocolosPacotesPage() {
                             })()}
                           </div>
 
-                          <div className="grid gap-2">
-                            <Label>Cronograma recomendado *</Label>
-                            <Textarea
-                              value={it.cronograma_recomendado || ''}
-                              onChange={(e) => {
-                                const items = getEstruturaItens()
-                                items[idx] = { ...items[idx], cronograma_recomendado: e.target.value }
-                                setEstruturaItens(items)
-                              }}
-                              placeholder="Descreva o cronograma recomendado para este tratamento..."
-                              rows={3}
-                            />
-                          </div>
-
                           <div className="flex justify-end">
                             <Button
                               type="button"
@@ -1511,10 +1498,50 @@ export function ProtocolosPacotesPage() {
                     </div>
                   </div>
                 </div>
+
+                {/* Cronograma Recomendado - auto-gerado */}
+                {(() => {
+                  const cronItems = getEstruturaItens()
+                  if (cronItems.length === 0) return null
+                  const sorted = [...cronItems].sort((a: any, b: any) => (a.ordem || 0) - (b.ordem || 0))
+                  let diaAtual = 0
+                  const linhas: string[] = []
+                  sorted.forEach((it: any) => {
+                    const nome = it.tipo === 'procedimento' && it.procedimento_id
+                      ? ((procedimentos || []) as any[]).find((p: any) => p.id === it.procedimento_id)?.nome || it.nome_manual || 'Procedimento'
+                      : it.nome_manual || 'Item'
+                    const sessoes = typeof it.sessoes_qtd === 'number' && it.sessoes_qtd > 0 ? it.sessoes_qtd : 1
+                    const intervalo = it.intervalo_recomendado || '7 dias'
+                    const match = intervalo.match(/(\d+)/)
+                    const dias = match ? parseInt(match[1]) : 7
+                    for (let s = 0; s < sessoes; s++) {
+                      linhas.push(`Dia ${diaAtual + 1}|${nome} - Sessão ${s + 1}/${sessoes}`)
+                      diaAtual += dias
+                    }
+                  })
+                  return (
+                    <div className="rounded-xl border border-blue-200 bg-blue-50/50 p-4 space-y-2 mt-4">
+                      <Label className="text-sm font-semibold text-blue-800">Cronograma Recomendado</Label>
+                      <p className="text-xs text-muted-foreground">Pré-montado com base nos procedimentos, ordem e sessões</p>
+                      <div className="space-y-1 text-sm">
+                        {linhas.map((l: string, i: number) => {
+                          const [dia, desc] = l.split('|')
+                          return (
+                            <div key={i} className="flex items-center gap-2 py-1 border-b border-blue-100 last:border-0">
+                              <span className="text-blue-600 font-medium min-w-[55px]">{dia}:</span>
+                              <span className="text-foreground">{desc}</span>
+                            </div>
+                          )
+                        })}
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-2">Duração total estimada: ~{diaAtual} dias</p>
+                    </div>
+                  )
+                })()}
               </div>
 
               <div className="rounded-xl border p-4 space-y-3">
-                <Label className="text-base font-semibold">Valores e condições</Label>
+                <Label className="text-sm font-semibold">Valores e condições</Label>
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="flex items-center justify-between p-3 border rounded-lg md:col-span-2">
                     <Label>IA pode informar valores?</Label>
@@ -1564,7 +1591,7 @@ export function ProtocolosPacotesPage() {
               </div>
 
               <div className="rounded-xl border p-4 space-y-3">
-                <Label className="text-base font-semibold">Regras de agendamento do pacote</Label>
+                <Label className="text-sm font-semibold">Regras de agendamento do pacote</Label>
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="grid gap-2">
                     <Label>Agendar avaliação primeiro?</Label>
@@ -1630,7 +1657,7 @@ export function ProtocolosPacotesPage() {
               </div>
 
               <div className="rounded-xl border p-4 space-y-3">
-                <Label className="text-base font-semibold">Copy e narrativa</Label>
+                <Label className="text-sm font-semibold">Copy e narrativa</Label>
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="grid gap-2">
                     <Label>Resultados prometidos</Label>
@@ -1668,7 +1695,7 @@ export function ProtocolosPacotesPage() {
               </div>
 
               <div className="rounded-xl border p-4 space-y-3">
-                <Label className="text-base font-semibold">Objeções específicas do pacote</Label>
+                <Label className="text-sm font-semibold">Objeções específicas do pacote</Label>
                 <PairsEditor
                   title="Objeções e respostas"
                   leftLabel="Objeção"
@@ -1689,7 +1716,7 @@ export function ProtocolosPacotesPage() {
               </div>
 
               <div className="rounded-xl border p-4 space-y-3">
-                <Label className="text-base font-semibold">Upsell dentro do pacote</Label>
+                <Label className="text-sm font-semibold">Upsell dentro do pacote</Label>
                 <div className="space-y-4">
                   <div className="grid gap-4 md:grid-cols-2">
                     <div className="grid gap-2">
@@ -1904,7 +1931,7 @@ export function ProtocolosPacotesPage() {
               </div>
 
               <div className="rounded-xl border p-4 space-y-3">
-                <Label className="text-base font-semibold">Retorno e manutenção pós-pacote</Label>
+                <Label className="text-sm font-semibold">Retorno e manutenção pós-pacote</Label>
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="grid gap-2">
                     <Label>Retorno em quantos dias?</Label>
@@ -1958,7 +1985,7 @@ export function ProtocolosPacotesPage() {
               </div>
 
               <div className="rounded-xl border p-4 space-y-3">
-                <Label className="text-base font-semibold">Mídias do pacote</Label>
+                <Label className="text-sm font-semibold">Mídias do pacote</Label>
                 <div className="grid gap-4 md:grid-cols-2">
                   {renderMidiaUploader({ tipo: 'antes_depois', label: 'Antes/depois', accept: 'image/*', allowWhenCreating: true })}
                   {renderMidiaUploader({ tipo: 'carrossel', label: 'Carrossel comercial', accept: 'image/*', allowWhenCreating: true })}
@@ -1970,7 +1997,7 @@ export function ProtocolosPacotesPage() {
             </div>
 
             <div className="rounded-xl border p-4 space-y-3">
-              <Label className="text-base font-semibold">FAQ - Perguntas Frequentes</Label>
+              <Label className="text-sm font-semibold">FAQ - Perguntas Frequentes</Label>
               {(getC('faq', []) as any[]).map((faq: any, idx: number) => (
                 <div key={idx} className="rounded-lg border p-3 space-y-3">
                   <div className="grid gap-2">
@@ -2117,7 +2144,7 @@ export function ProtocolosPacotesPage() {
 
             <div className="space-y-4">
               <div className="rounded-xl border p-4 space-y-3">
-                <Label className="text-base font-semibold">Dados básicos</Label>
+                <Label className="text-sm font-semibold">Dados básicos</Label>
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="grid gap-2">
                     <Label>Categoria</Label>
@@ -2161,7 +2188,7 @@ export function ProtocolosPacotesPage() {
               </div>
 
               <div className="space-y-3 pt-4 border-t">
-                <Label className="text-base font-semibold">Estrutura / Cronograma</Label>
+                <Label className="text-sm font-semibold">Estrutura / Cronograma</Label>
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="grid gap-2 md:col-span-2">
                     <Label>Itens do pacote</Label>
@@ -2320,20 +2347,6 @@ export function ProtocolosPacotesPage() {
                             })()}
                           </div>
 
-                          <div className="grid gap-2">
-                            <Label>Cronograma recomendado *</Label>
-                            <Textarea
-                              value={it.cronograma_recomendado || ''}
-                              onChange={(e) => {
-                                const items = getEstruturaItens()
-                                items[idx] = { ...items[idx], cronograma_recomendado: e.target.value }
-                                setEstruturaItens(items)
-                              }}
-                              placeholder="Descreva o cronograma recomendado para este tratamento..."
-                              rows={3}
-                            />
-                          </div>
-
                           <div className="flex justify-end">
                             <Button
                               type="button"
@@ -2372,10 +2385,50 @@ export function ProtocolosPacotesPage() {
                     </div>
                   </div>
                 </div>
+
+                {/* Cronograma Recomendado - auto-gerado */}
+                {(() => {
+                  const cronItems = getEstruturaItens()
+                  if (cronItems.length === 0) return null
+                  const sorted = [...cronItems].sort((a: any, b: any) => (a.ordem || 0) - (b.ordem || 0))
+                  let diaAtual = 0
+                  const linhas: string[] = []
+                  sorted.forEach((it: any) => {
+                    const nome = it.tipo === 'procedimento' && it.procedimento_id
+                      ? ((procedimentos || []) as any[]).find((p: any) => p.id === it.procedimento_id)?.nome || it.nome_manual || 'Procedimento'
+                      : it.nome_manual || 'Item'
+                    const sessoes = typeof it.sessoes_qtd === 'number' && it.sessoes_qtd > 0 ? it.sessoes_qtd : 1
+                    const intervalo = it.intervalo_recomendado || '7 dias'
+                    const match = intervalo.match(/(\d+)/)
+                    const dias = match ? parseInt(match[1]) : 7
+                    for (let s = 0; s < sessoes; s++) {
+                      linhas.push(`Dia ${diaAtual + 1}|${nome} - Sessão ${s + 1}/${sessoes}`)
+                      diaAtual += dias
+                    }
+                  })
+                  return (
+                    <div className="rounded-xl border border-blue-200 bg-blue-50/50 p-4 space-y-2 mt-4">
+                      <Label className="text-sm font-semibold text-blue-800">Cronograma Recomendado</Label>
+                      <p className="text-xs text-muted-foreground">Pré-montado com base nos procedimentos, ordem e sessões</p>
+                      <div className="space-y-1 text-sm">
+                        {linhas.map((l: string, i: number) => {
+                          const [dia, desc] = l.split('|')
+                          return (
+                            <div key={i} className="flex items-center gap-2 py-1 border-b border-blue-100 last:border-0">
+                              <span className="text-blue-600 font-medium min-w-[55px]">{dia}:</span>
+                              <span className="text-foreground">{desc}</span>
+                            </div>
+                          )
+                        })}
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-2">Duração total estimada: ~{diaAtual} dias</p>
+                    </div>
+                  )
+                })()}
               </div>
 
               <div className="rounded-xl border p-4 space-y-3">
-                <Label className="text-base font-semibold">Valores e condições</Label>
+                <Label className="text-sm font-semibold">Valores e condições</Label>
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="flex items-center justify-between p-3 border rounded-lg md:col-span-2">
                     <Label>IA pode informar valores?</Label>
@@ -2425,7 +2478,7 @@ export function ProtocolosPacotesPage() {
               </div>
 
               <div className="rounded-xl border p-4 space-y-3">
-                <Label className="text-base font-semibold">Regras de agendamento do pacote</Label>
+                <Label className="text-sm font-semibold">Regras de agendamento do pacote</Label>
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="grid gap-2">
                     <Label>Agendar avaliação primeiro?</Label>
@@ -2475,7 +2528,7 @@ export function ProtocolosPacotesPage() {
               </div>
 
               <div className="rounded-xl border p-4 space-y-3">
-                <Label className="text-base font-semibold">Copy e narrativa</Label>
+                <Label className="text-sm font-semibold">Copy e narrativa</Label>
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="grid gap-2">
                     <Label>Resultados prometidos</Label>
@@ -2513,7 +2566,7 @@ export function ProtocolosPacotesPage() {
               </div>
 
               <div className="rounded-xl border p-4 space-y-3">
-                <Label className="text-base font-semibold">Objeções específicas do pacote</Label>
+                <Label className="text-sm font-semibold">Objeções específicas do pacote</Label>
                 <PairsEditor
                   title="Objeções e respostas"
                   leftLabel="Objeção"
@@ -2534,7 +2587,7 @@ export function ProtocolosPacotesPage() {
               </div>
 
               <div className="space-y-3 pt-4 border-t">
-                <Label className="text-base font-semibold">Upsell dentro do pacote</Label>
+                <Label className="text-sm font-semibold">Upsell dentro do pacote</Label>
                 <div className="space-y-4">
                   <div className="grid gap-4 md:grid-cols-2">
                     <div className="grid gap-2">
@@ -2749,7 +2802,7 @@ export function ProtocolosPacotesPage() {
               </div>
 
               <div className="rounded-xl border p-4 space-y-3">
-                <Label className="text-base font-semibold">Retorno e manutenção pós-pacote</Label>
+                <Label className="text-sm font-semibold">Retorno e manutenção pós-pacote</Label>
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="grid gap-2">
                     <Label>Retorno em quantos dias?</Label>
@@ -2787,7 +2840,7 @@ export function ProtocolosPacotesPage() {
               </div>
 
               <div className="rounded-xl border p-4 space-y-3">
-                <Label className="text-base font-semibold">Mídias do pacote</Label>
+                <Label className="text-sm font-semibold">Mídias do pacote</Label>
                 <div className="grid gap-4 md:grid-cols-2">
                   {renderMidiaUploader({ tipo: 'antes_depois', label: 'Antes/depois', accept: 'image/*', allowWhenCreating: false })}
                   {renderMidiaUploader({ tipo: 'carrossel', label: 'Carrossel comercial', accept: 'image/*', allowWhenCreating: false })}
@@ -2799,7 +2852,7 @@ export function ProtocolosPacotesPage() {
             </div>
 
             <div className="rounded-xl border p-4 space-y-3">
-              <Label className="text-base font-semibold">FAQ - Perguntas Frequentes</Label>
+              <Label className="text-sm font-semibold">FAQ - Perguntas Frequentes</Label>
               {(getC('faq', []) as any[]).map((faq: any, idx: number) => (
                 <div key={idx} className="rounded-lg border p-3 space-y-3">
                   <div className="grid gap-2">

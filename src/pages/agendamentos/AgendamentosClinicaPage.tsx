@@ -59,7 +59,7 @@ import type {
 } from '@/services/api/agendamentos-clinica'
 
 type CalendarView = 'timeGridDay' | 'timeGridWeek' | 'dayGridMonth'
-type AgendaView = 'calendario' | 'lista'
+type AgendaView = 'calendario' | 'lista' | 'disponibilidade'
 
 const STATUS_CONFIG: Record<
   StatusAgendamentoClinica,
@@ -79,7 +79,7 @@ export function AgendamentosClinicaPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState<StatusAgendamentoClinica | 'all'>('all')
   const [pacienteFilter, setPacienteFilter] = useState<string>('all')
-  const [pacienteSearch, setPacienteSearch] = useState('')
+  const [, setPacienteSearch] = useState('')
   const [profissionalFilter, setProfissionalFilter] = useState<string>('all')
   const [procedimentoFilter, setProcedimentoFilter] = useState<string>('all')
   const [avaliacaoFilter, setAvaliacaoFilter] = useState<'all' | 'true' | 'false'>('all')
@@ -138,7 +138,6 @@ export function AgendamentosClinicaPage() {
       : undefined
 
     return {
-      search: searchTerm.trim() || undefined,
       status: statusFilter !== 'all' ? statusFilter : undefined,
       paciente_id: pacienteFilter !== 'all' ? pacienteFilter : undefined,
       profissional_id: profissionalFilter !== 'all' ? profissionalFilter : undefined,
@@ -148,7 +147,7 @@ export function AgendamentosClinicaPage() {
       data_inicio: startIso,
       data_fim: endIso,
     }
-  }, [searchTerm, statusFilter, pacienteFilter, profissionalFilter, procedimentoFilter, avaliacaoFilter, dataInicioFilter, dataFimFilter])
+  }, [statusFilter, pacienteFilter, profissionalFilter, procedimentoFilter, avaliacaoFilter, dataInicioFilter, dataFimFilter])
 
   const { data: agendamentos, isLoading, count } = useAgendamentosClinica(filters)
   const { data: pacientes } = usePacientes({ limit: 1000 })
@@ -571,6 +570,13 @@ export function AgendamentosClinicaPage() {
           >
             Lista
           </Button>
+          <Button
+            type="button"
+            variant={agendaView === 'disponibilidade' ? 'default' : 'outline'}
+            onClick={() => setAgendaView('disponibilidade')}
+          >
+            Disponibilidade
+          </Button>
 
           <Button onClick={() => setIsCreateModalOpen(true)}>
             <Plus className="mr-2 h-4 w-4" />
@@ -634,8 +640,8 @@ export function AgendamentosClinicaPage() {
       </section>
 
       <section className="relative z-20 overflow-visible rounded-2xl border border-border/40 bg-background/60 px-4 py-3 shadow-sm backdrop-blur">
-        <div className="flex flex-wrap items-end gap-3">
-          <div className="relative min-w-[160px] flex-1">
+        <div className="flex items-end gap-2 overflow-x-auto">
+          <div className="relative min-w-[140px]">
             <span className="mb-1 block text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Buscar</span>
             <div className="relative">
               <Search className="absolute left-2 top-2 h-3.5 w-3.5 text-muted-foreground" />
@@ -651,7 +657,7 @@ export function AgendamentosClinicaPage() {
           <div>
             <span className="mb-1 block text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Status</span>
             <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as any)}>
-              <SelectTrigger className="h-8 w-[130px] text-xs">
+              <SelectTrigger className="h-8 w-[110px] text-xs">
                 <SelectValue placeholder="Todos" />
               </SelectTrigger>
               <SelectContent>
@@ -666,7 +672,7 @@ export function AgendamentosClinicaPage() {
           <div>
             <span className="mb-1 block text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Pacientes</span>
             <Select value={pacienteFilter} onValueChange={(v) => { setPacienteFilter(v); setPacienteSearch('') }}>
-              <SelectTrigger className="h-8 w-[160px] text-xs">
+              <SelectTrigger className="h-8 w-[140px] text-xs">
                 <SelectValue placeholder="Todos" />
               </SelectTrigger>
               <SelectContent>
@@ -681,7 +687,7 @@ export function AgendamentosClinicaPage() {
           <div>
             <span className="mb-1 block text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Pacotes/Procedimentos</span>
             <Select value={procedimentoFilter} onValueChange={setProcedimentoFilter}>
-              <SelectTrigger className="h-8 w-[180px] text-xs">
+              <SelectTrigger className="h-8 w-[150px] text-xs">
                 <SelectValue placeholder="Todos" />
               </SelectTrigger>
               <SelectContent>
@@ -690,13 +696,13 @@ export function AgendamentosClinicaPage() {
                   <SelectItem value="__header_proc" disabled className="text-[10px] font-semibold text-muted-foreground uppercase">— Procedimentos —</SelectItem>
                 )}
                 {(procedimentos || []).map((p: any) => (
-                  <SelectItem key={p.id} value={p.id} className="text-foreground font-medium">{p.nome}</SelectItem>
+                  <SelectItem key={p.id} value={p.id}>{p.nome}</SelectItem>
                 ))}
                 {(protocolosPacotes || []).length > 0 && (
                   <SelectItem value="__header_pac" disabled className="text-[10px] font-semibold text-muted-foreground uppercase">— Pacotes —</SelectItem>
                 )}
                 {((protocolosPacotes || []) as any[]).map((p: any) => (
-                  <SelectItem key={`pac_${p.id}`} value={p.id} className="text-foreground font-medium">{p.nome}</SelectItem>
+                  <SelectItem key={`pac_${p.id}`} value={p.id}>{p.nome}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -705,7 +711,7 @@ export function AgendamentosClinicaPage() {
           <div>
             <span className="mb-1 block text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Avaliação</span>
             <Select value={avaliacaoFilter} onValueChange={(v) => setAvaliacaoFilter(v as any)}>
-              <SelectTrigger className="h-8 w-[130px] text-xs">
+              <SelectTrigger className="h-8 w-[110px] text-xs">
                 <SelectValue placeholder="Todos" />
               </SelectTrigger>
               <SelectContent>
@@ -1073,6 +1079,7 @@ export function AgendamentosClinicaPage() {
         updatePending={updateMutation.isPending}
         deletePending={deleteMutation.isPending}
         updateStatusPending={updateStatusMutation.isPending}
+        agendamentos={agendamentos}
       />
     </div>
   )

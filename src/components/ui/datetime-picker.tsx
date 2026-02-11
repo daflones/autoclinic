@@ -150,6 +150,23 @@ export function DateTimePicker({ value, onChange, label, required, min }: DateTi
             className="absolute left-0 top-full mt-2 z-[999] w-[320px] max-w-[92vw]"
           >
             <CardContent className="p-2">
+              {/* Botão Agora no topo */}
+              <div className="flex justify-center mb-1">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="text-xs w-full"
+                  onClick={() => {
+                    const now = new Date()
+                    setSelectedDate(now)
+                    onChange(formatLocalDateTime(now))
+                  }}
+                >
+                  Agora
+                </Button>
+              </div>
+
               {/* Header do calendário */}
               <div className="flex items-center justify-between mb-1">
                 <Button
@@ -261,20 +278,8 @@ export function DateTimePicker({ value, onChange, label, required, min }: DateTi
                 </div>
 
                 <div className="flex gap-2 mt-2">
-                  <Button type="button" variant="outline" size="sm" onClick={() => setShowPicker(false)} className="flex-1">
-                    Fechar
-                  </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    onClick={() => {
-                      const now = new Date()
-                      setSelectedDate(now)
-                      onChange(formatLocalDateTime(now))
-                    }}
-                    className="flex-1"
-                  >
-                    Agora
+                  <Button type="button" size="sm" onClick={() => setShowPicker(false)} className="flex-1">
+                    Confirmar
                   </Button>
                 </div>
               </div>

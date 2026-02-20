@@ -369,7 +369,7 @@ export function LeadForm() {
               {currentStep === 3 && (
                 <div className="space-y-6">
                   <div>
-                    <Label>Principal Desafio Atual * (selecione todos que se aplicam)</Label>
+                    <Label className="text-sm">Principal Desafio Atual * (selecione todos que se aplicam)</Label>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
                       {desafioOptions.map((option) => (
                         <div key={option.value} className="flex items-center space-x-2">
@@ -393,7 +393,7 @@ export function LeadForm() {
                   </div>
 
                   <div>
-                    <Label>Experiência Anterior com CRM</Label>
+                    <Label className="text-sm">Experiência Anterior com CRM</Label>
                     <div className="flex items-center space-x-4 mt-3">
                       <div className="flex items-center space-x-2">
                         <Checkbox

@@ -42,7 +42,7 @@ export function MessageTemplates({ onSendMessage, contacts }: MessageTemplatesPr
     {
       id: '1',
       name: 'Saudação Inicial',
-      content: 'Olá {nome}! 👋\n\nObrigado por entrar em contato conosco. Como posso ajudá-lo hoje?',
+      content: 'Olá {nome}! ??\n\nObrigado por entrar em contato conosco. Como posso ajudá-lo hoje?',
       category: 'saudacao',
       variables: ['nome'],
       createdAt: new Date(),
@@ -60,7 +60,7 @@ export function MessageTemplates({ onSendMessage, contacts }: MessageTemplatesPr
     {
       id: '3',
       name: 'Promoção Especial',
-      content: '🎉 OFERTA ESPECIAL para você, {nome}!\n\n{descricao_promocao}\n\nVálida até {data_limite}.\n\nNão perca essa oportunidade!',
+      content: '?? OFERTA ESPECIAL para você, {nome}!\n\n{descricao_promocao}\n\nVálida até {data_limite}.\n\nNão perca essa oportunidade!',
       category: 'promocao',
       variables: ['nome', 'descricao_promocao', 'data_limite'],
       createdAt: new Date(),
@@ -207,7 +207,7 @@ export function MessageTemplates({ onSendMessage, contacts }: MessageTemplatesPr
                 <div className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <Label htmlFor="template-name">Nome do Template</Label>
+                      <Label htmlFor="template-name" className="text-sm">Nome do Template</Label>
                       <Input
                         id="template-name"
                         placeholder="Ex: Saudação Inicial"
@@ -216,7 +216,7 @@ export function MessageTemplates({ onSendMessage, contacts }: MessageTemplatesPr
                       />
                     </div>
                     <div>
-                      <Label htmlFor="template-category">Categoria</Label>
+                      <Label htmlFor="template-category" className="text-sm">Categoria</Label>
                       <Select 
                         value={newTemplate.category} 
                         onValueChange={(value: MessageTemplate['category']) => 
@@ -238,7 +238,7 @@ export function MessageTemplates({ onSendMessage, contacts }: MessageTemplatesPr
                   </div>
                   
                   <div>
-                    <Label htmlFor="template-content">Conteúdo</Label>
+                    <Label htmlFor="template-content" className="text-sm">Conteúdo</Label>
                     <Textarea
                       id="template-content"
                       placeholder="Digite o conteúdo do template. Use {variavel} para criar variáveis."
@@ -253,7 +253,7 @@ export function MessageTemplates({ onSendMessage, contacts }: MessageTemplatesPr
 
                   {newTemplate.content && (
                     <div>
-                      <Label>Variáveis Detectadas:</Label>
+<Label className="text-sm">Variáveis Detectadas:</Label>
                       <div className="flex flex-wrap gap-2 mt-1">
                         {extractVariables(newTemplate.content).map(variable => (
                           <Badge key={variable} variant="outline">
@@ -383,7 +383,7 @@ export function MessageTemplates({ onSendMessage, contacts }: MessageTemplatesPr
             <div className="space-y-4">
               {/* Seleção de contato */}
               <div>
-                <Label>Destinatário</Label>
+<Label className="text-sm">Destinatário</Label>
                 <Select value={selectedContact} onValueChange={setSelectedContact}>
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione um contato" />
@@ -401,7 +401,7 @@ export function MessageTemplates({ onSendMessage, contacts }: MessageTemplatesPr
               {/* Variáveis do template */}
               {selectedTemplate.variables.length > 0 && (
                 <div className="space-y-3">
-                  <Label>Preencher Variáveis</Label>
+<Label className="text-sm">Preencher Variáveis</Label>
                   {selectedTemplate.variables.map(variable => (
                     <div key={variable}>
                       <Label htmlFor={`var-${variable}`} className="text-sm">
@@ -423,7 +423,7 @@ export function MessageTemplates({ onSendMessage, contacts }: MessageTemplatesPr
 
               {/* Preview da mensagem */}
               <div>
-                <Label>Preview da Mensagem</Label>
+<Label className="text-sm">Preview da Mensagem</Label>
                 <div className="bg-muted p-3 rounded-lg">
                   <p className="text-sm whitespace-pre-wrap">
                     {processTemplate(selectedTemplate.content, templateVariables)}

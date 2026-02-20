@@ -175,6 +175,49 @@ export function ProtocolosPacotesPage() {
     return cursor ?? fallback
   }
 
+  const [dragIdx, setDragIdx] = useState<number | null>(null)
+  const [cronDragLineIdx, setCronDragLineIdx] = useState<number | null>(null)
+  const [cronogramaCustomOrder, setCronogramaCustomOrder] = useState<{ nome: string; dias: number }[] | null>(null)
+
+  const handleDragReorder = (fromIdx: number, toIdx: number) => {
+    if (fromIdx === toIdx) return
+    const items = getEstruturaItens()
+    const [moved] = items.splice(fromIdx, 1)
+    items.splice(toIdx, 0, moved)
+    items.forEach((it: any, i: number) => { it.ordem = i + 1 })
+    setEstruturaItens(items)
+    setCronogramaCustomOrder(null)
+  }
+
+  const buildCronogramaLines = () => {
+    const cronItems = getEstruturaItens()
+    if (cronItems.length === 0) return []
+    const sorted = [...cronItems].sort((a: any, b: any) => (a.ordem || 0) - (b.ordem || 0))
+    const lines: { nome: string; dias: number }[] = []
+    sorted.forEach((it: any) => {
+      const nome = it.tipo === 'procedimento' && it.procedimento_id
+        ? ((procedimentos || []) as any[]).find((p: any) => p.id === it.procedimento_id)?.nome || it.nome_manual || 'Procedimento'
+        : it.nome_manual || 'Item'
+      const sessoes = typeof it.sessoes_qtd === 'number' && it.sessoes_qtd > 0 ? it.sessoes_qtd : 1
+      const intervalo = it.intervalo_recomendado || '7 dias'
+      const match = intervalo.match(/(\d+)/)
+      const dias = match ? parseInt(match[1]) : 7
+      for (let s = 0; s < sessoes; s++) {
+        lines.push({ nome: `${nome} - Sessão ${s + 1}/${sessoes}`, dias })
+      }
+    })
+    return lines
+  }
+
+  const handleCronLineReorder = (fromIdx: number, toIdx: number) => {
+    if (fromIdx === toIdx) return
+    const current = cronogramaCustomOrder || buildCronogramaLines()
+    const next = [...current]
+    const [moved] = next.splice(fromIdx, 1)
+    next.splice(toIdx, 0, moved)
+    setCronogramaCustomOrder(next)
+  }
+
   const [uploadingImagem, setUploadingImagem] = useState(false)
   const [pendingCreateMidias, setPendingCreateMidias] = useState<Record<string, File[]>>({})
   const [imagemPreviewUrlById, setImagemPreviewUrlById] = useState<Record<string, string>>({})
@@ -290,7 +333,10 @@ export function ProtocolosPacotesPage() {
     })
   }
 
-  const setEstruturaItens = (items: any[]) => setC('estrutura.itens', items)
+  const setEstruturaItens = (items: any[]) => {
+    setC('estrutura.itens', items)
+    setCronogramaCustomOrder(null)
+  }
 
   const getProcedimentoValor = (procedimentoId?: string | null) => {
     if (!procedimentoId) return null
@@ -546,7 +592,7 @@ export function ProtocolosPacotesPage() {
 
     return (
       <div className="space-y-2">
-        <Label>{label}</Label>
+<Label className="text-sm">{label}</Label>
 
         {canUpload ? (
           <FileUploadButton
@@ -703,7 +749,7 @@ export function ProtocolosPacotesPage() {
             <div className="space-y-4">
               <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
                 <div className="flex-1 space-y-2">
-                  <Label htmlFor="search">Buscar</Label>
+                  <Label htmlFor="search" className="text-sm">Buscar</Label>
                   <div className="relative">
                     <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                     <Input
@@ -717,7 +763,7 @@ export function ProtocolosPacotesPage() {
                 </div>
 
                 <div className="w-full md:w-64 space-y-2">
-                  <Label>Status</Label>
+<Label className="text-sm">Status</Label>
                   <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as any)}>
                     <SelectTrigger>
                       <SelectValue />
@@ -820,7 +866,7 @@ export function ProtocolosPacotesPage() {
             <div className="space-y-4">
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
-                  <Label>Pacote</Label>
+<Label className="text-sm">Pacote</Label>
                   <Select value={selectedPacoteIdForPacientes || 'none'} onValueChange={(v) => setSelectedPacoteIdForPacientes(v === 'none' ? '' : v)}>
                     <SelectTrigger>
                       <SelectValue placeholder="Selecione um pacote" />
@@ -919,7 +965,7 @@ export function ProtocolosPacotesPage() {
           {detailsItem ? (
             <div className="space-y-4">
               <div className="rounded-xl border p-4 space-y-3">
-                <Label className="text-sm font-semibold">Informações principais</Label>
+<Label className="text-sm">Informações principais</Label>
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="grid gap-1">
                     <div className="text-sm text-muted-foreground">Nome</div>
@@ -951,7 +997,7 @@ export function ProtocolosPacotesPage() {
               </div>
 
               <div className="rounded-xl border p-4 space-y-3">
-                <Label className="text-sm font-semibold">Dados básicos</Label>
+<Label className="text-sm">Dados básicos</Label>
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="grid gap-1">
                     <div className="text-sm text-muted-foreground">Categoria</div>
@@ -975,7 +1021,7 @@ export function ProtocolosPacotesPage() {
               </div>
 
               <div className="rounded-xl border p-4 space-y-3">
-                <Label className="text-sm font-semibold">Estrutura / Cronograma</Label>
+<Label className="text-sm">Estrutura / Cronograma</Label>
                 {(() => {
                   const items = Array.isArray(getDetails('estrutura.itens', [])) ? (getDetails('estrutura.itens', []) as any[]) : []
                   if (items.length === 0) {
@@ -1002,7 +1048,7 @@ export function ProtocolosPacotesPage() {
               </div>
 
               <div className="rounded-xl border p-4 space-y-3">
-                <Label className="text-sm font-semibold">Valores e condições</Label>
+<Label className="text-sm">Valores e condições</Label>
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="text-sm"><span className="text-muted-foreground">IA pode informar valores:</span> {Boolean(getDetails('ia.pode_informar_valores', false)) ? 'Sim' : 'Não'}</div>
                   <div className="text-sm"><span className="text-muted-foreground">Pode parcelar:</span> {String(getDetails('valores.pode_parcelar', '') || '')}</div>
@@ -1020,7 +1066,7 @@ export function ProtocolosPacotesPage() {
               </div>
 
               <div className="rounded-xl border p-4 space-y-3">
-                <Label className="text-sm font-semibold">Copy e narrativa</Label>
+<Label className="text-sm">Copy e narrativa</Label>
                 {(() => {
                   const mk = (label: string, path: string) => {
                     const arr = normalizeStringList(getDetails(path, []))
@@ -1051,7 +1097,7 @@ export function ProtocolosPacotesPage() {
               </div>
 
               <div className="rounded-xl border p-4 space-y-3">
-                <Label className="text-sm font-semibold">Regras de agendamento do pacote</Label>
+<Label className="text-sm">Regras de agendamento do pacote</Label>
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="text-sm"><span className="text-muted-foreground">Avaliação primeiro:</span> {String(getDetails('agendamento.avaliacao_primeiro', '') || '')}</div>
                   <div className="text-sm"><span className="text-muted-foreground">IA pode agendar:</span> {String(getDetails('agendamento.ia_pode_agendar', '') || '')}</div>
@@ -1066,7 +1112,7 @@ export function ProtocolosPacotesPage() {
               </div>
 
               <div className="rounded-xl border p-4 space-y-3">
-                <Label className="text-sm font-semibold">Objeções específicas do pacote</Label>
+<Label className="text-sm">Objeções específicas do pacote</Label>
                 {(() => {
                   const items = getDetails('objecoes.itens', [])
                   const normalized = Array.isArray(items)
@@ -1096,7 +1142,7 @@ export function ProtocolosPacotesPage() {
               </div>
 
               <div className="rounded-xl border p-4 space-y-3">
-                <Label className="text-sm font-semibold">Upsell dentro do pacote</Label>
+<Label className="text-sm">Upsell dentro do pacote</Label>
                 {(() => {
                   const quando = String(getDetails('upsell.quando', '') || '')
                   const argumento = String(getDetails('upsell.argumento', '') || '')
@@ -1170,7 +1216,7 @@ export function ProtocolosPacotesPage() {
               </div>
 
               <div className="rounded-xl border p-4 space-y-3">
-                <Label className="text-sm font-semibold">Retorno e manutenção pós-pacote</Label>
+<Label className="text-sm">Retorno e manutenção pós-pacote</Label>
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="text-sm"><span className="text-muted-foreground">Retorno (dias):</span> {String(getDetails('pos.retorno_dias', '') || '')}</div>
                   <div className="text-sm"><span className="text-muted-foreground">Manutenção (qtd):</span> {String(getDetails('pos.manutencao_sessoes_qtd', '') || '')}</div>
@@ -1204,11 +1250,11 @@ export function ProtocolosPacotesPage() {
           <div className="space-y-4">
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <Label>Nome *</Label>
+<Label className="text-sm">Nome *</Label>
                 <Input value={formState.nome} onChange={(e) => setFormState({ ...formState, nome: e.target.value })} />
               </div>
               <div className="space-y-2">
-                <Label>Valor total do pacote (opcional)</Label>
+<Label className="text-sm">Valor total do pacote (opcional)</Label>
                 <Input
                   type="number"
                   value={formState.preco ?? ''}
@@ -1251,16 +1297,16 @@ export function ProtocolosPacotesPage() {
             </div>
 
             <div className="space-y-2">
-              <Label>Descrição</Label>
+<Label className="text-sm">Descrição</Label>
               <Textarea value={formState.descricao || ''} onChange={(e) => setFormState({ ...formState, descricao: e.target.value })} rows={3} />
             </div>
 
             <div className="space-y-4">
               <div className="rounded-xl border p-4 space-y-3">
-                <Label className="text-sm font-semibold">Dados básicos</Label>
+<Label className="text-sm">Dados básicos</Label>
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="grid gap-2">
-                    <Label>Categoria</Label>
+<Label className="text-sm">Categoria</Label>
                     <Select value={getC('basico.categoria', 'misto')} onValueChange={(v) => setC('basico.categoria', v)}>
                       <SelectTrigger>
                         <SelectValue />
@@ -1276,11 +1322,11 @@ export function ProtocolosPacotesPage() {
                     </Select>
                   </div>
                   <div className="grid gap-2">
-                    <Label>Duração média do programa</Label>
+<Label className="text-sm">Duração média do programa</Label>
                     <Input value={getC('basico.duracao_programa', '')} onChange={(e) => setC('basico.duracao_programa', e.target.value)} placeholder="Ex: 60 dias" />
                   </div>
                   <div className="grid gap-2">
-                    <Label>Nível</Label>
+<Label className="text-sm">Nível</Label>
                     <Select value={getC('basico.nivel', 'intermediario')} onValueChange={(v) => setC('basico.nivel', v)}>
                       <SelectTrigger>
                         <SelectValue />
@@ -1294,58 +1340,71 @@ export function ProtocolosPacotesPage() {
                     </Select>
                   </div>
                   <div className="grid gap-2">
-                    <Label>Descrição geral (visão do tratamento)</Label>
+<Label className="text-sm">Descrição geral (visão do tratamento)</Label>
                     <Textarea value={getC('basico.descricao_geral', '')} onChange={(e) => setC('basico.descricao_geral', e.target.value)} rows={3} />
                   </div>
                 </div>
               </div>
 
               <div className="rounded-xl border p-4 space-y-3">
-                <Label className="text-sm font-semibold">Estrutura / Cronograma</Label>
+<Label className="text-sm">Estrutura / Cronograma</Label>
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="grid gap-2 md:col-span-2">
-                    <Label>Itens do pacote</Label>
+<Label className="text-sm">Itens do pacote</Label>
                     <div className="space-y-3">
                       {getEstruturaItens().map((it: any, idx: number) => (
-                        <div key={idx} className="rounded-lg border p-3 space-y-3">
-                          <div className="grid gap-3 md:grid-cols-2">
-                            <div className="grid gap-2">
-                              <Label>Tipo</Label>
-                              <Select
-                                value={it.tipo || 'manual'}
-                                onValueChange={(v) => {
-                                  const items = getEstruturaItens()
-                                  items[idx] = { ...items[idx], tipo: v }
-                                  if (v === 'manual') items[idx] = { ...items[idx], procedimento_id: null }
-                                  setEstruturaItens(items)
-                                }}
-                              >
-                                <SelectTrigger>
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="procedimento">Procedimento incluído</SelectItem>
-                                  <SelectItem value="manual">Item manual</SelectItem>
-                                </SelectContent>
-                              </Select>
+                        <div
+                          key={idx}
+                          className={`rounded-lg border p-3 space-y-3 transition-opacity ${dragIdx === idx ? 'opacity-50' : ''}`}
+                          draggable
+                          onDragStart={() => setDragIdx(idx)}
+                          onDragOver={(e) => { e.preventDefault() }}
+                          onDrop={() => { if (dragIdx !== null) { handleDragReorder(dragIdx, idx); setDragIdx(null) } }}
+                          onDragEnd={() => setDragIdx(null)}
+                        >
+                          <div className="flex items-start gap-2">
+                            <div className="cursor-grab pt-6 text-muted-foreground hover:text-foreground">
+                              <GripVertical className="h-4 w-4" />
                             </div>
-                            <div className="grid gap-2">
-                              <Label>Ordem recomendada</Label>
-                              <Input
-                                type="number"
-                                value={it.ordem ?? ''}
-                                onChange={(e) => {
-                                  const items = getEstruturaItens()
-                                  items[idx] = { ...items[idx], ordem: e.target.value === '' ? null : Number(e.target.value) }
-                                  setEstruturaItens(items)
-                                }}
-                              />
+                            <div className="flex-1 grid gap-3 md:grid-cols-2">
+                              <div className="grid gap-2">
+<Label className="text-sm">Tipo</Label>
+                                <Select
+                                  value={it.tipo || 'manual'}
+                                  onValueChange={(v) => {
+                                    const items = getEstruturaItens()
+                                    items[idx] = { ...items[idx], tipo: v }
+                                    if (v === 'manual') items[idx] = { ...items[idx], procedimento_id: null }
+                                    setEstruturaItens(items)
+                                  }}
+                                >
+                                  <SelectTrigger>
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="procedimento">Procedimento incluído</SelectItem>
+                                    <SelectItem value="manual">Item manual</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              <div className="grid gap-2">
+<Label className="text-sm">Ordem recomendada</Label>
+                                <Input
+                                  type="number"
+                                  value={it.ordem ?? ''}
+                                  onChange={(e) => {
+                                    const items = getEstruturaItens()
+                                    items[idx] = { ...items[idx], ordem: e.target.value === '' ? null : Number(e.target.value) }
+                                    setEstruturaItens(items)
+                                  }}
+                                />
+                              </div>
                             </div>
                           </div>
 
                           {it.tipo === 'procedimento' ? (
                             <div className="grid gap-2">
-                              <Label>Procedimento incluído</Label>
+<Label className="text-sm">Procedimento incluído</Label>
                               <Select
                                 value={it.procedimento_id || 'none'}
                                 onValueChange={(v) => {
@@ -1369,7 +1428,7 @@ export function ProtocolosPacotesPage() {
                             </div>
                           ) : (
                             <div className="grid gap-2">
-                              <Label>Item (texto)</Label>
+<Label className="text-sm">Item (texto)</Label>
                               <Input
                                 value={it.nome_manual || ''}
                                 onChange={(e) => {
@@ -1384,7 +1443,7 @@ export function ProtocolosPacotesPage() {
 
                           <div className="grid gap-3 md:grid-cols-3">
                             <div className="grid gap-2">
-                              <Label>Quantidade de sessões</Label>
+<Label className="text-sm">Quantidade de sessões</Label>
                               <Input
                                 type="number"
                                 value={it.sessoes_qtd ?? ''}
@@ -1397,7 +1456,7 @@ export function ProtocolosPacotesPage() {
                               />
                             </div>
                             <div className="grid gap-2">
-                              <Label>Duração de cada sessão (min)</Label>
+<Label className="text-sm">Duração de cada sessão (min)</Label>
                               <Input
                                 type="number"
                                 value={it.duracao_sessao_min ?? ''}
@@ -1410,7 +1469,7 @@ export function ProtocolosPacotesPage() {
                               />
                             </div>
                             <div className="grid gap-2">
-                              <Label>Intervalo recomendado</Label>
+<Label className="text-sm">Intervalo recomendado</Label>
                               <Input
                                 value={it.intervalo_recomendado || ''}
                                 onChange={(e) => {
@@ -1425,7 +1484,7 @@ export function ProtocolosPacotesPage() {
                           </div>
 
                           <div className="grid gap-2">
-                            <Label>Valor individual (R$)</Label>
+<Label className="text-sm">Valor individual (R$)</Label>
                             <Input
                               type="number"
                               step="0.01"
@@ -1499,56 +1558,64 @@ export function ProtocolosPacotesPage() {
                   </div>
                 </div>
 
-                {/* Cronograma Recomendado - auto-gerado */}
+                {/* Cronograma Recomendado - com drag-and-drop por linha */}
                 {(() => {
-                  const cronItems = getEstruturaItens()
-                  if (cronItems.length === 0) return null
-                  const sorted = [...cronItems].sort((a: any, b: any) => (a.ordem || 0) - (b.ordem || 0))
-                  let diaAtual = 0
-                  const linhas: string[] = []
-                  sorted.forEach((it: any) => {
-                    const nome = it.tipo === 'procedimento' && it.procedimento_id
-                      ? ((procedimentos || []) as any[]).find((p: any) => p.id === it.procedimento_id)?.nome || it.nome_manual || 'Procedimento'
-                      : it.nome_manual || 'Item'
-                    const sessoes = typeof it.sessoes_qtd === 'number' && it.sessoes_qtd > 0 ? it.sessoes_qtd : 1
-                    const intervalo = it.intervalo_recomendado || '7 dias'
-                    const match = intervalo.match(/(\d+)/)
-                    const dias = match ? parseInt(match[1]) : 7
-                    for (let s = 0; s < sessoes; s++) {
-                      linhas.push(`Dia ${diaAtual + 1}|${nome} - Sessão ${s + 1}/${sessoes}`)
-                      diaAtual += dias
-                    }
+                  const autoLines = buildCronogramaLines()
+                  if (autoLines.length === 0) return null
+                  const lines = cronogramaCustomOrder || autoLines
+                  const canDrag = lines.length > 1
+                  let diaAcumulado = 1
+                  const displayLines = lines.map((l, i) => {
+                    if (i > 0) diaAcumulado += lines[i - 1].dias
+                    return { dia: `Dia ${diaAcumulado}`, desc: l.nome }
                   })
+                  const totalDias = lines.length > 0
+                    ? diaAcumulado + lines[lines.length - 1].dias - 1
+                    : 0
                   return (
                     <div className="rounded-xl border border-blue-200 bg-blue-50/50 p-4 space-y-2 mt-4">
-                      <Label className="text-sm font-semibold text-blue-800">Cronograma Recomendado</Label>
-                      <p className="text-xs text-muted-foreground">Pré-montado com base nos procedimentos, ordem e sessões</p>
-                      <div className="space-y-1 text-sm">
-                        {linhas.map((l: string, i: number) => {
-                          const [dia, desc] = l.split('|')
-                          return (
-                            <div key={i} className="flex items-center gap-2 py-1 border-b border-blue-100 last:border-0">
-                              <span className="text-blue-600 font-medium min-w-[55px]">{dia}:</span>
-                              <span className="text-foreground">{desc}</span>
-                            </div>
-                          )
-                        })}
+<Label className="text-sm">Cronograma Recomendado</Label>
+                      <p className="text-xs text-muted-foreground">
+                        Pré-montado com base nos procedimentos, ordem e sessões
+                        {canDrag && ' • Arraste as linhas para reordenar'}
+                      </p>
+                      <div className="space-y-0.5 text-sm">
+                        {displayLines.map((line, idx) => (
+                          <div
+                            key={idx}
+                            className={`flex items-center gap-2 py-1.5 px-1 rounded-md border-b border-blue-100 last:border-0 transition-all ${canDrag ? 'cursor-grab active:cursor-grabbing' : ''} ${cronDragLineIdx === idx ? 'opacity-40 bg-blue-200' : cronDragLineIdx !== null ? 'hover:bg-blue-100' : ''}`}
+                            draggable={canDrag}
+                            onDragStart={() => setCronDragLineIdx(idx)}
+                            onDragOver={(e) => e.preventDefault()}
+                            onDrop={() => {
+                              if (cronDragLineIdx !== null && cronDragLineIdx !== idx) {
+                                handleCronLineReorder(cronDragLineIdx, idx)
+                              }
+                              setCronDragLineIdx(null)
+                            }}
+                            onDragEnd={() => setCronDragLineIdx(null)}
+                          >
+                            {canDrag && <GripVertical className="h-3.5 w-3.5 text-blue-400 flex-shrink-0" />}
+                            <span className="text-blue-600 font-medium min-w-[55px]">{line.dia}:</span>
+                            <span className="text-foreground">{line.desc}</span>
+                          </div>
+                        ))}
                       </div>
-                      <p className="text-xs text-muted-foreground mt-2">Duração total estimada: ~{diaAtual} dias</p>
+                      <p className="text-xs text-muted-foreground mt-2">Duração total estimada: ~{totalDias} dias</p>
                     </div>
                   )
                 })()}
               </div>
 
               <div className="rounded-xl border p-4 space-y-3">
-                <Label className="text-sm font-semibold">Valores e condições</Label>
+<Label className="text-sm">Valores e condições</Label>
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="flex items-center justify-between p-3 border rounded-lg md:col-span-2">
-                    <Label>IA pode informar valores?</Label>
+<Label className="text-sm">IA pode informar valores?</Label>
                     <Switch checked={Boolean(getC('ia.pode_informar_valores', false))} onCheckedChange={(v) => setC('ia.pode_informar_valores', v)} />
                   </div>
                   <div className="grid gap-2">
-                    <Label>Pode parcelar?</Label>
+<Label className="text-sm">Pode parcelar?</Label>
                     <Select value={getC('valores.pode_parcelar', 'nao')} onValueChange={(v) => setC('valores.pode_parcelar', v)}>
                       <SelectTrigger>
                         <SelectValue />
@@ -1560,11 +1627,11 @@ export function ProtocolosPacotesPage() {
                     </Select>
                   </div>
                   <div className="grid gap-2">
-                    <Label>Máx. parcelas</Label>
+<Label className="text-sm">Máx. parcelas</Label>
                     <Input type="number" value={getC('valores.max_parcelas', '')} onChange={(e) => setC('valores.max_parcelas', e.target.value === '' ? null : Number(e.target.value))} />
                   </div>
                   <div className="flex items-center justify-between p-3 border rounded-lg md:col-span-2">
-                    <Label>Entrada/sinal obrigatório?</Label>
+<Label className="text-sm">Entrada/sinal obrigatório?</Label>
                     <Select value={getC('valores.entrada_obrigatoria', 'nao')} onValueChange={(v) => setC('valores.entrada_obrigatoria', v)}>
                       <SelectTrigger className="w-full">
                         <SelectValue />
@@ -1578,11 +1645,11 @@ export function ProtocolosPacotesPage() {
                   {String(getC('valores.entrada_obrigatoria', 'nao')) === 'sim' ? (
                     <>
                       <div className="grid gap-2">
-                        <Label>Valor da entrada</Label>
+<Label className="text-sm">Valor da entrada</Label>
                         <Input type="number" step="0.01" value={getC('valores.valor_entrada', '')} onChange={(e) => setC('valores.valor_entrada', e.target.value === '' ? null : Number(e.target.value))} />
                       </div>
                       <div className="grid gap-2 md:col-span-2">
-                        <Label>Condições especiais</Label>
+<Label className="text-sm">Condições especiais</Label>
                         <Textarea value={getC('valores.condicoes_especiais', '')} onChange={(e) => setC('valores.condicoes_especiais', e.target.value)} rows={3} />
                       </div>
                     </>
@@ -1591,10 +1658,10 @@ export function ProtocolosPacotesPage() {
               </div>
 
               <div className="rounded-xl border p-4 space-y-3">
-                <Label className="text-sm font-semibold">Regras de agendamento do pacote</Label>
+<Label className="text-sm">Regras de agendamento do pacote</Label>
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="grid gap-2">
-                    <Label>Agendar avaliação primeiro?</Label>
+<Label className="text-sm">Agendar avaliação primeiro?</Label>
                     <Select value={getC('agendamento.avaliacao_primeiro', 'sim')} onValueChange={(v) => setC('agendamento.avaliacao_primeiro', v)}>
                       <SelectTrigger>
                         <SelectValue />
@@ -1606,7 +1673,7 @@ export function ProtocolosPacotesPage() {
                     </Select>
                   </div>
                   <div className="grid gap-2">
-                    <Label>IA pode agendar sessões diretamente?</Label>
+<Label className="text-sm">IA pode agendar sessões diretamente?</Label>
                     <Select value={getC('agendamento.ia_pode_agendar', 'nao')} onValueChange={(v) => setC('agendamento.ia_pode_agendar', v)}>
                       <SelectTrigger>
                         <SelectValue />
@@ -1618,7 +1685,7 @@ export function ProtocolosPacotesPage() {
                     </Select>
                   </div>
                   <div className="grid gap-2">
-                    <Label>Uma por vez ou várias?</Label>
+<Label className="text-sm">Uma por vez ou várias?</Label>
                     <Select value={getC('agendamento.modo', 'uma_por_vez')} onValueChange={(v) => setC('agendamento.modo', v)}>
                       <SelectTrigger>
                         <SelectValue />
@@ -1630,11 +1697,11 @@ export function ProtocolosPacotesPage() {
                     </Select>
                   </div>
                   <div className="grid gap-2">
-                    <Label>Prazo máximo para concluir</Label>
+<Label className="text-sm">Prazo máximo para concluir</Label>
                     <Input value={getC('agendamento.prazo_maximo', '')} onChange={(e) => setC('agendamento.prazo_maximo', e.target.value)} placeholder="Ex: 60 dias" />
                   </div>
                   <div className="grid gap-2">
-                    <Label>Intervalo mínimo entre sessões (dias)</Label>
+<Label className="text-sm">Intervalo mínimo entre sessões (dias)</Label>
                     <Input
                       type="number"
                       value={getC('agendamento.intervalo_min_dias', '')}
@@ -1642,7 +1709,7 @@ export function ProtocolosPacotesPage() {
                     />
                   </div>
                   <div className="grid gap-2">
-                    <Label>Intervalo máximo entre sessões (dias)</Label>
+<Label className="text-sm">Intervalo máximo entre sessões (dias)</Label>
                     <Input
                       type="number"
                       value={getC('agendamento.intervalo_max_dias', '')}
@@ -1650,17 +1717,17 @@ export function ProtocolosPacotesPage() {
                     />
                   </div>
                   <div className="grid gap-2 md:col-span-2">
-                    <Label>Regras adicionais (texto)</Label>
+<Label className="text-sm">Regras adicionais (texto)</Label>
                     <Textarea value={getC('agendamento.regras_texto', '')} onChange={(e) => setC('agendamento.regras_texto', e.target.value)} rows={3} />
                   </div>
                 </div>
               </div>
 
               <div className="rounded-xl border p-4 space-y-3">
-                <Label className="text-sm font-semibold">Copy e narrativa</Label>
+<Label className="text-sm">Copy e narrativa</Label>
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="grid gap-2">
-                    <Label>Resultados prometidos</Label>
+<Label className="text-sm">Resultados prometidos</Label>
                     <ListEditor
                       placeholder="Adicione resultados prometidos"
                       items={normalizeStringList(getC('copy.resultados', []))}
@@ -1668,7 +1735,7 @@ export function ProtocolosPacotesPage() {
                     />
                   </div>
                   <div className="grid gap-2">
-                    <Label>Benefícios emocionais</Label>
+<Label className="text-sm">Benefícios emocionais</Label>
                     <ListEditor
                       placeholder="Adicione benefícios emocionais"
                       items={normalizeStringList(getC('copy.beneficios_emocionais', []))}
@@ -1676,7 +1743,7 @@ export function ProtocolosPacotesPage() {
                     />
                   </div>
                   <div className="grid gap-2">
-                    <Label>Problemas que resolve</Label>
+<Label className="text-sm">Problemas que resolve</Label>
                     <ListEditor
                       placeholder="Adicione problemas que resolve"
                       items={normalizeStringList(getC('copy.problemas_resolve', []))}
@@ -1684,7 +1751,7 @@ export function ProtocolosPacotesPage() {
                     />
                   </div>
                   <div className="grid gap-2">
-                    <Label>Por que é melhor que avulso</Label>
+<Label className="text-sm">Por que é melhor que avulso</Label>
                     <ListEditor
                       placeholder="Adicione razões"
                       items={normalizeStringList(getC('copy.porque_melhor', []))}
@@ -1695,7 +1762,7 @@ export function ProtocolosPacotesPage() {
               </div>
 
               <div className="rounded-xl border p-4 space-y-3">
-                <Label className="text-sm font-semibold">Objeções específicas do pacote</Label>
+<Label className="text-sm">Objeções específicas do pacote</Label>
                 <PairsEditor
                   title="Objeções e respostas"
                   leftLabel="Objeção"
@@ -1716,11 +1783,11 @@ export function ProtocolosPacotesPage() {
               </div>
 
               <div className="rounded-xl border p-4 space-y-3">
-                <Label className="text-sm font-semibold">Upsell dentro do pacote</Label>
+<Label className="text-sm">Upsell dentro do pacote</Label>
                 <div className="space-y-4">
                   <div className="grid gap-4 md:grid-cols-2">
                     <div className="grid gap-2">
-                      <Label>Procedimentos complementares</Label>
+<Label className="text-sm">Procedimentos complementares</Label>
                       <div className="flex gap-2">
                         <Select value={getC('upsell._ui_add_procedimento', 'none')} onValueChange={(v) => setC('upsell._ui_add_procedimento', v)}>
                           <SelectTrigger>
@@ -1776,7 +1843,7 @@ export function ProtocolosPacotesPage() {
                     </div>
 
                     <div className="grid gap-2">
-                      <Label>Upgrade para Pacotes Premium</Label>
+<Label className="text-sm">Upgrade para Pacotes Premium</Label>
                       <div className="flex gap-2">
                         <Select value={getC('upsell._ui_add_pacote', 'none')} onValueChange={(v) => setC('upsell._ui_add_pacote', v)}>
                           <SelectTrigger>
@@ -1836,7 +1903,7 @@ export function ProtocolosPacotesPage() {
 
                   <div className="grid gap-4 md:grid-cols-2">
                     <div className="grid gap-2">
-                      <Label>Quando sugerir</Label>
+<Label className="text-sm">Quando sugerir</Label>
                       <Select value={getC('upsell.quando', 'no_fechamento')} onValueChange={(v) => setC('upsell.quando', v)}>
                         <SelectTrigger>
                           <SelectValue />
@@ -1850,13 +1917,13 @@ export function ProtocolosPacotesPage() {
                       </Select>
                     </div>
                     <div className="grid gap-2">
-                      <Label>Adicionais por sessão</Label>
+<Label className="text-sm">Adicionais por sessão</Label>
                       <div className="space-y-3">
                         {(((getC('upsell.adicionais_por_sessao', []) as any[]) || []) as any[]).map((a: any, idx: number) => (
                           <div key={idx} className="rounded-lg border p-3 space-y-3">
                             <div className="grid gap-3 md:grid-cols-3">
                               <div className="grid gap-2">
-                                <Label>Nome</Label>
+<Label className="text-sm">Nome</Label>
                                 <Input
                                   value={a?.nome || ''}
                                   onChange={(e) => {
@@ -1867,7 +1934,7 @@ export function ProtocolosPacotesPage() {
                                 />
                               </div>
                               <div className="grid gap-2">
-                                <Label>Valor (R$)</Label>
+<Label className="text-sm">Valor (R$)</Label>
                                 <Input
                                   type="number"
                                   step="0.01"
@@ -1895,7 +1962,7 @@ export function ProtocolosPacotesPage() {
                               </div>
                             </div>
                             <div className="grid gap-2">
-                              <Label>Motivo</Label>
+<Label className="text-sm">Motivo</Label>
                               <Textarea
                                 value={a?.motivo || ''}
                                 onChange={(e) => {
@@ -1924,21 +1991,21 @@ export function ProtocolosPacotesPage() {
                   </div>
 
                   <div className="grid gap-2">
-                    <Label>Argumento de venda</Label>
+<Label className="text-sm">Argumento de venda</Label>
                     <Textarea value={getC('upsell.argumento', '')} onChange={(e) => setC('upsell.argumento', e.target.value)} rows={3} />
                   </div>
                 </div>
               </div>
 
               <div className="rounded-xl border p-4 space-y-3">
-                <Label className="text-sm font-semibold">Retorno e manutenção pós-pacote</Label>
+<Label className="text-sm">Retorno e manutenção pós-pacote</Label>
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="grid gap-2">
-                    <Label>Retorno em quantos dias?</Label>
+<Label className="text-sm">Retorno em quantos dias?</Label>
                     <Input type="number" value={getC('pos.retorno_dias', '')} onChange={(e) => setC('pos.retorno_dias', e.target.value === '' ? null : Number(e.target.value))} />
                   </div>
                   <div className="grid gap-2">
-                    <Label>Sessões de manutenção (qtd)</Label>
+<Label className="text-sm">Sessões de manutenção (qtd)</Label>
                     <Input
                       type="number"
                       value={getC('pos.manutencao_sessoes_qtd', '')}
@@ -1946,7 +2013,7 @@ export function ProtocolosPacotesPage() {
                     />
                   </div>
                   <div className="grid gap-2">
-                    <Label>Período para reativação (dias)</Label>
+<Label className="text-sm">Período para reativação (dias)</Label>
                     <Input
                       type="number"
                       value={getC('pos.reativacao_dias', '')}
@@ -1954,11 +2021,11 @@ export function ProtocolosPacotesPage() {
                     />
                   </div>
                   <div className="grid gap-2">
-                    <Label>Mensagens pós-pacote (texto)</Label>
+<Label className="text-sm">Mensagens pós-pacote (texto)</Label>
                     <Textarea value={getC('pos.mensagens', '')} onChange={(e) => setC('pos.mensagens', e.target.value)} rows={3} />
                   </div>
                   <div className="grid gap-2">
-                    <Label>Oferecer novo pacote?</Label>
+<Label className="text-sm">Oferecer novo pacote?</Label>
                     <Select value={getC('pos.oferecer_novo_pacote', 'sim')} onValueChange={(v) => setC('pos.oferecer_novo_pacote', v)}>
                       <SelectTrigger>
                         <SelectValue />
@@ -1970,7 +2037,7 @@ export function ProtocolosPacotesPage() {
                     </Select>
                   </div>
                   <div className="grid gap-2">
-                    <Label>Oferecer upgrade maior?</Label>
+<Label className="text-sm">Oferecer upgrade maior?</Label>
                     <Select value={getC('pos.oferecer_upgrade', 'nao')} onValueChange={(v) => setC('pos.oferecer_upgrade', v)}>
                       <SelectTrigger>
                         <SelectValue />
@@ -1985,7 +2052,7 @@ export function ProtocolosPacotesPage() {
               </div>
 
               <div className="rounded-xl border p-4 space-y-3">
-                <Label className="text-sm font-semibold">Mídias do pacote</Label>
+<Label className="text-sm">Mídias do pacote</Label>
                 <div className="grid gap-4 md:grid-cols-2">
                   {renderMidiaUploader({ tipo: 'antes_depois', label: 'Antes/depois', accept: 'image/*', allowWhenCreating: true })}
                   {renderMidiaUploader({ tipo: 'carrossel', label: 'Carrossel comercial', accept: 'image/*', allowWhenCreating: true })}
@@ -1997,11 +2064,11 @@ export function ProtocolosPacotesPage() {
             </div>
 
             <div className="rounded-xl border p-4 space-y-3">
-              <Label className="text-sm font-semibold">FAQ - Perguntas Frequentes</Label>
+<Label className="text-sm">FAQ - Perguntas Frequentes</Label>
               {(getC('faq', []) as any[]).map((faq: any, idx: number) => (
                 <div key={idx} className="rounded-lg border p-3 space-y-3">
                   <div className="grid gap-2">
-                    <Label>Pergunta</Label>
+<Label className="text-sm">Pergunta</Label>
                     <Input
                       value={faq?.pergunta || ''}
                       onChange={(e) => {
@@ -2013,7 +2080,7 @@ export function ProtocolosPacotesPage() {
                     />
                   </div>
                   <div className="grid gap-2">
-                    <Label>Resposta</Label>
+<Label className="text-sm">Resposta</Label>
                     <Textarea
                       value={faq?.resposta || ''}
                       onChange={(e) => {
@@ -2056,7 +2123,7 @@ export function ProtocolosPacotesPage() {
             </div>
 
             <div className="space-y-2">
-              <Label>Status</Label>
+<Label className="text-sm">Status</Label>
               <Select value={formState.ativo ? 'ativo' : 'inativo'} onValueChange={(v) => setFormState({ ...formState, ativo: v === 'ativo' })}>
                 <SelectTrigger>
                   <SelectValue />
@@ -2091,11 +2158,11 @@ export function ProtocolosPacotesPage() {
           <div className="space-y-4">
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <Label>Nome *</Label>
+<Label className="text-sm">Nome *</Label>
                 <Input value={formState.nome} onChange={(e) => setFormState({ ...formState, nome: e.target.value })} />
               </div>
               <div className="space-y-2">
-                <Label>Valor total do pacote (opcional)</Label>
+<Label className="text-sm">Valor total do pacote (opcional)</Label>
                 <Input
                   type="number"
                   value={formState.preco ?? ''}
@@ -2138,16 +2205,16 @@ export function ProtocolosPacotesPage() {
             </div>
 
             <div className="space-y-2">
-              <Label>Descrição</Label>
+<Label className="text-sm">Descrição</Label>
               <Textarea value={formState.descricao || ''} onChange={(e) => setFormState({ ...formState, descricao: e.target.value })} rows={3} />
             </div>
 
             <div className="space-y-4">
               <div className="rounded-xl border p-4 space-y-3">
-                <Label className="text-sm font-semibold">Dados básicos</Label>
+<Label className="text-sm">Dados básicos</Label>
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="grid gap-2">
-                    <Label>Categoria</Label>
+<Label className="text-sm">Categoria</Label>
                     <Select value={getC('basico.categoria', 'misto')} onValueChange={(v) => setC('basico.categoria', v)}>
                       <SelectTrigger>
                         <SelectValue />
@@ -2163,11 +2230,11 @@ export function ProtocolosPacotesPage() {
                     </Select>
                   </div>
                   <div className="grid gap-2">
-                    <Label>Duração média do programa</Label>
+<Label className="text-sm">Duração média do programa</Label>
                     <Input value={getC('basico.duracao_programa', '')} onChange={(e) => setC('basico.duracao_programa', e.target.value)} placeholder="Ex: 60 dias" />
                   </div>
                   <div className="grid gap-2">
-                    <Label>Nível</Label>
+<Label className="text-sm">Nível</Label>
                     <Select value={getC('basico.nivel', 'intermediario')} onValueChange={(v) => setC('basico.nivel', v)}>
                       <SelectTrigger>
                         <SelectValue />
@@ -2181,58 +2248,71 @@ export function ProtocolosPacotesPage() {
                     </Select>
                   </div>
                   <div className="grid gap-2">
-                    <Label>Descrição geral (visão do tratamento)</Label>
+<Label className="text-sm">Descrição geral (visão do tratamento)</Label>
                     <Textarea value={getC('basico.descricao_geral', '')} onChange={(e) => setC('basico.descricao_geral', e.target.value)} rows={3} />
                   </div>
                 </div>
               </div>
 
               <div className="space-y-3 pt-4 border-t">
-                <Label className="text-sm font-semibold">Estrutura / Cronograma</Label>
+<Label className="text-sm">Estrutura / Cronograma</Label>
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="grid gap-2 md:col-span-2">
-                    <Label>Itens do pacote</Label>
+<Label className="text-sm">Itens do pacote</Label>
                     <div className="space-y-3">
                       {getEstruturaItens().map((it: any, idx: number) => (
-                        <div key={idx} className="rounded-lg border p-3 space-y-3">
-                          <div className="grid gap-3 md:grid-cols-2">
-                            <div className="grid gap-2">
-                              <Label>Tipo</Label>
-                              <Select
-                                value={it.tipo || 'manual'}
-                                onValueChange={(v) => {
-                                  const items = getEstruturaItens()
-                                  items[idx] = { ...items[idx], tipo: v }
-                                  if (v === 'manual') items[idx] = { ...items[idx], procedimento_id: null }
-                                  setEstruturaItens(items)
-                                }}
-                              >
-                                <SelectTrigger>
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="procedimento">Procedimento incluído</SelectItem>
-                                  <SelectItem value="manual">Item manual</SelectItem>
-                                </SelectContent>
-                              </Select>
+                        <div
+                          key={idx}
+                          className={`rounded-lg border p-3 space-y-3 transition-opacity ${dragIdx === idx ? 'opacity-50' : ''}`}
+                          draggable
+                          onDragStart={() => setDragIdx(idx)}
+                          onDragOver={(e) => { e.preventDefault() }}
+                          onDrop={() => { if (dragIdx !== null) { handleDragReorder(dragIdx, idx); setDragIdx(null) } }}
+                          onDragEnd={() => setDragIdx(null)}
+                        >
+                          <div className="flex items-start gap-2">
+                            <div className="cursor-grab pt-6 text-muted-foreground hover:text-foreground">
+                              <GripVertical className="h-4 w-4" />
                             </div>
-                            <div className="grid gap-2">
-                              <Label>Ordem recomendada</Label>
-                              <Input
-                                type="number"
-                                value={it.ordem ?? ''}
-                                onChange={(e) => {
-                                  const items = getEstruturaItens()
-                                  items[idx] = { ...items[idx], ordem: e.target.value === '' ? null : Number(e.target.value) }
-                                  setEstruturaItens(items)
-                                }}
-                              />
+                            <div className="flex-1 grid gap-3 md:grid-cols-2">
+                              <div className="grid gap-2">
+<Label className="text-sm">Tipo</Label>
+                                <Select
+                                  value={it.tipo || 'manual'}
+                                  onValueChange={(v) => {
+                                    const items = getEstruturaItens()
+                                    items[idx] = { ...items[idx], tipo: v }
+                                    if (v === 'manual') items[idx] = { ...items[idx], procedimento_id: null }
+                                    setEstruturaItens(items)
+                                  }}
+                                >
+                                  <SelectTrigger>
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="procedimento">Procedimento incluído</SelectItem>
+                                    <SelectItem value="manual">Item manual</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              <div className="grid gap-2">
+<Label className="text-sm">Ordem recomendada</Label>
+                                <Input
+                                  type="number"
+                                  value={it.ordem ?? ''}
+                                  onChange={(e) => {
+                                    const items = getEstruturaItens()
+                                    items[idx] = { ...items[idx], ordem: e.target.value === '' ? null : Number(e.target.value) }
+                                    setEstruturaItens(items)
+                                  }}
+                                />
+                              </div>
                             </div>
                           </div>
 
                           {it.tipo === 'procedimento' ? (
                             <div className="grid gap-2">
-                              <Label>Procedimento incluído</Label>
+<Label className="text-sm">Procedimento incluído</Label>
                               <Select
                                 value={it.procedimento_id || 'none'}
                                 onValueChange={(v) => {
@@ -2256,7 +2336,7 @@ export function ProtocolosPacotesPage() {
                             </div>
                           ) : (
                             <div className="grid gap-2">
-                              <Label>Item (texto)</Label>
+<Label className="text-sm">Item (texto)</Label>
                               <Input
                                 value={it.nome_manual || ''}
                                 onChange={(e) => {
@@ -2271,7 +2351,7 @@ export function ProtocolosPacotesPage() {
 
                           <div className="grid gap-3 md:grid-cols-3">
                             <div className="grid gap-2">
-                              <Label>Quantidade de sessões</Label>
+<Label className="text-sm">Quantidade de sessões</Label>
                               <Input
                                 type="number"
                                 value={it.sessoes_qtd ?? ''}
@@ -2284,7 +2364,7 @@ export function ProtocolosPacotesPage() {
                               />
                             </div>
                             <div className="grid gap-2">
-                              <Label>Duração de cada sessão (min)</Label>
+<Label className="text-sm">Duração de cada sessão (min)</Label>
                               <Input
                                 type="number"
                                 value={it.duracao_sessao_min ?? ''}
@@ -2297,7 +2377,7 @@ export function ProtocolosPacotesPage() {
                               />
                             </div>
                             <div className="grid gap-2">
-                              <Label>Intervalo recomendado</Label>
+<Label className="text-sm">Intervalo recomendado</Label>
                               <Input
                                 value={it.intervalo_recomendado || ''}
                                 onChange={(e) => {
@@ -2312,7 +2392,7 @@ export function ProtocolosPacotesPage() {
                           </div>
 
                           <div className="grid gap-2">
-                            <Label>Valor individual (R$)</Label>
+<Label className="text-sm">Valor individual (R$)</Label>
                             <Input
                               type="number"
                               step="0.01"
@@ -2386,56 +2466,64 @@ export function ProtocolosPacotesPage() {
                   </div>
                 </div>
 
-                {/* Cronograma Recomendado - auto-gerado */}
+                {/* Cronograma Recomendado - com drag-and-drop por linha */}
                 {(() => {
-                  const cronItems = getEstruturaItens()
-                  if (cronItems.length === 0) return null
-                  const sorted = [...cronItems].sort((a: any, b: any) => (a.ordem || 0) - (b.ordem || 0))
-                  let diaAtual = 0
-                  const linhas: string[] = []
-                  sorted.forEach((it: any) => {
-                    const nome = it.tipo === 'procedimento' && it.procedimento_id
-                      ? ((procedimentos || []) as any[]).find((p: any) => p.id === it.procedimento_id)?.nome || it.nome_manual || 'Procedimento'
-                      : it.nome_manual || 'Item'
-                    const sessoes = typeof it.sessoes_qtd === 'number' && it.sessoes_qtd > 0 ? it.sessoes_qtd : 1
-                    const intervalo = it.intervalo_recomendado || '7 dias'
-                    const match = intervalo.match(/(\d+)/)
-                    const dias = match ? parseInt(match[1]) : 7
-                    for (let s = 0; s < sessoes; s++) {
-                      linhas.push(`Dia ${diaAtual + 1}|${nome} - Sessão ${s + 1}/${sessoes}`)
-                      diaAtual += dias
-                    }
+                  const autoLines = buildCronogramaLines()
+                  if (autoLines.length === 0) return null
+                  const lines = cronogramaCustomOrder || autoLines
+                  const canDrag = lines.length > 1
+                  let diaAcumulado = 1
+                  const displayLines = lines.map((l, i) => {
+                    if (i > 0) diaAcumulado += lines[i - 1].dias
+                    return { dia: `Dia ${diaAcumulado}`, desc: l.nome }
                   })
+                  const totalDias = lines.length > 0
+                    ? diaAcumulado + lines[lines.length - 1].dias - 1
+                    : 0
                   return (
                     <div className="rounded-xl border border-blue-200 bg-blue-50/50 p-4 space-y-2 mt-4">
-                      <Label className="text-sm font-semibold text-blue-800">Cronograma Recomendado</Label>
-                      <p className="text-xs text-muted-foreground">Pré-montado com base nos procedimentos, ordem e sessões</p>
-                      <div className="space-y-1 text-sm">
-                        {linhas.map((l: string, i: number) => {
-                          const [dia, desc] = l.split('|')
-                          return (
-                            <div key={i} className="flex items-center gap-2 py-1 border-b border-blue-100 last:border-0">
-                              <span className="text-blue-600 font-medium min-w-[55px]">{dia}:</span>
-                              <span className="text-foreground">{desc}</span>
-                            </div>
-                          )
-                        })}
+<Label className="text-sm">Cronograma Recomendado</Label>
+                      <p className="text-xs text-muted-foreground">
+                        Pré-montado com base nos procedimentos, ordem e sessões
+                        {canDrag && ' • Arraste as linhas para reordenar'}
+                      </p>
+                      <div className="space-y-0.5 text-sm">
+                        {displayLines.map((line, idx) => (
+                          <div
+                            key={idx}
+                            className={`flex items-center gap-2 py-1.5 px-1 rounded-md border-b border-blue-100 last:border-0 transition-all ${canDrag ? 'cursor-grab active:cursor-grabbing' : ''} ${cronDragLineIdx === idx ? 'opacity-40 bg-blue-200' : cronDragLineIdx !== null ? 'hover:bg-blue-100' : ''}`}
+                            draggable={canDrag}
+                            onDragStart={() => setCronDragLineIdx(idx)}
+                            onDragOver={(e) => e.preventDefault()}
+                            onDrop={() => {
+                              if (cronDragLineIdx !== null && cronDragLineIdx !== idx) {
+                                handleCronLineReorder(cronDragLineIdx, idx)
+                              }
+                              setCronDragLineIdx(null)
+                            }}
+                            onDragEnd={() => setCronDragLineIdx(null)}
+                          >
+                            {canDrag && <GripVertical className="h-3.5 w-3.5 text-blue-400 flex-shrink-0" />}
+                            <span className="text-blue-600 font-medium min-w-[55px]">{line.dia}:</span>
+                            <span className="text-foreground">{line.desc}</span>
+                          </div>
+                        ))}
                       </div>
-                      <p className="text-xs text-muted-foreground mt-2">Duração total estimada: ~{diaAtual} dias</p>
+                      <p className="text-xs text-muted-foreground mt-2">Duração total estimada: ~{totalDias} dias</p>
                     </div>
                   )
                 })()}
               </div>
 
               <div className="rounded-xl border p-4 space-y-3">
-                <Label className="text-sm font-semibold">Valores e condições</Label>
+<Label className="text-sm">Valores e condições</Label>
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="flex items-center justify-between p-3 border rounded-lg md:col-span-2">
-                    <Label>IA pode informar valores?</Label>
+<Label className="text-sm">IA pode informar valores?</Label>
                     <Switch checked={Boolean(getC('ia.pode_informar_valores', false))} onCheckedChange={(v) => setC('ia.pode_informar_valores', v)} />
                   </div>
                   <div className="grid gap-2">
-                    <Label>Pode parcelar?</Label>
+<Label className="text-sm">Pode parcelar?</Label>
                     <Select value={getC('valores.pode_parcelar', 'nao')} onValueChange={(v) => setC('valores.pode_parcelar', v)}>
                       <SelectTrigger>
                         <SelectValue />
@@ -2447,11 +2535,11 @@ export function ProtocolosPacotesPage() {
                     </Select>
                   </div>
                   <div className="grid gap-2">
-                    <Label>Máx. parcelas</Label>
+<Label className="text-sm">Máx. parcelas</Label>
                     <Input type="number" value={getC('valores.max_parcelas', '')} onChange={(e) => setC('valores.max_parcelas', e.target.value === '' ? null : Number(e.target.value))} />
                   </div>
                   <div className="flex items-center justify-between p-3 border rounded-lg md:col-span-2">
-                    <Label>Entrada/sinal obrigatório?</Label>
+<Label className="text-sm">Entrada/sinal obrigatório?</Label>
                     <Select value={getC('valores.entrada_obrigatoria', 'nao')} onValueChange={(v) => setC('valores.entrada_obrigatoria', v)}>
                       <SelectTrigger className="w-full">
                         <SelectValue />
@@ -2465,11 +2553,11 @@ export function ProtocolosPacotesPage() {
                   {String(getC('valores.entrada_obrigatoria', 'nao')) === 'sim' ? (
                     <>
                       <div className="grid gap-2">
-                        <Label>Valor da entrada</Label>
+<Label className="text-sm">Valor da entrada</Label>
                         <Input type="number" step="0.01" value={getC('valores.valor_entrada', '')} onChange={(e) => setC('valores.valor_entrada', e.target.value === '' ? null : Number(e.target.value))} />
                       </div>
                       <div className="grid gap-2 md:col-span-2">
-                        <Label>Condições especiais</Label>
+<Label className="text-sm">Condições especiais</Label>
                         <Textarea value={getC('valores.condicoes_especiais', '')} onChange={(e) => setC('valores.condicoes_especiais', e.target.value)} rows={3} />
                       </div>
                     </>
@@ -2478,10 +2566,10 @@ export function ProtocolosPacotesPage() {
               </div>
 
               <div className="rounded-xl border p-4 space-y-3">
-                <Label className="text-sm font-semibold">Regras de agendamento do pacote</Label>
+<Label className="text-sm">Regras de agendamento do pacote</Label>
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="grid gap-2">
-                    <Label>Agendar avaliação primeiro?</Label>
+<Label className="text-sm">Agendar avaliação primeiro?</Label>
                     <Select value={getC('agendamento.avaliacao_primeiro', 'sim')} onValueChange={(v) => setC('agendamento.avaliacao_primeiro', v)}>
                       <SelectTrigger>
                         <SelectValue />
@@ -2493,7 +2581,7 @@ export function ProtocolosPacotesPage() {
                     </Select>
                   </div>
                   <div className="grid gap-2">
-                    <Label>IA pode agendar sessões diretamente?</Label>
+<Label className="text-sm">IA pode agendar sessões diretamente?</Label>
                     <Select value={getC('agendamento.ia_pode_agendar', 'nao')} onValueChange={(v) => setC('agendamento.ia_pode_agendar', v)}>
                       <SelectTrigger>
                         <SelectValue />
@@ -2505,7 +2593,7 @@ export function ProtocolosPacotesPage() {
                     </Select>
                   </div>
                   <div className="grid gap-2">
-                    <Label>Uma por vez ou várias?</Label>
+<Label className="text-sm">Uma por vez ou várias?</Label>
                     <Select value={getC('agendamento.modo', 'uma_por_vez')} onValueChange={(v) => setC('agendamento.modo', v)}>
                       <SelectTrigger>
                         <SelectValue />
@@ -2517,21 +2605,21 @@ export function ProtocolosPacotesPage() {
                     </Select>
                   </div>
                   <div className="grid gap-2">
-                    <Label>Prazo máximo para concluir</Label>
+<Label className="text-sm">Prazo máximo para concluir</Label>
                     <Input value={getC('agendamento.prazo_maximo', '')} onChange={(e) => setC('agendamento.prazo_maximo', e.target.value)} placeholder="Ex: 60 dias" />
                   </div>
                   <div className="grid gap-2 md:col-span-2">
-                    <Label>Regras adicionais (texto)</Label>
+<Label className="text-sm">Regras adicionais (texto)</Label>
                     <Textarea value={getC('agendamento.regras_texto', '')} onChange={(e) => setC('agendamento.regras_texto', e.target.value)} rows={3} />
                   </div>
                 </div>
               </div>
 
               <div className="rounded-xl border p-4 space-y-3">
-                <Label className="text-sm font-semibold">Copy e narrativa</Label>
+<Label className="text-sm">Copy e narrativa</Label>
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="grid gap-2">
-                    <Label>Resultados prometidos</Label>
+<Label className="text-sm">Resultados prometidos</Label>
                     <ListEditor
                       placeholder="Adicione resultados prometidos"
                       items={normalizeStringList(getC('copy.resultados', []))}
@@ -2539,7 +2627,7 @@ export function ProtocolosPacotesPage() {
                     />
                   </div>
                   <div className="grid gap-2">
-                    <Label>Benefícios emocionais</Label>
+<Label className="text-sm">Benefícios emocionais</Label>
                     <ListEditor
                       placeholder="Adicione benefícios emocionais"
                       items={normalizeStringList(getC('copy.beneficios_emocionais', []))}
@@ -2547,7 +2635,7 @@ export function ProtocolosPacotesPage() {
                     />
                   </div>
                   <div className="grid gap-2">
-                    <Label>Problemas que resolve</Label>
+<Label className="text-sm">Problemas que resolve</Label>
                     <ListEditor
                       placeholder="Adicione problemas que resolve"
                       items={normalizeStringList(getC('copy.problemas_resolve', []))}
@@ -2555,7 +2643,7 @@ export function ProtocolosPacotesPage() {
                     />
                   </div>
                   <div className="grid gap-2">
-                    <Label>Por que é melhor que avulso</Label>
+<Label className="text-sm">Por que é melhor que avulso</Label>
                     <ListEditor
                       placeholder="Adicione razões"
                       items={normalizeStringList(getC('copy.porque_melhor', []))}
@@ -2566,7 +2654,7 @@ export function ProtocolosPacotesPage() {
               </div>
 
               <div className="rounded-xl border p-4 space-y-3">
-                <Label className="text-sm font-semibold">Objeções específicas do pacote</Label>
+<Label className="text-sm">Objeções específicas do pacote</Label>
                 <PairsEditor
                   title="Objeções e respostas"
                   leftLabel="Objeção"
@@ -2587,11 +2675,11 @@ export function ProtocolosPacotesPage() {
               </div>
 
               <div className="space-y-3 pt-4 border-t">
-                <Label className="text-sm font-semibold">Upsell dentro do pacote</Label>
+<Label className="text-sm">Upsell dentro do pacote</Label>
                 <div className="space-y-4">
                   <div className="grid gap-4 md:grid-cols-2">
                     <div className="grid gap-2">
-                      <Label>Procedimentos complementares</Label>
+<Label className="text-sm">Procedimentos complementares</Label>
                       <div className="flex gap-2">
                         <Select value={getC('upsell._ui_add_procedimento', 'none')} onValueChange={(v) => setC('upsell._ui_add_procedimento', v)}>
                           <SelectTrigger>
@@ -2647,7 +2735,7 @@ export function ProtocolosPacotesPage() {
                     </div>
 
                     <div className="grid gap-2">
-                      <Label>Upgrade para Pacotes Premium</Label>
+<Label className="text-sm">Upgrade para Pacotes Premium</Label>
                       <div className="flex gap-2">
                         <Select value={getC('upsell._ui_add_pacote', 'none')} onValueChange={(v) => setC('upsell._ui_add_pacote', v)}>
                           <SelectTrigger>
@@ -2707,7 +2795,7 @@ export function ProtocolosPacotesPage() {
 
                   <div className="grid gap-4 md:grid-cols-2">
                     <div className="grid gap-2">
-                      <Label>Quando sugerir</Label>
+<Label className="text-sm">Quando sugerir</Label>
                       <Select value={getC('upsell.quando', 'no_fechamento')} onValueChange={(v) => setC('upsell.quando', v)}>
                         <SelectTrigger>
                           <SelectValue />
@@ -2721,13 +2809,13 @@ export function ProtocolosPacotesPage() {
                       </Select>
                     </div>
                     <div className="grid gap-2">
-                      <Label>Adicionais por sessão</Label>
+<Label className="text-sm">Adicionais por sessão</Label>
                       <div className="space-y-3">
                         {(((getC('upsell.adicionais_por_sessao', []) as any[]) || []) as any[]).map((a: any, idx: number) => (
                           <div key={idx} className="rounded-lg border p-3 space-y-3">
                             <div className="grid gap-3 md:grid-cols-3">
                               <div className="grid gap-2">
-                                <Label>Nome</Label>
+<Label className="text-sm">Nome</Label>
                                 <Input
                                   value={a?.nome || ''}
                                   onChange={(e) => {
@@ -2738,7 +2826,7 @@ export function ProtocolosPacotesPage() {
                                 />
                               </div>
                               <div className="grid gap-2">
-                                <Label>Valor (R$)</Label>
+<Label className="text-sm">Valor (R$)</Label>
                                 <Input
                                   type="number"
                                   step="0.01"
@@ -2766,7 +2854,7 @@ export function ProtocolosPacotesPage() {
                               </div>
                             </div>
                             <div className="grid gap-2">
-                              <Label>Motivo</Label>
+<Label className="text-sm">Motivo</Label>
                               <Textarea
                                 value={a?.motivo || ''}
                                 onChange={(e) => {
@@ -2795,25 +2883,25 @@ export function ProtocolosPacotesPage() {
                   </div>
 
                   <div className="grid gap-2">
-                    <Label>Argumento de venda</Label>
+<Label className="text-sm">Argumento de venda</Label>
                     <Textarea value={getC('upsell.argumento', '')} onChange={(e) => setC('upsell.argumento', e.target.value)} rows={3} />
                   </div>
                 </div>
               </div>
 
               <div className="rounded-xl border p-4 space-y-3">
-                <Label className="text-sm font-semibold">Retorno e manutenção pós-pacote</Label>
+<Label className="text-sm">Retorno e manutenção pós-pacote</Label>
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="grid gap-2">
-                    <Label>Retorno em quantos dias?</Label>
+<Label className="text-sm">Retorno em quantos dias?</Label>
                     <Input type="number" value={getC('pos.retorno_dias', '')} onChange={(e) => setC('pos.retorno_dias', e.target.value === '' ? null : Number(e.target.value))} />
                   </div>
                   <div className="grid gap-2">
-                    <Label>Mensagens pós-pacote (texto)</Label>
+<Label className="text-sm">Mensagens pós-pacote (texto)</Label>
                     <Textarea value={getC('pos.mensagens', '')} onChange={(e) => setC('pos.mensagens', e.target.value)} rows={3} />
                   </div>
                   <div className="grid gap-2">
-                    <Label>Oferecer novo pacote?</Label>
+<Label className="text-sm">Oferecer novo pacote?</Label>
                     <Select value={getC('pos.oferecer_novo_pacote', 'sim')} onValueChange={(v) => setC('pos.oferecer_novo_pacote', v)}>
                       <SelectTrigger>
                         <SelectValue />
@@ -2825,7 +2913,7 @@ export function ProtocolosPacotesPage() {
                     </Select>
                   </div>
                   <div className="grid gap-2">
-                    <Label>Oferecer upgrade maior?</Label>
+<Label className="text-sm">Oferecer upgrade maior?</Label>
                     <Select value={getC('pos.oferecer_upgrade', 'nao')} onValueChange={(v) => setC('pos.oferecer_upgrade', v)}>
                       <SelectTrigger>
                         <SelectValue />
@@ -2840,7 +2928,7 @@ export function ProtocolosPacotesPage() {
               </div>
 
               <div className="rounded-xl border p-4 space-y-3">
-                <Label className="text-sm font-semibold">Mídias do pacote</Label>
+<Label className="text-sm">Mídias do pacote</Label>
                 <div className="grid gap-4 md:grid-cols-2">
                   {renderMidiaUploader({ tipo: 'antes_depois', label: 'Antes/depois', accept: 'image/*', allowWhenCreating: false })}
                   {renderMidiaUploader({ tipo: 'carrossel', label: 'Carrossel comercial', accept: 'image/*', allowWhenCreating: false })}
@@ -2852,11 +2940,11 @@ export function ProtocolosPacotesPage() {
             </div>
 
             <div className="rounded-xl border p-4 space-y-3">
-              <Label className="text-sm font-semibold">FAQ - Perguntas Frequentes</Label>
+<Label className="text-sm">FAQ - Perguntas Frequentes</Label>
               {(getC('faq', []) as any[]).map((faq: any, idx: number) => (
                 <div key={idx} className="rounded-lg border p-3 space-y-3">
                   <div className="grid gap-2">
-                    <Label>Pergunta</Label>
+<Label className="text-sm">Pergunta</Label>
                     <Input
                       value={faq?.pergunta || ''}
                       onChange={(e) => {
@@ -2868,7 +2956,7 @@ export function ProtocolosPacotesPage() {
                     />
                   </div>
                   <div className="grid gap-2">
-                    <Label>Resposta</Label>
+<Label className="text-sm">Resposta</Label>
                     <Textarea
                       value={faq?.resposta || ''}
                       onChange={(e) => {
@@ -2911,7 +2999,7 @@ export function ProtocolosPacotesPage() {
             </div>
 
             <div className="space-y-2">
-              <Label>Status</Label>
+<Label className="text-sm">Status</Label>
               <Select value={formState.ativo ? 'ativo' : 'inativo'} onValueChange={(v) => setFormState({ ...formState, ativo: v === 'ativo' })}>
                 <SelectTrigger>
                   <SelectValue />

@@ -797,7 +797,7 @@ export default function VendedoresPage() {
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="nome">
+                  <Label htmlFor="nome" className="text-sm">
                     Nome <span className="text-red-500">*</span>
                   </Label>
                   <Input
@@ -810,7 +810,7 @@ export default function VendedoresPage() {
                 </div>
                 
                 <div className="space-y-2">
-                  <Label htmlFor="email">
+                  <Label htmlFor="email" className="text-sm">
                     Email <span className="text-red-500">*</span>
                   </Label>
                   <Input
@@ -824,7 +824,7 @@ export default function VendedoresPage() {
                 </div>
                 
                 <div className="space-y-2">
-                  <Label htmlFor="senha">
+                  <Label htmlFor="senha" className="text-sm">
                     Senha <span className="text-red-500">*</span>
                   </Label>
                   <Input
@@ -839,7 +839,7 @@ export default function VendedoresPage() {
                 </div>
                 
                 <div className="space-y-2">
-                  <Label htmlFor="whatsapp">
+                  <Label htmlFor="whatsapp" className="text-sm">
                     WhatsApp <span className="text-red-500">*</span>
                   </Label>
                   <Input
@@ -859,7 +859,7 @@ export default function VendedoresPage() {
               
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="telefone">Telefone</Label>
+                  <Label htmlFor="telefone" className="text-sm">Telefone</Label>
                   <Input
                     id="telefone"
                     placeholder="(11) 99999-9999"
@@ -869,7 +869,7 @@ export default function VendedoresPage() {
                 </div>
                 
                 <div className="space-y-2">
-                  <Label htmlFor="cpf">CPF</Label>
+                  <Label htmlFor="cpf" className="text-sm">CPF</Label>
                   <Input
                     id="cpf"
                     placeholder="000.000.000-00"
@@ -879,7 +879,7 @@ export default function VendedoresPage() {
                 </div>
                 
                 <div className="space-y-2">
-                  <Label htmlFor="data_contratacao">Data de Contratação</Label>
+                  <Label htmlFor="data_contratacao" className="text-sm">Data de Contratação</Label>
                   <Input
                     id="data_contratacao"
                     type="date"
@@ -896,7 +896,7 @@ export default function VendedoresPage() {
               
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="meta_mensal">Meta Mensal (R$)</Label>
+                  <Label htmlFor="meta_mensal" className="text-sm">Meta Mensal (R$)</Label>
                   <Input
                     id="meta_mensal"
                     type="number"
@@ -909,7 +909,7 @@ export default function VendedoresPage() {
                 </div>
                 
                 <div className="space-y-2">
-                  <Label htmlFor="comissao_percentual">Comissão (%)</Label>
+                  <Label htmlFor="comissao_percentual" className="text-sm">Comissão (%)</Label>
                   <Input
                     id="comissao_percentual"
                     type="number"
@@ -923,7 +923,7 @@ export default function VendedoresPage() {
                 </div>
                 
                 <div className="space-y-2">
-                  <Label htmlFor="salario_base">Salário Base (R$)</Label>
+                  <Label htmlFor="salario_base" className="text-sm">Salário Base (R$)</Label>
                   <Input
                     id="salario_base"
                     type="number"
@@ -944,7 +944,7 @@ export default function VendedoresPage() {
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <div className="space-y-4">
                   <div className="space-y-2">
-                    <Label>
+<Label className="text-sm">
                       Segmentos Principais <span className="text-red-500">*</span>
                     </Label>
                     <MultiSelect
@@ -957,7 +957,7 @@ export default function VendedoresPage() {
                   </div>
                   
                   <div className="space-y-2">
-                    <Label>Segmentos Secundários</Label>
+<Label className="text-sm">Segmentos Secundários</Label>
                     <MultiSelect
                       options={segmentos}
                       selected={formData.segmentos_secundarios}
@@ -968,7 +968,7 @@ export default function VendedoresPage() {
                 </div>
                 
                 <div className="space-y-2">
-                  <Label>
+<Label className="text-sm">
                     Regiões de Atendimento <span className="text-red-500">*</span>
                   </Label>
                   <MultiSelect
@@ -990,7 +990,7 @@ export default function VendedoresPage() {
                   <div key={dia} className="p-3 border rounded-lg space-y-3">
                     <div className="flex items-center gap-4">
                       <div className="w-20">
-                        <Label className="capitalize">{dia}</Label>
+<Label className="text-sm">{dia}</Label>
                       </div>
                       <Switch
                         checked={config?.ativo || false}
@@ -1322,7 +1322,7 @@ export default function VendedoresPage() {
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="edit-nome">
+                  <Label htmlFor="edit-nome" className="text-sm">
                     Nome <span className="text-red-500">*</span>
                   </Label>
                   <Input
@@ -1333,7 +1333,7 @@ export default function VendedoresPage() {
                 </div>
                 
                 <div className="space-y-2">
-                  <Label htmlFor="edit-email">
+                  <Label htmlFor="edit-email" className="text-sm">
                     Email <span className="text-red-500">*</span>
                   </Label>
                   <Input
@@ -1345,7 +1345,7 @@ export default function VendedoresPage() {
                 </div>
                 
                 <div className="space-y-2">
-                  <Label htmlFor="edit-whatsapp">
+                  <Label htmlFor="edit-whatsapp" className="text-sm">
                     WhatsApp <span className="text-red-500">*</span>
                   </Label>
                   <Input
@@ -1356,7 +1356,7 @@ export default function VendedoresPage() {
                 </div>
                 
                 <div className="space-y-2">
-                  <Label htmlFor="edit-telefone">Telefone</Label>
+                  <Label htmlFor="edit-telefone" className="text-sm">Telefone</Label>
                   <Input
                     id="edit-telefone"
                     value={formData.telefone}
@@ -1372,7 +1372,7 @@ export default function VendedoresPage() {
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="edit-cpf">CPF</Label>
+                  <Label htmlFor="edit-cpf" className="text-sm">CPF</Label>
                   <Input
                     id="edit-cpf"
                     value={formData.cpf}
@@ -1381,7 +1381,7 @@ export default function VendedoresPage() {
                 </div>
                 
                 <div className="space-y-2">
-                  <Label htmlFor="edit-data_contratacao">Data de Contratação</Label>
+                  <Label htmlFor="edit-data_contratacao" className="text-sm">Data de Contratação</Label>
                   <Input
                     id="edit-data_contratacao"
                     type="date"
@@ -1398,7 +1398,7 @@ export default function VendedoresPage() {
               
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="edit-meta_mensal">Meta Mensal (R$)</Label>
+                  <Label htmlFor="edit-meta_mensal" className="text-sm">Meta Mensal (R$)</Label>
                   <Input
                     id="edit-meta_mensal"
                     type="number"
@@ -1408,7 +1408,7 @@ export default function VendedoresPage() {
                 </div>
                 
                 <div className="space-y-2">
-                  <Label htmlFor="edit-comissao_percentual">Comissão (%)</Label>
+                  <Label htmlFor="edit-comissao_percentual" className="text-sm">Comissão (%)</Label>
                   <Input
                     id="edit-comissao_percentual"
                     type="number"
@@ -1419,7 +1419,7 @@ export default function VendedoresPage() {
                 </div>
                 
                 <div className="space-y-2">
-                  <Label htmlFor="edit-salario_base">Salário Base (R$)</Label>
+                  <Label htmlFor="edit-salario_base" className="text-sm">Salário Base (R$)</Label>
                   <Input
                     id="edit-salario_base"
                     type="number"
@@ -1438,7 +1438,7 @@ export default function VendedoresPage() {
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <div className="space-y-4">
                   <div className="space-y-2">
-                    <Label>
+<Label className="text-sm">
                       Segmentos Principais <span className="text-red-500">*</span>
                     </Label>
                     <MultiSelect
@@ -1451,7 +1451,7 @@ export default function VendedoresPage() {
                   </div>
                   
                   <div className="space-y-2">
-                    <Label>Segmentos Secundários</Label>
+<Label className="text-sm">Segmentos Secundários</Label>
                     <MultiSelect
                       options={segmentos}
                       selected={formData.segmentos_secundarios}
@@ -1462,7 +1462,7 @@ export default function VendedoresPage() {
                 </div>
                 
                 <div className="space-y-2">
-                  <Label>
+<Label className="text-sm">
                     Regiões de Atendimento <span className="text-red-500">*</span>
                   </Label>
                   <MultiSelect
@@ -1484,7 +1484,7 @@ export default function VendedoresPage() {
                   <div key={dia} className="p-3 border rounded-lg space-y-3">
                     <div className="flex items-center gap-4">
                       <div className="w-20">
-                        <Label className="capitalize">{dia}</Label>
+<Label className="text-sm">{dia}</Label>
                       </div>
                       <Switch
                         checked={config?.ativo || false}

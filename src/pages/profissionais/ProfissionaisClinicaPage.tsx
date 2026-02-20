@@ -359,7 +359,7 @@ export function ProfissionaisClinicaPage() {
     const horarios = formState.horarios_disponiveis || defaultHorariosProfissional
     return (
       <div className="space-y-3 pt-4 border-t">
-        <Label className="text-sm font-semibold flex items-center gap-2"><Clock className="h-4 w-4" /> Horários Disponíveis</Label>
+<Label className="text-sm"><Clock className="h-4 w-4" /> Horários Disponíveis</Label>
         <p className="text-xs text-muted-foreground">Configure os horários de atendimento deste profissional</p>
         {DIAS_SEMANA.map((dia) => {
           const config = (horarios as any)[dia] || defaultHorariosProfissional[dia]
@@ -367,7 +367,7 @@ export function ProfissionaisClinicaPage() {
           return (
             <div key={dia} className="flex items-start gap-3 p-3 border rounded-lg">
               <div className="w-20 pt-1">
-                <Label className="text-xs font-medium">{DIAS_LABEL[dia]}</Label>
+<Label className="text-sm">{DIAS_LABEL[dia]}</Label>
               </div>
               <Switch
                 checked={config?.ativo || false}
@@ -385,7 +385,7 @@ export function ProfissionaisClinicaPage() {
                       <span className="text-xs text-muted-foreground">às</span>
                       <Input type="time" value={p?.fim || '18:00'} onChange={(e) => updateHorarioPeriodo(dia, idx, 'fim', e.target.value)} className="w-24 h-8 text-xs" />
                       {periodos.length > 1 && (
-                        <Button type="button" variant="outline" size="sm" className="h-8 text-xs" onClick={() => removeHorarioPeriodo(dia, idx)}>✕</Button>
+                        <Button type="button" variant="outline" size="sm" className="h-8 text-xs" onClick={() => removeHorarioPeriodo(dia, idx)}>?</Button>
                       )}
                     </div>
                   ))}
@@ -605,7 +605,7 @@ export function ProfissionaisClinicaPage() {
           <div className="space-y-4">
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="create-nome">Nome Completo *</Label>
+                <Label htmlFor="create-nome" className="text-sm">Nome Completo *</Label>
                 <Input
                   id="create-nome"
                   value={formState.nome}
@@ -615,7 +615,7 @@ export function ProfissionaisClinicaPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="create-cargo">Cargo / Função *</Label>
+                <Label htmlFor="create-cargo" className="text-sm">Cargo / Função *</Label>
                 <Select
                   value={formState.cargo || ''}
                   onValueChange={(v) => setFormState({ ...formState, cargo: v })}
@@ -633,7 +633,7 @@ export function ProfissionaisClinicaPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="create-documento">CPF/Documento</Label>
+                <Label htmlFor="create-documento" className="text-sm">CPF/Documento</Label>
                 <Input
                   id="create-documento"
                   value={formState.documento || ''}
@@ -645,7 +645,7 @@ export function ProfissionaisClinicaPage() {
 
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="create-email">E-mail *</Label>
+                <Label htmlFor="create-email" className="text-sm">E-mail *</Label>
                 <Input
                   id="create-email"
                   type="email"
@@ -656,7 +656,7 @@ export function ProfissionaisClinicaPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="create-senha">Senha de Acesso *</Label>
+                <Label htmlFor="create-senha" className="text-sm">Senha de Acesso *</Label>
                 <Input
                   id="create-senha"
                   type="password"
@@ -669,7 +669,7 @@ export function ProfissionaisClinicaPage() {
 
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="create-telefone">Telefone</Label>
+                <Label htmlFor="create-telefone" className="text-sm">Telefone</Label>
                 <Input
                   id="create-telefone"
                   value={formState.telefone || ''}
@@ -679,7 +679,7 @@ export function ProfissionaisClinicaPage() {
               </div>
 
               <div className="space-y-2">
-                <Label>Foto</Label>
+<Label className="text-sm">Foto</Label>
                 <FileUploadButton
                   label="Enviar fotos"
                   accept="image/*"
@@ -712,7 +712,7 @@ export function ProfissionaisClinicaPage() {
                 ) : null}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="create-whatsapp">WhatsApp</Label>
+                <Label htmlFor="create-whatsapp" className="text-sm">WhatsApp</Label>
                 <Input
                   id="create-whatsapp"
                   value={formState.whatsapp || ''}
@@ -724,7 +724,7 @@ export function ProfissionaisClinicaPage() {
 
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="create-especialidades">Especialidades (uma por linha)</Label>
+                <Label htmlFor="create-especialidades" className="text-sm">Especialidades (uma por linha)</Label>
                 <ListEditor
                   placeholder="Adicione especialidades"
                   items={normalizeStringList((formState as any).especialidades)}
@@ -732,7 +732,7 @@ export function ProfissionaisClinicaPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="create-experiencia">Experiência</Label>
+                <Label htmlFor="create-experiencia" className="text-sm">Experiência</Label>
                 <Textarea
                   id="create-experiencia"
                   value={formState.experiencia || ''}
@@ -744,7 +744,7 @@ export function ProfissionaisClinicaPage() {
 
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="create-certificacoes">Certificações</Label>
+                <Label htmlFor="create-certificacoes" className="text-sm">Certificações</Label>
                 <Textarea
                   id="create-certificacoes"
                   value={formState.certificacoes || ''}
@@ -753,7 +753,7 @@ export function ProfissionaisClinicaPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label>Procedimentos que realiza</Label>
+<Label className="text-sm">Procedimentos que realiza</Label>
                 <Input
                   placeholder="Buscar procedimento..."
                   value={procedimentosSearch}
@@ -797,7 +797,7 @@ export function ProfissionaisClinicaPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="create-bio">Bio</Label>
+              <Label htmlFor="create-bio" className="text-sm">Bio</Label>
               <Textarea
                 id="create-bio"
                 value={formState.bio || ''}
@@ -808,7 +808,7 @@ export function ProfissionaisClinicaPage() {
 
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="create-conselho">Conselho Profissional</Label>
+                <Label htmlFor="create-conselho" className="text-sm">Conselho Profissional</Label>
                 <Input
                   id="create-conselho"
                   value={formState.conselho || ''}
@@ -818,7 +818,7 @@ export function ProfissionaisClinicaPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="create-registro">Número de Registro</Label>
+                <Label htmlFor="create-registro" className="text-sm">Número de Registro</Label>
                 <Input
                   id="create-registro"
                   value={formState.registro_profissional || ''}
@@ -830,7 +830,7 @@ export function ProfissionaisClinicaPage() {
 
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="create-comissao">Comissão (%)</Label>
+                <Label htmlFor="create-comissao" className="text-sm">Comissão (%)</Label>
                 <Input
                   id="create-comissao"
                   type="number"
@@ -844,7 +844,7 @@ export function ProfissionaisClinicaPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="create-meta">Meta Mensal (R$)</Label>
+                <Label htmlFor="create-meta" className="text-sm">Meta Mensal (R$)</Label>
                 <Input
                   id="create-meta"
                   type="number"
@@ -861,7 +861,7 @@ export function ProfissionaisClinicaPage() {
             {renderHorariosSelector()}
 
             <div className="space-y-2">
-              <Label htmlFor="create-status">Status</Label>
+              <Label htmlFor="create-status" className="text-sm">Status</Label>
               <Select
                 value={formState.status}
                 onValueChange={(v) =>
@@ -910,7 +910,7 @@ export function ProfissionaisClinicaPage() {
           <div className="space-y-4">
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="edit-nome">Nome Completo *</Label>
+                <Label htmlFor="edit-nome" className="text-sm">Nome Completo *</Label>
                 <Input
                   id="edit-nome"
                   value={formState.nome}
@@ -919,7 +919,7 @@ export function ProfissionaisClinicaPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="edit-cargo">Cargo / Função *</Label>
+                <Label htmlFor="edit-cargo" className="text-sm">Cargo / Função *</Label>
                 <Select
                   value={formState.cargo || ''}
                   onValueChange={(v) => setFormState({ ...formState, cargo: v })}
@@ -937,7 +937,7 @@ export function ProfissionaisClinicaPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="edit-documento">CPF/Documento</Label>
+                <Label htmlFor="edit-documento" className="text-sm">CPF/Documento</Label>
                 <Input
                   id="edit-documento"
                   value={formState.documento || ''}
@@ -948,7 +948,7 @@ export function ProfissionaisClinicaPage() {
 
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="edit-email">E-mail</Label>
+                <Label htmlFor="edit-email" className="text-sm">E-mail</Label>
                 <Input
                   id="edit-email"
                   type="email"
@@ -958,7 +958,7 @@ export function ProfissionaisClinicaPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="edit-telefone">Telefone</Label>
+                <Label htmlFor="edit-telefone" className="text-sm">Telefone</Label>
                 <Input
                   id="edit-telefone"
                   value={formState.telefone || ''}
@@ -969,7 +969,7 @@ export function ProfissionaisClinicaPage() {
 
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <Label>Foto</Label>
+<Label className="text-sm">Foto</Label>
                 <FileUploadButton
                   label="Enviar fotos"
                   accept="image/*"
@@ -1006,7 +1006,7 @@ export function ProfissionaisClinicaPage() {
                 )}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="edit-whatsapp">WhatsApp</Label>
+                <Label htmlFor="edit-whatsapp" className="text-sm">WhatsApp</Label>
                 <Input
                   id="edit-whatsapp"
                   value={formState.whatsapp || ''}
@@ -1017,7 +1017,7 @@ export function ProfissionaisClinicaPage() {
 
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="edit-especialidades">Especialidades (uma por linha)</Label>
+                <Label htmlFor="edit-especialidades" className="text-sm">Especialidades (uma por linha)</Label>
                 <ListEditor
                   placeholder="Adicione especialidades"
                   items={normalizeStringList((formState as any).especialidades)}
@@ -1025,7 +1025,7 @@ export function ProfissionaisClinicaPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="edit-experiencia">Experiência</Label>
+                <Label htmlFor="edit-experiencia" className="text-sm">Experiência</Label>
                 <Textarea
                   id="edit-experiencia"
                   value={formState.experiencia || ''}
@@ -1037,7 +1037,7 @@ export function ProfissionaisClinicaPage() {
 
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="edit-certificacoes">Certificações</Label>
+                <Label htmlFor="edit-certificacoes" className="text-sm">Certificações</Label>
                 <Textarea
                   id="edit-certificacoes"
                   value={formState.certificacoes || ''}
@@ -1046,7 +1046,7 @@ export function ProfissionaisClinicaPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label>Procedimentos que realiza</Label>
+<Label className="text-sm">Procedimentos que realiza</Label>
                 <Input
                   placeholder="Buscar procedimento..."
                   value={procedimentosSearch}
@@ -1090,7 +1090,7 @@ export function ProfissionaisClinicaPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="edit-bio">Bio</Label>
+              <Label htmlFor="edit-bio" className="text-sm">Bio</Label>
               <Textarea
                 id="edit-bio"
                 value={formState.bio || ''}
@@ -1101,7 +1101,7 @@ export function ProfissionaisClinicaPage() {
 
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="edit-conselho">Conselho Profissional</Label>
+                <Label htmlFor="edit-conselho" className="text-sm">Conselho Profissional</Label>
                 <Input
                   id="edit-conselho"
                   value={formState.conselho || ''}
@@ -1110,7 +1110,7 @@ export function ProfissionaisClinicaPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="edit-registro">Número de Registro</Label>
+                <Label htmlFor="edit-registro" className="text-sm">Número de Registro</Label>
                 <Input
                   id="edit-registro"
                   value={formState.registro_profissional || ''}
@@ -1121,7 +1121,7 @@ export function ProfissionaisClinicaPage() {
 
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="edit-comissao">Comissão (%)</Label>
+                <Label htmlFor="edit-comissao" className="text-sm">Comissão (%)</Label>
                 <Input
                   id="edit-comissao"
                   type="number"
@@ -1134,7 +1134,7 @@ export function ProfissionaisClinicaPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="edit-meta">Meta Mensal (R$)</Label>
+                <Label htmlFor="edit-meta" className="text-sm">Meta Mensal (R$)</Label>
                 <Input
                   id="edit-meta"
                   type="number"
@@ -1150,7 +1150,7 @@ export function ProfissionaisClinicaPage() {
             {renderHorariosSelector()}
 
             <div className="space-y-2">
-              <Label htmlFor="edit-status">Status</Label>
+              <Label htmlFor="edit-status" className="text-sm">Status</Label>
               <Select
                 value={formState.status}
                 onValueChange={(v) =>

@@ -1,3 +1,4 @@
+import { useState, useRef, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -18,7 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Edit, Trash2, X } from 'lucide-react'
+import { Edit, Trash2, X, UserPlus, Search } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { DateTimePicker } from '@/components/ui/datetime-picker'
@@ -76,6 +77,7 @@ interface AgendamentoModalsProps {
   deletePending: boolean
   updateStatusPending: boolean
   agendamentos?: AgendamentoClinica[]
+  onCreatePaciente?: (nome: string) => void
 }
 
 export function AgendamentoModals({
@@ -107,7 +109,26 @@ export function AgendamentoModals({
   deletePending,
   updateStatusPending,
   agendamentos = [],
+  onCreatePaciente,
 }: AgendamentoModalsProps) {
+  const [pacienteSearch, setPacienteSearch] = useState('')
+  const [showPacienteDropdown, setShowPacienteDropdown] = useState(false)
+  const pacienteDropdownRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!showPacienteDropdown) return
+    const handleOutside = (ev: MouseEvent) => {
+      if (pacienteDropdownRef.current && !pacienteDropdownRef.current.contains(ev.target as Node)) {
+        setShowPacienteDropdown(false)
+      }
+    }
+    document.addEventListener('mousedown', handleOutside)
+    return () => document.removeEventListener('mousedown', handleOutside)
+  }, [showPacienteDropdown])
+
+  const filteredPacientes = pacientes.filter((p) =>
+    !pacienteSearch || p.nome_completo?.toLowerCase().includes(pacienteSearch.toLowerCase())
+  )
   const formatDateTime = (dateString: string) => {
     try {
       return format(parseISO(dateString), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })
@@ -615,7 +636,7 @@ export function AgendamentoModals({
               
               <div className="grid gap-3 md:grid-cols-2">
                 <div className="space-y-2">
-                  <Label>Data/Hora Início</Label>
+<Label className="text-sm">Data/Hora Início</Label>
                   <DateTimePicker
                     value={startTime || ''}
                     onChange={(value) => {
@@ -626,7 +647,7 @@ export function AgendamentoModals({
                 </div>
                 
                 <div className="space-y-2">
-                  <Label>Data/Hora Fim</Label>
+<Label className="text-sm">Data/Hora Fim</Label>
                   <DateTimePicker
                     value={endTime || ''}
                     onChange={(value) => updateSessionData(session.id, 'data_fim', value || '')}
@@ -644,7 +665,7 @@ export function AgendamentoModals({
               
               {session.sessionNumber === 1 && session.totalSessions > 1 && (
                 <div className="text-xs text-blue-600 bg-blue-50 p-2 rounded">
-                  💡 Configure a primeira sessão e as demais serão agendadas automaticamente respeitando o intervalo de {session.intervalDays} dias.
+                  ?? Configure a primeira sessão e as demais serão agendadas automaticamente respeitando o intervalo de {session.intervalDays} dias.
                 </div>
               )}
             </div>
@@ -672,7 +693,7 @@ export function AgendamentoModals({
 
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="create-titulo">Título *</Label>
+              <Label htmlFor="create-titulo" className="text-sm">Título *</Label>
               <Input
                 id="create-titulo"
                 value={formState.titulo}
@@ -705,7 +726,7 @@ export function AgendamentoModals({
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="create-valor">Valor</Label>
+                <Label htmlFor="create-valor" className="text-sm">Valor</Label>
                 <Input
                   id="create-valor"
                   type="number"
@@ -719,37 +740,83 @@ export function AgendamentoModals({
 
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="create-paciente">Paciente</Label>
-                <Select
-                  value={formState.paciente_id || 'none'}
-                  onValueChange={(v) => {
-                    const newPacienteId = v === 'none' ? null : v
-                    const newTitle = generateTitle(
-                      Boolean(formState.is_avaliacao),
-                      newPacienteId,
-                      normalizeIdArray((formState as any).procedimentos_ids),
-                      normalizeIdArray((formState as any).protocolos_pacotes_ids),
-                      formState.profissional_id || null
-                    )
-                    setFormState({ ...formState, paciente_id: newPacienteId, titulo: newTitle })
-                  }}
-                >
-                  <SelectTrigger id="create-paciente">
-                    <SelectValue placeholder="Selecione o paciente" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Nenhum</SelectItem>
-                    {pacientes.map((p) => (
-                      <SelectItem key={p.id} value={p.id}>
-                        {p.nome_completo}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Label htmlFor="create-paciente" className="text-sm">Paciente</Label>
+                <div className="relative" ref={pacienteDropdownRef}>
+                  <div className="relative">
+                    <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
+                    <Input
+                      id="create-paciente"
+                      placeholder="Buscar paciente pelo nome..."
+                      value={pacienteSearch || (formState.paciente_id ? (pacientes.find(p => p.id === formState.paciente_id)?.nome_completo || '') : '')}
+                      onChange={(e) => {
+                        setPacienteSearch(e.target.value)
+                        setShowPacienteDropdown(true)
+                        if (!e.target.value) {
+                          const newTitle = generateTitle(Boolean(formState.is_avaliacao), null, normalizeIdArray((formState as any).procedimentos_ids), normalizeIdArray((formState as any).protocolos_pacotes_ids), formState.profissional_id || null)
+                          setFormState({ ...formState, paciente_id: null, titulo: newTitle })
+                        }
+                      }}
+                      onFocus={() => setShowPacienteDropdown(true)}
+                      className="h-9 pl-8 text-sm"
+                    />
+                    {formState.paciente_id && (
+                      <button
+                        type="button"
+                        className="absolute right-2 top-2.5 text-muted-foreground hover:text-foreground"
+                        onClick={() => {
+                          setPacienteSearch('')
+                          const newTitle = generateTitle(Boolean(formState.is_avaliacao), null, normalizeIdArray((formState as any).procedimentos_ids), normalizeIdArray((formState as any).protocolos_pacotes_ids), formState.profissional_id || null)
+                          setFormState({ ...formState, paciente_id: null, titulo: newTitle })
+                        }}
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    )}
+                  </div>
+                  {showPacienteDropdown && (
+                    <div className="absolute left-0 top-full z-50 mt-1 w-full rounded-md border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-lg max-h-[200px] overflow-y-auto">
+                      {filteredPacientes.length > 0 ? (
+                        filteredPacientes.slice(0, 50).map((p) => (
+                          <button
+                            key={p.id}
+                            type="button"
+                            className="flex w-full items-center px-3 py-2 text-sm text-gray-900 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800 text-left"
+                            onClick={() => {
+                              setPacienteSearch('')
+                              setShowPacienteDropdown(false)
+                              const newTitle = generateTitle(Boolean(formState.is_avaliacao), p.id, normalizeIdArray((formState as any).procedimentos_ids), normalizeIdArray((formState as any).protocolos_pacotes_ids), formState.profissional_id || null)
+                              setFormState({ ...formState, paciente_id: p.id, titulo: newTitle })
+                            }}
+                          >
+                            {p.nome_completo}
+                          </button>
+                        ))
+                      ) : (
+                        <div className="px-3 py-2 text-sm text-gray-500 dark:text-gray-400">Nenhum paciente encontrado</div>
+                      )}
+                      {onCreatePaciente && (
+                        <button
+                          type="button"
+                          className="flex w-full items-center gap-2 border-t border-gray-200 dark:border-gray-700 px-3 py-2 text-sm font-medium text-primary hover:bg-gray-100 dark:hover:bg-gray-800 text-left sticky bottom-0 bg-white dark:bg-gray-900"
+                          onClick={() => {
+                            onCreatePaciente(pacienteSearch.trim())
+                            setPacienteSearch('')
+                            setShowPacienteDropdown(false)
+                          }}
+                        >
+                          <UserPlus className="h-3.5 w-3.5" />
+                          {pacienteSearch.trim().length > 1
+                            ? <>Cadastrar &quot;{pacienteSearch.trim()}&quot;</>
+                            : 'Cadastrar novo paciente'}
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="create-profissional">Profissional</Label>
+                <Label htmlFor="create-profissional" className="text-sm">Profissional</Label>
                 <Select
                   value={formState.profissional_id || 'none'}
                   onValueChange={(v) => {
@@ -798,7 +865,7 @@ export function AgendamentoModals({
 
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <Label>Procedimentos</Label>
+<Label className="text-sm">Procedimentos</Label>
                 {(() => {
                   const selectedProfId = formState.profissional_id || null
                   const allowedProcIds = selectedProfId ? getProfissionalProcedimentoIds(selectedProfId) : []
@@ -864,7 +931,7 @@ export function AgendamentoModals({
               </div>
 
               <div className="space-y-2">
-                <Label>Protocolos/Pacotes</Label>
+<Label className="text-sm">Protocolos/Pacotes</Label>
                 <Select
                   value="none"
                   onValueChange={(v) => {
@@ -915,7 +982,7 @@ export function AgendamentoModals({
               {(normalizeIdArray((formState as any).protocolos_pacotes_ids).length > 0 || 
                 normalizeIdArray((formState as any).procedimentos_ids).length > 0) && (
                 <div className="space-y-4">
-                  <Label className="text-base font-semibold">Agendamento das Sessões</Label>
+<Label className="text-sm">Agendamento das Sessões</Label>
                   {renderSessionScheduling()}
                 </div>
               )}
@@ -982,7 +1049,7 @@ export function AgendamentoModals({
               </div>
 
               <div className="space-y-2">
-                <Label>Duração (min) *</Label>
+<Label className="text-sm">Duração (min) *</Label>
                 <div className="space-y-1">
                   <Input
                     type="number"
@@ -1019,7 +1086,7 @@ export function AgendamentoModals({
                     ))}
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    ✓ Duração: {getDurationFromTimes(formState.data_inicio, formState.data_fim)} minutos
+                    ? Duração: {getDurationFromTimes(formState.data_inicio, formState.data_fim)} minutos
                   </p>
                 </div>
               </div>
@@ -1036,7 +1103,7 @@ export function AgendamentoModals({
 
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="create-sala">Sala/Consultório</Label>
+                <Label htmlFor="create-sala" className="text-sm">Sala/Consultório</Label>
                 <Input
                   id="create-sala"
                   value={formState.sala || ''}
@@ -1046,7 +1113,7 @@ export function AgendamentoModals({
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="create-status">Status</Label>
+                <Label htmlFor="create-status" className="text-sm">Status</Label>
                 <Select
                   value={formState.status}
                   onValueChange={(v) =>
@@ -1068,7 +1135,7 @@ export function AgendamentoModals({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="create-descricao">Descrição</Label>
+              <Label htmlFor="create-descricao" className="text-sm">Descrição</Label>
               <Textarea
                 id="create-descricao"
                 value={formState.descricao || ''}
@@ -1108,22 +1175,22 @@ export function AgendamentoModals({
               <div className="space-y-4">
                 <div className="grid gap-4 md:grid-cols-2">
                   <div>
-                    <Label className="text-muted-foreground">Data/Hora Início</Label>
+<Label className="text-sm">Data/Hora Início</Label>
                     <p className="font-medium">{formatDateTime(selectedAgendamento.data_inicio)}</p>
                   </div>
                   <div>
-                    <Label className="text-muted-foreground">Data/Hora Fim</Label>
+<Label className="text-sm">Data/Hora Fim</Label>
                     <p className="font-medium">{formatDateTime(selectedAgendamento.data_fim)}</p>
                   </div>
                 </div>
 
                 <div className="grid gap-4 md:grid-cols-2">
                   <div>
-                    <Label className="text-muted-foreground">Avaliação</Label>
+<Label className="text-sm">Avaliação</Label>
                     <p className="font-medium">{selectedAgendamento.is_avaliacao ? 'Sim' : 'Não'}</p>
                   </div>
                   <div>
-                    <Label className="text-muted-foreground">Valor</Label>
+<Label className="text-sm">Valor</Label>
                     <p className="font-medium">
                       {typeof selectedAgendamento.valor === 'number'
                         ? selectedAgendamento.valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
@@ -1134,7 +1201,7 @@ export function AgendamentoModals({
 
                 {selectedAgendamento.paciente && (
                   <div>
-                    <Label className="text-muted-foreground">Paciente</Label>
+<Label className="text-sm">Paciente</Label>
                     <p className="font-medium">{selectedAgendamento.paciente.nome_completo}</p>
                     {selectedAgendamento.paciente.telefone && (
                       <p className="text-sm text-muted-foreground">
@@ -1146,7 +1213,7 @@ export function AgendamentoModals({
 
                 {selectedAgendamento.profissional && (
                   <div>
-                    <Label className="text-muted-foreground">Profissional</Label>
+<Label className="text-sm">Profissional</Label>
                     <p className="font-medium">{selectedAgendamento.profissional.nome}</p>
                     {selectedAgendamento.profissional.conselho && (
                       <p className="text-sm text-muted-foreground">
@@ -1158,20 +1225,20 @@ export function AgendamentoModals({
 
                 {selectedAgendamento.sala && (
                   <div>
-                    <Label className="text-muted-foreground">Sala/Consultório</Label>
+<Label className="text-sm">Sala/Consultório</Label>
                     <p className="font-medium">{selectedAgendamento.sala}</p>
                   </div>
                 )}
 
                 {selectedAgendamento.descricao && (
                   <div>
-                    <Label className="text-muted-foreground">Descrição</Label>
+<Label className="text-sm">Descrição</Label>
                     <p className="font-medium whitespace-pre-wrap">{selectedAgendamento.descricao}</p>
                   </div>
                 )}
 
                 <div className="pt-4 border-t">
-                  <Label className="text-muted-foreground">Atualizar Status</Label>
+<Label className="text-sm">Atualizar Status</Label>
                   <div className="flex flex-wrap gap-2 mt-2">
                     {Object.entries(STATUS_CONFIG).map(([key, config]) => (
                       <Button
@@ -1208,7 +1275,7 @@ export function AgendamentoModals({
 
       {/* Modal de Edição */}
       <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-visible">
           <DialogHeader>
             <DialogTitle>Editar Agendamento</DialogTitle>
             <DialogDescription>Atualize as informações do agendamento</DialogDescription>
@@ -1222,7 +1289,7 @@ export function AgendamentoModals({
 
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="edit-titulo">Título *</Label>
+              <Label htmlFor="edit-titulo" className="text-sm">Título *</Label>
               <Input
                 id="edit-titulo"
                 value={editFormState.titulo}
@@ -1254,7 +1321,7 @@ export function AgendamentoModals({
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="edit-valor">Valor</Label>
+                <Label htmlFor="edit-valor" className="text-sm">Valor</Label>
                 <Input
                   id="edit-valor"
                   type="number"
@@ -1268,7 +1335,7 @@ export function AgendamentoModals({
 
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="edit-paciente">Paciente</Label>
+                <Label htmlFor="edit-paciente" className="text-sm">Paciente</Label>
                 <Select
                   value={editFormState.paciente_id || 'none'}
                   onValueChange={(v) => {
@@ -1298,7 +1365,7 @@ export function AgendamentoModals({
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="edit-profissional">Profissional</Label>
+                <Label htmlFor="edit-profissional" className="text-sm">Profissional</Label>
                 <Select
                   value={editFormState.profissional_id || 'none'}
                   onValueChange={(v) => {
@@ -1330,7 +1397,7 @@ export function AgendamentoModals({
 
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <Label>Procedimentos</Label>
+<Label className="text-sm">Procedimentos</Label>
                 <Select
                   value="none"
                   onValueChange={(v) => {
@@ -1375,7 +1442,7 @@ export function AgendamentoModals({
               </div>
 
               <div className="space-y-2">
-                <Label>Protocolos/Pacotes</Label>
+<Label className="text-sm">Protocolos/Pacotes</Label>
                 <Select
                   value="none"
                   onValueChange={(v) => {
@@ -1442,7 +1509,7 @@ export function AgendamentoModals({
               </div>
 
               <div className="space-y-2">
-                <Label>Duração (min) *</Label>
+<Label className="text-sm">Duração (min) *</Label>
                 <div className="space-y-1">
                   <Input
                     type="number"
@@ -1479,7 +1546,7 @@ export function AgendamentoModals({
                     ))}
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    ✓ Duração: {getDurationFromTimes(editFormState.data_inicio, editFormState.data_fim)} minutos
+                    ? Duração: {getDurationFromTimes(editFormState.data_inicio, editFormState.data_fim)} minutos
                   </p>
                 </div>
               </div>
@@ -1496,7 +1563,7 @@ export function AgendamentoModals({
 
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="edit-sala">Sala/Consultório</Label>
+                <Label htmlFor="edit-sala" className="text-sm">Sala/Consultório</Label>
                 <Input
                   id="edit-sala"
                   value={editFormState.sala || ''}
@@ -1505,7 +1572,7 @@ export function AgendamentoModals({
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="edit-status">Status</Label>
+                <Label htmlFor="edit-status" className="text-sm">Status</Label>
                 <Select
                   value={editFormState.status}
                   onValueChange={(v) =>
@@ -1527,7 +1594,7 @@ export function AgendamentoModals({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="edit-descricao">Descrição</Label>
+              <Label htmlFor="edit-descricao" className="text-sm">Descrição</Label>
               <Textarea
                 id="edit-descricao"
                 value={editFormState.descricao || ''}

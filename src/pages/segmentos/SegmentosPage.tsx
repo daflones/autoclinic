@@ -401,7 +401,7 @@ export function SegmentosPage() {
           <div className="grid gap-6 py-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="categoria">Categoria *</Label>
+                <Label htmlFor="categoria" className="text-sm">Categoria *</Label>
                 <Select 
                   value={newSegmento.categoria_id} 
                   onValueChange={(value) => setNewSegmento(prev => ({ ...prev, categoria_id: value }))}
@@ -420,7 +420,7 @@ export function SegmentosPage() {
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="status">Status</Label>
+                <Label htmlFor="status" className="text-sm">Status</Label>
                 <Select 
                   value={newSegmento.status} 
                   onValueChange={(value: 'ativo' | 'inativo') => setNewSegmento(prev => ({ ...prev, status: value }))}
@@ -438,7 +438,7 @@ export function SegmentosPage() {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="nome">Nome *</Label>
+                <Label htmlFor="nome" className="text-sm">Nome *</Label>
                 <Input
                   id="nome"
                   value={newSegmento.nome}
@@ -448,7 +448,7 @@ export function SegmentosPage() {
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="codigo">Código *</Label>
+                <Label htmlFor="codigo" className="text-sm">Código *</Label>
                 <Input
                   id="codigo"
                   value={newSegmento.codigo}
@@ -459,7 +459,7 @@ export function SegmentosPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="descricao">Descrição</Label>
+              <Label htmlFor="descricao" className="text-sm">Descrição</Label>
               <Textarea
                 id="descricao"
                 value={newSegmento.descricao}
@@ -471,7 +471,7 @@ export function SegmentosPage() {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="icone">Ícone</Label>
+                <Label htmlFor="icone" className="text-sm">Ícone</Label>
                 <Select 
                   value={newSegmento.icone} 
                   onValueChange={(value) => setNewSegmento(prev => ({ ...prev, icone: value }))}
@@ -496,7 +496,7 @@ export function SegmentosPage() {
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="cor">Cor</Label>
+                <Label htmlFor="cor" className="text-sm">Cor</Label>
                 <div className="flex gap-2">
                   <Input
                     id="cor"
@@ -516,10 +516,10 @@ export function SegmentosPage() {
             </div>
 
             <div className="space-y-4">
-              <Label>Configurações</Label>
+<Label className="text-sm">Configurações</Label>
               <div className="grid grid-cols-2 gap-4 p-4 border rounded-lg bg-gray-50 dark:bg-gray-800">
                 <div className="space-y-2">
-                  <Label htmlFor="margem">Margem Padrão (%)</Label>
+                  <Label htmlFor="margem" className="text-sm">Margem Padrão (%)</Label>
                   <Input
                     id="margem"
                     type="number"
@@ -535,7 +535,7 @@ export function SegmentosPage() {
                 </div>
                 
                 <div className="space-y-2">
-                  <Label htmlFor="prazo">Prazo de Entrega</Label>
+                  <Label htmlFor="prazo" className="text-sm">Prazo de Entrega</Label>
                   <Input
                     id="prazo"
                     value={newSegmento.configuracoes?.prazo_entrega_padrao || '15 dias'}
@@ -551,7 +551,7 @@ export function SegmentosPage() {
                 </div>
                 
                 <div className="col-span-2 space-y-2">
-                  <Label htmlFor="observacoes">Observações Padrão</Label>
+                  <Label htmlFor="observacoes" className="text-sm">Observações Padrão</Label>
                   <Textarea
                     id="observacoes"
                     value={newSegmento.configuracoes?.observacoes_padrao || ''}
@@ -649,18 +649,18 @@ export function SegmentosPage() {
             <div className="space-y-6">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label className="text-sm font-medium text-gray-500">Categoria</Label>
+<Label className="text-sm">Categoria</Label>
                   <p className="text-sm font-semibold">{getCategoryName(selectedSegmento.categoria_id)}</p>
                 </div>
                 <div>
-                  <Label className="text-sm font-medium text-gray-500">Produtos</Label>
+<Label className="text-sm">Produtos</Label>
                   <p className="text-sm font-semibold">{getProductCount(selectedSegmento.id)} produtos</p>
                 </div>
               </div>
 
               {selectedSegmento.descricao && (
                 <div>
-                  <Label className="text-sm font-medium text-gray-500">Descrição</Label>
+<Label className="text-sm">Descrição</Label>
                   <p className="text-sm mt-1 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
                     {selectedSegmento.descricao}
                   </p>
@@ -668,19 +668,19 @@ export function SegmentosPage() {
               )}
 
               <div>
-                <Label className="text-sm font-medium text-gray-500 mb-3 block">Configurações</Label>
+<Label className="text-sm">Configurações</Label>
                 <div className="grid grid-cols-2 gap-4 p-4 border rounded-lg bg-gray-50 dark:bg-gray-800">
                   <div>
-                    <Label className="text-xs text-gray-500">Margem Padrão</Label>
+<Label className="text-sm">Margem Padrão</Label>
                     <p className="text-sm font-semibold">{selectedSegmento.configuracoes?.margem_padrao || 30}%</p>
                   </div>
                   <div>
-                    <Label className="text-xs text-gray-500">Prazo de Entrega</Label>
+<Label className="text-sm">Prazo de Entrega</Label>
                     <p className="text-sm font-semibold">{selectedSegmento.configuracoes?.prazo_entrega_padrao || '15 dias'}</p>
                   </div>
                   {selectedSegmento.configuracoes?.observacoes_padrao && (
                     <div className="col-span-2">
-                      <Label className="text-xs text-gray-500">Observações Padrão</Label>
+<Label className="text-sm">Observações Padrão</Label>
                       <p className="text-sm mt-1">{selectedSegmento.configuracoes.observacoes_padrao}</p>
                     </div>
                   )}
@@ -689,11 +689,11 @@ export function SegmentosPage() {
 
               <div className="grid grid-cols-2 gap-4 text-xs text-gray-500">
                 <div>
-                  <Label>Criado em</Label>
+<Label className="text-sm">Criado em</Label>
                   <p>{new Date(selectedSegmento.created_at).toLocaleDateString('pt-BR')}</p>
                 </div>
                 <div>
-                  <Label>Atualizado em</Label>
+<Label className="text-sm">Atualizado em</Label>
                   <p>{new Date(selectedSegmento.updated_at).toLocaleDateString('pt-BR')}</p>
                 </div>
               </div>
@@ -721,7 +721,7 @@ export function SegmentosPage() {
           <div className="grid gap-6 py-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="edit-categoria">Categoria *</Label>
+                <Label htmlFor="edit-categoria" className="text-sm">Categoria *</Label>
                 <Select 
                   value={editSegmento.categoria_id} 
                   onValueChange={(value) => setEditSegmento(prev => ({ ...prev, categoria_id: value }))}
@@ -740,7 +740,7 @@ export function SegmentosPage() {
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="edit-status">Status</Label>
+                <Label htmlFor="edit-status" className="text-sm">Status</Label>
                 <Select 
                   value={editSegmento.status} 
                   onValueChange={(value: 'ativo' | 'inativo') => setEditSegmento(prev => ({ ...prev, status: value }))}
@@ -758,7 +758,7 @@ export function SegmentosPage() {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="edit-nome">Nome *</Label>
+                <Label htmlFor="edit-nome" className="text-sm">Nome *</Label>
                 <Input
                   id="edit-nome"
                   value={editSegmento.nome}
@@ -768,7 +768,7 @@ export function SegmentosPage() {
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="edit-codigo">Código *</Label>
+                <Label htmlFor="edit-codigo" className="text-sm">Código *</Label>
                 <Input
                   id="edit-codigo"
                   value={editSegmento.codigo}
@@ -779,7 +779,7 @@ export function SegmentosPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="edit-descricao">Descrição</Label>
+              <Label htmlFor="edit-descricao" className="text-sm">Descrição</Label>
               <Textarea
                 id="edit-descricao"
                 value={editSegmento.descricao}
@@ -791,7 +791,7 @@ export function SegmentosPage() {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="edit-icone">Ícone</Label>
+                <Label htmlFor="edit-icone" className="text-sm">Ícone</Label>
                 <Select 
                   value={editSegmento.icone} 
                   onValueChange={(value) => setEditSegmento(prev => ({ ...prev, icone: value }))}
@@ -816,7 +816,7 @@ export function SegmentosPage() {
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="edit-cor">Cor</Label>
+                <Label htmlFor="edit-cor" className="text-sm">Cor</Label>
                 <div className="flex gap-2">
                   <Input
                     id="edit-cor"
@@ -836,10 +836,10 @@ export function SegmentosPage() {
             </div>
 
             <div className="space-y-4">
-              <Label>Configurações</Label>
+<Label className="text-sm">Configurações</Label>
               <div className="grid grid-cols-2 gap-4 p-4 border rounded-lg bg-gray-50 dark:bg-gray-800">
                 <div className="space-y-2">
-                  <Label htmlFor="edit-margem">Margem Padrão (%)</Label>
+                  <Label htmlFor="edit-margem" className="text-sm">Margem Padrão (%)</Label>
                   <Input
                     id="edit-margem"
                     type="number"
@@ -855,7 +855,7 @@ export function SegmentosPage() {
                 </div>
                 
                 <div className="space-y-2">
-                  <Label htmlFor="edit-prazo">Prazo de Entrega</Label>
+                  <Label htmlFor="edit-prazo" className="text-sm">Prazo de Entrega</Label>
                   <Input
                     id="edit-prazo"
                     value={editSegmento.configuracoes?.prazo_entrega_padrao || '15 dias'}
@@ -871,7 +871,7 @@ export function SegmentosPage() {
                 </div>
                 
                 <div className="col-span-2 space-y-2">
-                  <Label htmlFor="edit-observacoes">Observações Padrão</Label>
+                  <Label htmlFor="edit-observacoes" className="text-sm">Observações Padrão</Label>
                   <Textarea
                     id="edit-observacoes"
                     value={editSegmento.configuracoes?.observacoes_padrao || ''}

@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+﻿import { useState, useRef } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -841,7 +841,7 @@ export function ArquivosPage() {
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label htmlFor="categoria">Categoria</Label>
+              <Label htmlFor="categoria" className="text-sm">Categoria</Label>
               <Select 
                 value={uploadData.categoria} 
                 onValueChange={(value) => setUploadData(prev => ({ ...prev, categoria: value as CategoriaArquivo }))}
@@ -863,7 +863,7 @@ export function ArquivosPage() {
             </div>
 
             <div>
-              <Label htmlFor="nome">Nome do Arquivo</Label>
+              <Label htmlFor="nome" className="text-sm">Nome do Arquivo</Label>
               <Input
                 id="nome"
                 placeholder="Digite o nome do arquivo..."
@@ -875,7 +875,7 @@ export function ArquivosPage() {
             {/* Product selector for product images */}
             {uploadData.categoria === 'produtos' && (
               <div>
-                <Label htmlFor="produto">Produto (Opcional)</Label>
+                <Label htmlFor="produto" className="text-sm">Produto (Opcional)</Label>
                 <Select 
                   value={uploadData.selectedProductId} 
                   onValueChange={(value) => {
@@ -906,7 +906,7 @@ export function ArquivosPage() {
             )}
             
             <div>
-              <Label htmlFor="descricao">Descrição (opcional)</Label>
+              <Label htmlFor="descricao" className="text-sm">Descrição (opcional)</Label>
               <Textarea
                 id="descricao"
                 placeholder="Descreva o arquivo..."
@@ -916,7 +916,7 @@ export function ArquivosPage() {
             </div>
 
             <div>
-              <Label htmlFor="tags">Tags (opcional)</Label>
+              <Label htmlFor="tags" className="text-sm">Tags (opcional)</Label>
               <div className="flex gap-2 mb-2">
                 <Input
                   placeholder="Adicionar tag..."
@@ -951,7 +951,7 @@ export function ArquivosPage() {
             </div>
 
             <div>
-              <Label htmlFor="is_public">Visibilidade</Label>
+              <Label htmlFor="is_public" className="text-sm">Visibilidade</Label>
               <Select 
                 value={uploadData.is_public ? 'public' : 'private'} 
                 onValueChange={(value) => setUploadData(prev => ({ ...prev, is_public: value === 'public' }))}
@@ -1160,7 +1160,7 @@ export function ArquivosPage() {
           {selectedFile && (
             <div className="space-y-4">
               <div>
-                <Label htmlFor="edit-nome">Nome</Label>
+                <Label htmlFor="edit-nome" className="text-sm">Nome</Label>
                 <Input
                   id="edit-nome"
                   defaultValue={selectedFile.nome}
@@ -1169,7 +1169,7 @@ export function ArquivosPage() {
               </div>
               
               <div>
-                <Label htmlFor="edit-descricao">Descrição</Label>
+                <Label htmlFor="edit-descricao" className="text-sm">Descrição</Label>
                 <Textarea
                   id="edit-descricao"
                   defaultValue={selectedFile.descricao || ''}
@@ -1178,7 +1178,7 @@ export function ArquivosPage() {
               </div>
 
               <div>
-                <Label htmlFor="edit-categoria">Categoria</Label>
+                <Label htmlFor="edit-categoria" className="text-sm">Categoria</Label>
                 <Select 
                   value={selectedFile.categoria} 
                   onValueChange={(value) => setSelectedFile(prev => prev ? { ...prev, categoria: value as CategoriaArquivo } : null)}
@@ -1200,7 +1200,7 @@ export function ArquivosPage() {
               </div>
 
               <div>
-                <Label htmlFor="edit-is_public">Visibilidade</Label>
+                <Label htmlFor="edit-is_public" className="text-sm">Visibilidade</Label>
                 <Select 
                   value={selectedFile.is_public ? 'public' : 'private'} 
                   onValueChange={(value) => setSelectedFile(prev => prev ? { ...prev, is_public: value === 'public' } : null)}

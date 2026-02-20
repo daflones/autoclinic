@@ -723,7 +723,7 @@ export default function ArquivosIAPage() {
           <div className="space-y-4">
             {/* Upload Mode Selection */}
             <div className="space-y-3">
-              <Label className="text-base font-semibold">Modo de Adição</Label>
+<Label className="text-sm">Modo de Adição</Label>
               <div className="flex gap-4">
                 <div className="flex items-center space-x-2">
                   <input
@@ -753,7 +753,7 @@ export default function ArquivosIAPage() {
             {/* File Upload Section */}
             {uploadMode === 'file' && (
               <div>
-                <Label htmlFor="file">Arquivo *</Label>
+                <Label htmlFor="file" className="text-sm">Arquivo *</Label>
                 <FileUploadButton
                   label="Selecionar arquivo"
                   accept="*/*"
@@ -765,7 +765,7 @@ export default function ArquivosIAPage() {
             {/* Common File Selection */}
             {uploadMode === 'existing' && (
               <div className="space-y-3">
-                <Label htmlFor="common-file">Selecionar Arquivo Comum *</Label>
+                <Label htmlFor="common-file" className="text-sm">Selecionar Arquivo Comum *</Label>
                 <div className="text-sm text-gray-600 mb-2">
                   Primeiro selecione a categoria para filtrar os arquivos disponíveis
                 </div>
@@ -788,7 +788,7 @@ export default function ArquivosIAPage() {
                     </Select>
                     {selectedCommonFile && (
                       <div className="text-xs text-green-600 bg-green-50 p-2 rounded border border-green-200">
-                        ✓ Informações do arquivo carregadas automaticamente nos campos abaixo
+                        ? Informações do arquivo carregadas automaticamente nos campos abaixo
                       </div>
                     )}
                   </div>
@@ -806,7 +806,7 @@ export default function ArquivosIAPage() {
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="nome">Nome *</Label>
+                <Label htmlFor="nome" className="text-sm">Nome *</Label>
                 <Input
                   id="nome"
                   value={uploadData.nome || ''}
@@ -816,13 +816,13 @@ export default function ArquivosIAPage() {
                 />
                 {uploadMode === 'existing' && selectedCommonFile && uploadData.nome && (
                   <div className="text-xs text-green-600 mt-1">
-                    ✓ Preenchido automaticamente
+                    ? Preenchido automaticamente
                   </div>
                 )}
               </div>
               
               <div>
-                <Label htmlFor="categoria">Categoria *</Label>
+                <Label htmlFor="categoria" className="text-sm">Categoria *</Label>
                 <Select value={uploadData.categoria} onValueChange={(value) => handleCategoryChange(value as CategoriaArquivoIA)}>
                   <SelectTrigger>
                     <SelectValue />
@@ -839,7 +839,7 @@ export default function ArquivosIAPage() {
             </div>
 
             <div>
-              <Label htmlFor="descricao">Descrição</Label>
+              <Label htmlFor="descricao" className="text-sm">Descrição</Label>
               <Textarea
                 id="descricao"
                 value={uploadData.descricao || ''}
@@ -849,14 +849,14 @@ export default function ArquivosIAPage() {
               />
               {uploadMode === 'existing' && selectedCommonFile && uploadData.descricao && (
                 <div className="text-xs text-green-600 mt-1">
-                  ✓ Preenchido automaticamente
+                  ? Preenchido automaticamente
                 </div>
               )}
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="instrucoes_ia">Instruções para IA</Label>
+                <Label htmlFor="instrucoes_ia" className="text-sm">Instruções para IA</Label>
                 <Textarea
                   id="instrucoes_ia"
                   value={uploadData.instrucoes_ia || ''}
@@ -866,7 +866,7 @@ export default function ArquivosIAPage() {
               </div>
               
               <div>
-                <Label htmlFor="contexto_uso">Contexto de Uso</Label>
+                <Label htmlFor="contexto_uso" className="text-sm">Contexto de Uso</Label>
                 <Textarea
                   id="contexto_uso"
                   value={uploadData.contexto_uso || ''}
@@ -878,7 +878,7 @@ export default function ArquivosIAPage() {
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="palavras_chave">Palavras-chave (separadas por vírgula)</Label>
+                <Label htmlFor="palavras_chave" className="text-sm">Palavras-chave (separadas por vírgula)</Label>
                 <Input
                   id="palavras_chave"
                   type="text"
@@ -890,7 +890,7 @@ export default function ArquivosIAPage() {
               </div>
               
               <div>
-                <Label htmlFor="prioridade">Prioridade (1-10)</Label>
+                <Label htmlFor="prioridade" className="text-sm">Prioridade (1-10)</Label>
                 <Input
                   id="prioridade"
                   type="number"
@@ -904,7 +904,7 @@ export default function ArquivosIAPage() {
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="cliente_id">Cliente</Label>
+                <Label htmlFor="cliente_id" className="text-sm">Cliente</Label>
                 <Select value={uploadData.cliente_id || 'none'} onValueChange={(value) => setUploadData({...uploadData, cliente_id: value === 'none' ? undefined : value})}>
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione um cliente" />
@@ -921,7 +921,7 @@ export default function ArquivosIAPage() {
               </div>
               
               <div>
-                <Label htmlFor="visibilidade">Visibilidade</Label>
+                <Label htmlFor="visibilidade" className="text-sm">Visibilidade</Label>
                 <Select value={uploadData.visibilidade} onValueChange={(value) => setUploadData({...uploadData, visibilidade: value as any})}>
                   <SelectTrigger>
                     <SelectValue />
@@ -936,7 +936,7 @@ export default function ArquivosIAPage() {
             </div>
 
             <div>
-              <Label htmlFor="observacoes">Observações</Label>
+              <Label htmlFor="observacoes" className="text-sm">Observações</Label>
               <Textarea
                 id="observacoes"
                 value={uploadData.observacoes || ''}
@@ -952,7 +952,7 @@ export default function ArquivosIAPage() {
                 checked={uploadData.disponivel_ia || false}
                 onChange={(e) => setUploadData({...uploadData, disponivel_ia: e.target.checked})}
               />
-              <Label htmlFor="disponivel_ia">Disponível para IA</Label>
+              <Label htmlFor="disponivel_ia" className="text-sm">Disponível para IA</Label>
             </div>
 
             <div className="flex gap-2 pt-4">
@@ -981,7 +981,7 @@ export default function ArquivosIAPage() {
             <div className="space-y-6">
               {/* File Preview Section */}
               <div className="space-y-4">
-                <Label className="font-semibold text-lg">Pré-visualização</Label>
+<Label className="text-sm">Pré-visualização</Label>
                 <div className="border rounded-lg p-4 bg-gray-50">
                   {selectedArquivo.tipo_mime?.startsWith('image/') && selectedArquivo.url ? (
                     <div className="flex justify-center">
@@ -1066,26 +1066,26 @@ export default function ArquivosIAPage() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label className="font-semibold">Nome do Arquivo</Label>
+<Label className="text-sm">Nome do Arquivo</Label>
                   <p className="text-sm">{selectedArquivo.nome}</p>
                 </div>
                 <div className="space-y-2">
-                  <Label className="font-semibold">Categoria</Label>
+<Label className="text-sm">Categoria</Label>
                   <Badge>{CATEGORIA_CONFIG[selectedArquivo.categoria]?.label}</Badge>
                 </div>
                 <div className="space-y-2">
-                  <Label className="font-semibold">Tamanho</Label>
+<Label className="text-sm">Tamanho</Label>
                   <p className="text-sm">{formatBytes(selectedArquivo.tamanho)}</p>
                 </div>
                 <div className="space-y-2">
-                  <Label className="font-semibold">Criado em</Label>
+<Label className="text-sm">Criado em</Label>
                   <p className="text-sm">{formatDate(selectedArquivo.created_at)}</p>
                 </div>
               </div>
 
               {selectedArquivo.descricao && (
                 <div className="space-y-2">
-                  <Label className="font-semibold">Descrição</Label>
+<Label className="text-sm">Descrição</Label>
                   <p className="text-sm">{selectedArquivo.descricao}</p>
                 </div>
               )}
@@ -1094,38 +1094,38 @@ export default function ArquivosIAPage() {
                 <h3 className="font-semibold text-lg">Metadados IA</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label className="font-semibold">Prioridade</Label>
+<Label className="text-sm">Prioridade</Label>
                     <Badge variant="outline">{selectedArquivo.prioridade}/10</Badge>
                   </div>
                   <div className="space-y-2">
-                    <Label className="font-semibold">Status IA</Label>
+<Label className="text-sm">Status IA</Label>
                     <Badge variant={selectedArquivo.disponivel_ia ? 'default' : 'secondary'}>
                       {selectedArquivo.disponivel_ia ? 'Disponível' : 'Indisponível'}
                     </Badge>
                   </div>
                   <div className="space-y-2">
-                    <Label className="font-semibold">Visibilidade</Label>
+<Label className="text-sm">Visibilidade</Label>
                     <Badge variant="outline">{selectedArquivo.visibilidade}</Badge>
                   </div>
                 </div>
 
                 {selectedArquivo.instrucoes_ia && (
                   <div className="space-y-2">
-                    <Label className="font-semibold">Instruções para IA</Label>
+<Label className="text-sm">Instruções para IA</Label>
                     <p className="text-sm bg-muted p-3 rounded">{selectedArquivo.instrucoes_ia}</p>
                   </div>
                 )}
 
                 {selectedArquivo.contexto_uso && (
                   <div className="space-y-2">
-                    <Label className="font-semibold">Contexto de Uso</Label>
+<Label className="text-sm">Contexto de Uso</Label>
                     <p className="text-sm bg-muted p-3 rounded">{selectedArquivo.contexto_uso}</p>
                   </div>
                 )}
 
                 {selectedArquivo.palavras_chave && selectedArquivo.palavras_chave.length > 0 && (
                   <div className="space-y-2">
-                    <Label className="font-semibold">Palavras-chave</Label>
+<Label className="text-sm">Palavras-chave</Label>
                     <div className="flex flex-wrap gap-2">
                       {selectedArquivo.palavras_chave.map((keyword, index) => (
                         <Badge key={index} variant="outline">{keyword}</Badge>
@@ -1136,7 +1136,7 @@ export default function ArquivosIAPage() {
 
                 {selectedArquivo.observacoes && (
                   <div className="space-y-2">
-                    <Label className="font-semibold">Observações</Label>
+<Label className="text-sm">Observações</Label>
                     <p className="text-sm bg-muted p-3 rounded">{selectedArquivo.observacoes}</p>
                   </div>
                 )}
@@ -1180,7 +1180,7 @@ export default function ArquivosIAPage() {
           <div className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Nome do Arquivo *</Label>
+<Label className="text-sm">Nome do Arquivo *</Label>
                 <Input
                   value={editData.nome || ''}
                   onChange={(e) => setEditData({...editData, nome: e.target.value})}
@@ -1188,7 +1188,7 @@ export default function ArquivosIAPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label>Categoria *</Label>
+<Label className="text-sm">Categoria *</Label>
                 <Select 
                   value={editData.categoria || ''} 
                   onValueChange={(v) => setEditData({...editData, categoria: v as CategoriaArquivoIA})}
@@ -1206,7 +1206,7 @@ export default function ArquivosIAPage() {
             </div>
 
             <div className="space-y-2">
-              <Label>Descrição</Label>
+<Label className="text-sm">Descrição</Label>
               <Textarea
                 value={editData.descricao || ''}
                 onChange={(e) => setEditData({...editData, descricao: e.target.value})}
@@ -1217,7 +1217,7 @@ export default function ArquivosIAPage() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Prioridade (1-10)</Label>
+<Label className="text-sm">Prioridade (1-10)</Label>
                 <Input
                   type="number"
                   min="1"
@@ -1227,7 +1227,7 @@ export default function ArquivosIAPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label>Visibilidade</Label>
+<Label className="text-sm">Visibilidade</Label>
                 <Select 
                   value={editData.visibilidade || 'privado'} 
                   onValueChange={(v) => setEditData({...editData, visibilidade: v as any})}
@@ -1245,7 +1245,7 @@ export default function ArquivosIAPage() {
             </div>
 
             <div className="space-y-2">
-              <Label>Instruções para IA</Label>
+<Label className="text-sm">Instruções para IA</Label>
               <Textarea
                 value={editData.instrucoes_ia || ''}
                 onChange={(e) => setEditData({...editData, instrucoes_ia: e.target.value})}
@@ -1255,7 +1255,7 @@ export default function ArquivosIAPage() {
             </div>
 
             <div className="space-y-2">
-              <Label>Contexto de Uso</Label>
+<Label className="text-sm">Contexto de Uso</Label>
               <Textarea
                 value={editData.contexto_uso || ''}
                 onChange={(e) => setEditData({...editData, contexto_uso: e.target.value})}
@@ -1265,7 +1265,7 @@ export default function ArquivosIAPage() {
             </div>
 
             <div className="space-y-2">
-              <Label>Palavras-chave (separadas por vírgula)</Label>
+<Label className="text-sm">Palavras-chave (separadas por vírgula)</Label>
               <Input
                 type="text"
                 value={palavrasChaveEdit}
@@ -1276,7 +1276,7 @@ export default function ArquivosIAPage() {
             </div>
 
             <div className="space-y-2">
-              <Label>Observações</Label>
+<Label className="text-sm">Observações</Label>
               <Textarea
                 value={editData.observacoes || ''}
                 onChange={(e) => setEditData({...editData, observacoes: e.target.value})}
@@ -1292,7 +1292,7 @@ export default function ArquivosIAPage() {
                 checked={editData.disponivel_ia || false}
                 onChange={(e) => setEditData({...editData, disponivel_ia: e.target.checked})}
               />
-              <Label htmlFor="edit_disponivel_ia">Disponível para IA</Label>
+              <Label htmlFor="edit_disponivel_ia" className="text-sm">Disponível para IA</Label>
             </div>
 
             <div className="flex gap-2 pt-4">

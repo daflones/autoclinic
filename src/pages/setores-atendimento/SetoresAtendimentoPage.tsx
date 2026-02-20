@@ -242,7 +242,7 @@ export default function SetoresAtendimentoPage() {
   const renderResponsaveisFields = () => (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <Label className="text-sm font-medium">Responsáveis</Label>
+<Label className="text-sm">Responsáveis</Label>
         <Button
           type="button"
           variant="outline"
@@ -263,7 +263,7 @@ export default function SetoresAtendimentoPage() {
             <div className="flex flex-col gap-4">
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="space-y-2">
-                  <Label className="text-xs font-medium uppercase text-gray-500 dark:text-gray-400">
+<Label className="text-sm">
                     Nome
                   </Label>
                   <Input
@@ -274,7 +274,7 @@ export default function SetoresAtendimentoPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-xs font-medium uppercase text-gray-500 dark:text-gray-400">
+<Label className="text-sm">
                     Cargo
                   </Label>
                   <Input
@@ -287,7 +287,7 @@ export default function SetoresAtendimentoPage() {
 
               <div className="grid gap-3 sm:grid-cols-3">
                 <div className="space-y-2">
-                  <Label className="text-xs font-medium uppercase text-gray-500 dark:text-gray-400">
+<Label className="text-sm">
                     Email
                   </Label>
                   <Input
@@ -298,7 +298,7 @@ export default function SetoresAtendimentoPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-xs font-medium uppercase text-gray-500 dark:text-gray-400">
+<Label className="text-sm">
                     Telefone
                   </Label>
                   <Input
@@ -308,7 +308,7 @@ export default function SetoresAtendimentoPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-xs font-medium uppercase text-gray-500 dark:text-gray-400">
+<Label className="text-sm">
                     WhatsApp
                   </Label>
                   <Input
@@ -683,7 +683,7 @@ export default function SetoresAtendimentoPage() {
 
               {selectedSetor.descricao && (
                 <div>
-                  <Label className="text-sm font-medium">Descrição</Label>
+<Label className="text-sm">Descrição</Label>
                   <p className="text-sm text-gray-600 mt-1">{selectedSetor.descricao}</p>
                 </div>
               )}
@@ -691,21 +691,21 @@ export default function SetoresAtendimentoPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {selectedSetor.email && (
                   <div>
-                    <Label className="text-sm font-medium">Email</Label>
+<Label className="text-sm">Email</Label>
                     <p className="text-sm text-gray-600">{selectedSetor.email}</p>
                   </div>
                 )}
                 
                 {selectedSetor.telefone && (
                   <div>
-                    <Label className="text-sm font-medium">Telefone</Label>
+<Label className="text-sm">Telefone</Label>
                     <p className="text-sm text-gray-600">{selectedSetor.telefone}</p>
                   </div>
                 )}
                 
                 {selectedSetor.responsaveis && selectedSetor.responsaveis.length > 0 && (
                   <div>
-                    <Label className="text-sm font-medium">Responsáveis</Label>
+<Label className="text-sm">Responsáveis</Label>
                     <div className="mt-2 space-y-2">
                       {selectedSetor.responsaveis.map((responsavel) => (
                         <div
@@ -748,28 +748,28 @@ export default function SetoresAtendimentoPage() {
                 )}
                 
                 <div>
-                  <Label className="text-sm font-medium">Prioridade</Label>
+<Label className="text-sm">Prioridade</Label>
                   <p className="text-sm text-gray-600 capitalize">{selectedSetor.prioridade}</p>
                 </div>
               </div>
 
               {selectedSetor.instrucoes_ia && (
                 <div>
-                  <Label className="text-sm font-medium">Instruções para IA</Label>
+<Label className="text-sm">Instruções para IA</Label>
                   <p className="text-sm text-gray-600 mt-1">{selectedSetor.instrucoes_ia}</p>
                 </div>
               )}
 
               {selectedSetor.contexto_uso && (
                 <div>
-                  <Label className="text-sm font-medium">Contexto de Uso</Label>
+<Label className="text-sm">Contexto de Uso</Label>
                   <p className="text-sm text-gray-600 mt-1">{selectedSetor.contexto_uso}</p>
                 </div>
               )}
 
               {selectedSetor.palavras_chave && selectedSetor.palavras_chave.length > 0 && (
                 <div>
-                  <Label className="text-sm font-medium">Palavras-chave</Label>
+<Label className="text-sm">Palavras-chave</Label>
                   <div className="flex flex-wrap gap-2 mt-1">
                     {selectedSetor.palavras_chave.map((palavra, index) => (
                       <span key={index} className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">

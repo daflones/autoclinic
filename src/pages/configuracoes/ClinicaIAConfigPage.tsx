@@ -506,47 +506,47 @@ export function ClinicaIAConfigPage() {
           <div className="space-y-4">
             <div className="grid gap-4 md:grid-cols-2">
               <div className="grid gap-2">
-                <Label>Nome da clínica</Label>
+<Label className="text-sm">Nome da clínica</Label>
                 <Input value={identidade.nome_clinica || ''} onChange={(e) => setIdentidade({ ...identidade, nome_clinica: e.target.value })} />
               </div>
               <div className="grid gap-2">
-                <Label>Nome fantasia</Label>
+<Label className="text-sm">Nome fantasia</Label>
                 <Input value={identidade.nome_fantasia || ''} onChange={(e) => setIdentidade({ ...identidade, nome_fantasia: e.target.value })} />
               </div>
               <div className="grid gap-2">
-                <Label>Nome do agente</Label>
+<Label className="text-sm">Nome do agente</Label>
                 <Input value={identidade.nome_agente || ''} onChange={(e) => setIdentidade({ ...identidade, nome_agente: e.target.value })} />
               </div>
               <div className="grid gap-2">
-                <Label>CNPJ (opcional)</Label>
+<Label className="text-sm">CNPJ (opcional)</Label>
                 <Input value={identidade.cnpj || ''} onChange={(e) => setIdentidade({ ...identidade, cnpj: e.target.value })} />
               </div>
               <div className="grid gap-2">
-                <Label>Cidade / Estado</Label>
+<Label className="text-sm">Cidade / Estado</Label>
                 <Input value={identidade.cidade_estado || ''} onChange={(e) => setIdentidade({ ...identidade, cidade_estado: e.target.value })} />
               </div>
               <div className="grid gap-2">
-                <Label>Endereço completo</Label>
+<Label className="text-sm">Endereço completo</Label>
                 <Input value={identidade.endereco_completo || ''} onChange={(e) => setIdentidade({ ...identidade, endereco_completo: e.target.value })} />
               </div>
               <div className="grid gap-2">
-                <Label>Zona / Bairro</Label>
+<Label className="text-sm">Zona / Bairro</Label>
                 <Input value={identidade.bairro || ''} onChange={(e) => setIdentidade({ ...identidade, bairro: e.target.value })} />
               </div>
               <div className="grid gap-2">
-                <Label>Telefone principal</Label>
+<Label className="text-sm">Telefone principal</Label>
                 <Input value={identidade.telefone_principal || ''} onChange={(e) => setIdentidade({ ...identidade, telefone_principal: e.target.value })} />
               </div>
               <div className="grid gap-2">
-                <Label>Telefone da recepção</Label>
+<Label className="text-sm">Telefone da recepção</Label>
                 <Input value={identidade.telefone_recepcao || ''} onChange={(e) => setIdentidade({ ...identidade, telefone_recepcao: e.target.value })} />
               </div>
               <div className="grid gap-2">
-                <Label>Site (opcional)</Label>
+<Label className="text-sm">Site (opcional)</Label>
                 <Input value={identidade.site || ''} onChange={(e) => setIdentidade({ ...identidade, site: e.target.value })} />
               </div>
               <div className="grid gap-2">
-                <Label>Redes sociais (uma por linha)</Label>
+<Label className="text-sm">Redes sociais (uma por linha)</Label>
                 <ListEditor
                   placeholder="Adicione redes sociais"
                   items={Array.isArray(identidade.redes_sociais) ? identidade.redes_sociais : []}
@@ -556,14 +556,14 @@ export function ClinicaIAConfigPage() {
             </div>
 
             <div className="space-y-3 pt-4 border-t">
-              <Label>Horário de funcionamento</Label>
+<Label className="text-sm">Horário de funcionamento</Label>
               {(['segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado', 'domingo'] as const).map((dia) => {
                 const horarios = identidade.horarios_funcionamento || defaultHorarios
                 const config = (horarios as any)[dia] || (defaultHorarios as any)[dia]
                 return (
                 <div key={dia} className="flex items-center gap-4 p-3 border rounded-lg">
                   <div className="w-24">
-                    <Label className="capitalize">{dia}</Label>
+<Label className="text-sm">{dia}</Label>
                   </div>
                   <Switch
                     checked={config?.ativo || false}
@@ -665,7 +665,7 @@ export function ClinicaIAConfigPage() {
           <div className="space-y-4">
             <div className="grid gap-4 md:grid-cols-2">
               <div className="grid gap-2">
-                <Label>Nicho</Label>
+<Label className="text-sm">Nicho</Label>
                 <Select value={(posicionamento.nicho as string) || 'multiestetica'} onValueChange={(value) => setPosicionamento({ ...posicionamento, nicho: value })}>
                   <SelectTrigger>
                     <SelectValue />
@@ -680,7 +680,7 @@ export function ClinicaIAConfigPage() {
               </div>
 
               <div className="grid gap-2">
-                <Label>Posicionamento da marca</Label>
+<Label className="text-sm">Posicionamento da marca</Label>
                 <Select
                   value={(posicionamento.posicionamento_marca as string) || 'intermediario'}
                   onValueChange={(value) => setPosicionamento({ ...posicionamento, posicionamento_marca: value })}
@@ -699,7 +699,7 @@ export function ClinicaIAConfigPage() {
               </div>
 
               <div className="grid gap-2">
-                <Label>Tom de voz da IA</Label>
+<Label className="text-sm">Tom de voz da IA</Label>
                 <Select value={(posicionamento.tom_voz_ia as string) || 'acolhedor'} onValueChange={(value) => setPosicionamento({ ...posicionamento, tom_voz_ia: value })}>
                   <SelectTrigger>
                     <SelectValue />
@@ -716,7 +716,7 @@ export function ClinicaIAConfigPage() {
               </div>
 
               <div className="grid gap-2">
-                <Label>Estilo de comunicação</Label>
+<Label className="text-sm">Estilo de comunicação</Label>
                 <Select value={(posicionamento.estilo_comunicacao as string) || 'medio'} onValueChange={(value) => setPosicionamento({ ...posicionamento, estilo_comunicacao: value })}>
                   <SelectTrigger>
                     <SelectValue />
@@ -732,11 +732,11 @@ export function ClinicaIAConfigPage() {
 
             <div className="grid gap-4 md:grid-cols-2">
               <div className="grid gap-2">
-                <Label>Persona da marca (opcional)</Label>
+<Label className="text-sm">Persona da marca (opcional)</Label>
                 <Textarea value={posicionamento.persona_marca || ''} onChange={(e) => setPosicionamento({ ...posicionamento, persona_marca: e.target.value })} rows={3} />
               </div>
               <div className="grid gap-2">
-                <Label>Slogan (opcional)</Label>
+<Label className="text-sm">Slogan (opcional)</Label>
                 <Textarea value={posicionamento.slogan || ''} onChange={(e) => setPosicionamento({ ...posicionamento, slogan: e.target.value })} rows={3} />
               </div>
             </div>
@@ -750,7 +750,7 @@ export function ClinicaIAConfigPage() {
           </div>
           <div className="space-y-4">
             <div className="grid gap-2">
-              <Label>Selecionar profissionais (IDs)</Label>
+<Label className="text-sm">Selecionar profissionais (IDs)</Label>
               <Select
                 value=""
                 onValueChange={(id) => {
@@ -799,32 +799,32 @@ export function ClinicaIAConfigPage() {
           </div>
           <div className="space-y-6">
             <div className="space-y-3">
-              <Label className="text-base font-semibold">Avaliação</Label>
+<Label className="text-sm">Avaliação</Label>
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="flex items-center justify-between p-3 border rounded-lg">
-                  <Label>Avaliação obrigatória?</Label>
+<Label className="text-sm">Avaliação obrigatória?</Label>
                   <Switch checked={!!politicas.avaliacao?.obrigatoria} onCheckedChange={(checked) => setPoliticas({ ...politicas, avaliacao: { ...politicas.avaliacao, obrigatoria: checked } })} />
                 </div>
                 <div className="flex items-center justify-between p-3 border rounded-lg">
-                  <Label>Avaliação gratuita?</Label>
+<Label className="text-sm">Avaliação gratuita?</Label>
                   <Switch checked={!!politicas.avaliacao?.gratuita} onCheckedChange={(checked) => setPoliticas({ ...politicas, avaliacao: { ...politicas.avaliacao, gratuita: checked } })} />
                 </div>
                 <div className="grid gap-2">
-                  <Label>Valor (se houver)</Label>
+<Label className="text-sm">Valor (se houver)</Label>
                   <Input type="number" value={politicas.avaliacao?.valor ?? ''} onChange={(e) => setPoliticas({ ...politicas, avaliacao: { ...politicas.avaliacao, valor: e.target.value === '' ? null : Number(e.target.value) } })} />
                 </div>
                 <div className="flex items-center justify-between p-3 border rounded-lg">
-                  <Label>IA pode agendar avaliação?</Label>
+<Label className="text-sm">IA pode agendar avaliação?</Label>
                   <Switch checked={!!politicas.avaliacao?.ia_pode_agendar} onCheckedChange={(checked) => setPoliticas({ ...politicas, avaliacao: { ...politicas.avaliacao, ia_pode_agendar: checked } })} />
                 </div>
               </div>
             </div>
 
             <div className="space-y-3 pt-4 border-t">
-              <Label className="text-base font-semibold">Agendamento</Label>
+<Label className="text-sm">Agendamento</Label>
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="flex items-center justify-between p-3 border rounded-lg">
-                  <Label>IA pode agendar procedimentos?</Label>
+<Label className="text-sm">IA pode agendar procedimentos?</Label>
                   <Switch
                     checked={!!politicas.agendamento?.ia_pode_agendar_procedimentos}
                     onCheckedChange={(checked) =>
@@ -836,7 +836,7 @@ export function ClinicaIAConfigPage() {
                   />
                 </div>
                 <div className="flex items-center justify-between p-3 border rounded-lg">
-                  <Label>Exige pagamento antecipado?</Label>
+<Label className="text-sm">Exige pagamento antecipado?</Label>
                   <Switch
                     checked={!!politicas.agendamento?.exige_pagamento_antecipado}
                     onCheckedChange={(checked) =>
@@ -848,7 +848,7 @@ export function ClinicaIAConfigPage() {
                   />
                 </div>
                 <div className="flex items-center justify-between p-3 border rounded-lg">
-                  <Label>Exige sinal para reservar horário?</Label>
+<Label className="text-sm">Exige sinal para reservar horário?</Label>
                   <Switch
                     checked={!!politicas.agendamento?.exige_sinal}
                     onCheckedChange={(checked) =>
@@ -860,7 +860,7 @@ export function ClinicaIAConfigPage() {
                   />
                 </div>
                 <div className="grid gap-2">
-                  <Label>Valor do sinal (se houver)</Label>
+<Label className="text-sm">Valor do sinal (se houver)</Label>
                   <Input
                     type="number"
                     value={politicas.agendamento?.valor_sinal ?? ''}
@@ -877,7 +877,7 @@ export function ClinicaIAConfigPage() {
                   />
                 </div>
                 <div className="grid gap-2 md:col-span-2">
-                  <Label>Política de agendamento</Label>
+<Label className="text-sm">Política de agendamento</Label>
                   <Textarea
                     value={politicas.agendamento?.politica_agendamento || ''}
                     onChange={(e) => setPoliticas({ ...politicas, agendamento: { ...politicas.agendamento, politica_agendamento: e.target.value } })}
@@ -888,10 +888,10 @@ export function ClinicaIAConfigPage() {
             </div>
 
             <div className="space-y-3 pt-4 border-t">
-              <Label className="text-base font-semibold">Valores</Label>
+<Label className="text-sm">Valores</Label>
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="grid gap-2">
-                  <Label>IA pode informar valores?</Label>
+<Label className="text-sm">IA pode informar valores?</Label>
                   <Select value={politicas.valores?.ia_pode_informar || 'nao'} onValueChange={(value) => setPoliticas({ ...politicas, valores: { ...politicas.valores, ia_pode_informar: value } })}>
                     <SelectTrigger>
                       <SelectValue />
@@ -904,11 +904,11 @@ export function ClinicaIAConfigPage() {
                   </Select>
                 </div>
                 <div className="grid gap-2">
-                  <Label>Texto padrão</Label>
+<Label className="text-sm">Texto padrão</Label>
                   <Textarea value={politicas.valores?.texto_padrao || ''} onChange={(e) => setPoliticas({ ...politicas, valores: { ...politicas.valores, texto_padrao: e.target.value } })} rows={3} />
                 </div>
                 <div className="grid gap-2 md:col-span-2">
-                  <Label>Texto padrão para políticas de valores</Label>
+<Label className="text-sm">Texto padrão para políticas de valores</Label>
                   <Textarea
                     value={politicas.valores?.texto_padrao_politicas || ''}
                     onChange={(e) => setPoliticas({ ...politicas, valores: { ...politicas.valores, texto_padrao_politicas: e.target.value } })}
@@ -919,22 +919,22 @@ export function ClinicaIAConfigPage() {
             </div>
 
             <div className="space-y-3 pt-4 border-t">
-              <Label className="text-base font-semibold">Cancelamento / no-show</Label>
+<Label className="text-sm">Cancelamento / no-show</Label>
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="grid gap-2">
-                  <Label>Regra de atrasos</Label>
+<Label className="text-sm">Regra de atrasos</Label>
                   <Textarea value={politicas.cancelamento_no_show?.regra_atrasos || ''} onChange={(e) => setPoliticas({ ...politicas, cancelamento_no_show: { ...politicas.cancelamento_no_show, regra_atrasos: e.target.value } })} rows={2} />
                 </div>
                 <div className="grid gap-2">
-                  <Label>Regra de remarcações</Label>
+<Label className="text-sm">Regra de remarcações</Label>
                   <Textarea value={politicas.cancelamento_no_show?.regra_remarcacoes || ''} onChange={(e) => setPoliticas({ ...politicas, cancelamento_no_show: { ...politicas.cancelamento_no_show, regra_remarcacoes: e.target.value } })} rows={2} />
                 </div>
                 <div className="grid gap-2">
-                  <Label>Penalidades</Label>
+<Label className="text-sm">Penalidades</Label>
                   <Textarea value={politicas.cancelamento_no_show?.penalidades_ausencia || ''} onChange={(e) => setPoliticas({ ...politicas, cancelamento_no_show: { ...politicas.cancelamento_no_show, penalidades_ausencia: e.target.value } })} rows={2} />
                 </div>
                 <div className="grid gap-2">
-                  <Label>Texto padrão para IA</Label>
+<Label className="text-sm">Texto padrão para IA</Label>
                   <Textarea value={politicas.cancelamento_no_show?.texto_padrao_ia || ''} onChange={(e) => setPoliticas({ ...politicas, cancelamento_no_show: { ...politicas.cancelamento_no_show, texto_padrao_ia: e.target.value } })} rows={2} />
                 </div>
               </div>
@@ -950,26 +950,26 @@ export function ClinicaIAConfigPage() {
           <div className="space-y-4">
             <div className="grid gap-4 md:grid-cols-2">
               <div className="grid gap-2">
-                <Label>Clientes atendidos (estimado)</Label>
+<Label className="text-sm">Clientes atendidos (estimado)</Label>
                 <Input type="number" value={provaSocial.clientes_atendidos ?? ''} onChange={(e) => setProvaSocial({ ...provaSocial, clientes_atendidos: e.target.value === '' ? null : Number(e.target.value) })} />
               </div>
               <div className="grid gap-2">
-                <Label>Procedimentos realizados</Label>
+<Label className="text-sm">Procedimentos realizados</Label>
                 <Input type="number" value={provaSocial.procedimentos_realizados ?? ''} onChange={(e) => setProvaSocial({ ...provaSocial, procedimentos_realizados: e.target.value === '' ? null : Number(e.target.value) })} />
               </div>
               <div className="grid gap-2">
-                <Label>Total de avaliações (Google)</Label>
+<Label className="text-sm">Total de avaliações (Google)</Label>
                 <Input type="number" value={provaSocial.avaliacoes_google_total ?? ''} onChange={(e) => setProvaSocial({ ...provaSocial, avaliacoes_google_total: e.target.value === '' ? null : Number(e.target.value) })} />
               </div>
               <div className="grid gap-2">
-                <Label>Nota média (Google)</Label>
+<Label className="text-sm">Nota média (Google)</Label>
                 <Input type="number" step="0.1" value={provaSocial.google_nota_media ?? ''} onChange={(e) => setProvaSocial({ ...provaSocial, google_nota_media: e.target.value === '' ? null : Number(e.target.value) })} />
               </div>
             </div>
 
             <div className="grid gap-4 md:grid-cols-2">
               <div className="grid gap-2">
-                <Label>Prêmios e reconhecimentos (um por linha)</Label>
+<Label className="text-sm">Prêmios e reconhecimentos (um por linha)</Label>
                 <ListEditor
                   placeholder="Adicione prêmios e reconhecimentos"
                   items={Array.isArray(provaSocial.premios_reconhecimentos) ? provaSocial.premios_reconhecimentos : []}
@@ -977,7 +977,7 @@ export function ClinicaIAConfigPage() {
                 />
               </div>
               <div className="grid gap-2 md:col-span-2">
-                <Label>Depoimentos</Label>
+<Label className="text-sm">Depoimentos</Label>
                 <div className="space-y-2">
                   {(Array.isArray(provaSocial.depoimentos) ? provaSocial.depoimentos : []).map((d: any, idx: number) => (
                     <div
@@ -1002,7 +1002,7 @@ export function ClinicaIAConfigPage() {
                     >
                       <div className="grid gap-2 md:grid-cols-3">
                         <div className="grid gap-2">
-                          <Label>Nome</Label>
+<Label className="text-sm">Nome</Label>
                           <Input
                             value={d?.nome || ''}
                             onChange={(e) =>
@@ -1015,7 +1015,7 @@ export function ClinicaIAConfigPage() {
                           />
                         </div>
                         <div className="grid gap-2">
-                          <Label>Idade</Label>
+<Label className="text-sm">Idade</Label>
                           <Input
                             type="number"
                             value={d?.idade ?? ''}
@@ -1045,7 +1045,7 @@ export function ClinicaIAConfigPage() {
                         </div>
                       </div>
                       <div className="grid gap-2">
-                        <Label>Depoimento</Label>
+<Label className="text-sm">Depoimento</Label>
                         <Textarea
                           value={d?.depoimento || ''}
                           onChange={(e) =>
@@ -1073,7 +1073,7 @@ export function ClinicaIAConfigPage() {
 
             <div className="grid gap-4 md:grid-cols-2">
               <div className="grid gap-2">
-                <Label>Cases (foto/vídeo)</Label>
+<Label className="text-sm">Cases (foto/vídeo)</Label>
                 <FileUploadButton
                   accept="image/*,video/*"
                   multiple
@@ -1108,7 +1108,7 @@ export function ClinicaIAConfigPage() {
               </div>
 
               <div className="grid gap-2">
-                <Label>Fotos da clínica (foto/vídeo)</Label>
+<Label className="text-sm">Fotos da clínica (foto/vídeo)</Label>
                 <FileUploadButton
                   accept="image/*,video/*"
                   multiple
@@ -1153,7 +1153,7 @@ export function ClinicaIAConfigPage() {
           <div className="space-y-4">
             <div className="grid gap-4 md:grid-cols-2">
               <div className="grid gap-2">
-                <Label>Imagem de apresentação</Label>
+<Label className="text-sm">Imagem de apresentação</Label>
                 <FileUploadButton
                   accept="image/*"
                   disabled={!!uploadingMidia}
@@ -1181,7 +1181,7 @@ export function ClinicaIAConfigPage() {
                 ) : null}
               </div>
               <div className="grid gap-2">
-                <Label>Foto da fachada</Label>
+<Label className="text-sm">Foto da fachada</Label>
                 <FileUploadButton
                   accept="image/*"
                   disabled={!!uploadingMidia}
@@ -1209,7 +1209,7 @@ export function ClinicaIAConfigPage() {
                 ) : null}
               </div>
               <div className="grid gap-2">
-                <Label>Vídeo institucional</Label>
+<Label className="text-sm">Vídeo institucional</Label>
                 <FileUploadButton
                   accept="video/*"
                   disabled={!!uploadingMidia}
@@ -1221,7 +1221,7 @@ export function ClinicaIAConfigPage() {
                 />
               </div>
               <div className="grid gap-2">
-                <Label>Fotos das salas</Label>
+<Label className="text-sm">Fotos das salas</Label>
                 <FileUploadButton
                   accept="image/*"
                   multiple
@@ -1246,7 +1246,7 @@ export function ClinicaIAConfigPage() {
                 </div>
               </div>
               <div className="grid gap-2">
-                <Label>Antes/depois de paciente</Label>
+<Label className="text-sm">Antes/depois de paciente</Label>
                 <FileUploadButton
                   accept="image/*"
                   multiple
@@ -1282,23 +1282,23 @@ export function ClinicaIAConfigPage() {
           <div className="space-y-4">
             <div className="grid gap-4 md:grid-cols-2">
               <div className="grid gap-2">
-                <Label>Tempo médio de resposta humana</Label>
+<Label className="text-sm">Tempo médio de resposta humana</Label>
                 <Input value={regrasInternas.tempo_medio_resposta_humana || ''} onChange={(e) => setRegrasInternas({ ...regrasInternas, tempo_medio_resposta_humana: e.target.value })} />
               </div>
               <div className="grid gap-2">
-                <Label>Dias sem atendimento</Label>
+<Label className="text-sm">Dias sem atendimento</Label>
                 <Input value={regrasInternas.dias_sem_atendimento || ''} onChange={(e) => setRegrasInternas({ ...regrasInternas, dias_sem_atendimento: e.target.value })} />
               </div>
               <div className="grid gap-2">
-                <Label>Mensagens proibidas</Label>
+<Label className="text-sm">Mensagens proibidas</Label>
                 <Textarea value={regrasInternas.mensagens_proibidas || ''} onChange={(e) => setRegrasInternas({ ...regrasInternas, mensagens_proibidas: e.target.value })} rows={3} />
               </div>
               <div className="grid gap-2">
-                <Label>Informações sensíveis</Label>
+<Label className="text-sm">Informações sensíveis</Label>
                 <Textarea value={regrasInternas.informacoes_sensiveis || ''} onChange={(e) => setRegrasInternas({ ...regrasInternas, informacoes_sensiveis: e.target.value })} rows={3} />
               </div>
               <div className="grid gap-2 md:col-span-2">
-                <Label>Quando transferir para humano</Label>
+<Label className="text-sm">Quando transferir para humano</Label>
                 <Textarea value={regrasInternas.quando_transferir_humano || ''} onChange={(e) => setRegrasInternas({ ...regrasInternas, quando_transferir_humano: e.target.value })} rows={3} />
               </div>
             </div>
@@ -1313,19 +1313,19 @@ export function ClinicaIAConfigPage() {
           <div className="space-y-4">
             <div className="grid gap-4 md:grid-cols-2">
               <div className="grid gap-2">
-                <Label>Diferenciais</Label>
+<Label className="text-sm">Diferenciais</Label>
                 <Textarea value={gatilhos.diferenciais || ''} onChange={(e) => setGatilhos({ ...gatilhos, diferenciais: e.target.value })} rows={3} />
               </div>
               <div className="grid gap-2">
-                <Label>O que importa para o cliente</Label>
+<Label className="text-sm">O que importa para o cliente</Label>
                 <Textarea value={gatilhos.o_que_importa_para_cliente || ''} onChange={(e) => setGatilhos({ ...gatilhos, o_que_importa_para_cliente: e.target.value })} rows={3} />
               </div>
               <div className="grid gap-2">
-                <Label>Motivos para escolher</Label>
+<Label className="text-sm">Motivos para escolher</Label>
                 <Textarea value={gatilhos.motivos_para_escolher || ''} onChange={(e) => setGatilhos({ ...gatilhos, motivos_para_escolher: e.target.value })} rows={3} />
               </div>
               <div className="grid gap-2">
-                <Label>Garantias</Label>
+<Label className="text-sm">Garantias</Label>
                 <Textarea value={gatilhos.garantias || ''} onChange={(e) => setGatilhos({ ...gatilhos, garantias: e.target.value })} rows={3} />
               </div>
             </div>
@@ -1339,7 +1339,7 @@ export function ClinicaIAConfigPage() {
           </div>
           <div className="space-y-4">
             <div className="grid gap-2">
-              <Label>Selecionar protocolo/pacote</Label>
+<Label className="text-sm">Selecionar protocolo/pacote</Label>
               <Select
                 value=""
                 onValueChange={(id) => {

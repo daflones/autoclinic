@@ -82,7 +82,7 @@ export function ContactsList({ contacts, onSendMessage, onRefresh }: ContactsLis
                 <Badge className="bg-emerald-100 text-emerald-700 text-xs border-0">Meu Contato</Badge>
               )}
               {!contact.isMyContact && !contact.isGroup && (
-                <Badge className="bg-slate-100 text-slate-600 text-xs border-0">Usuário WhatsApp</Badge>
+                <Badge className="bg-slate-100 text-slate-600 text-xs border-0">Usu�rio WhatsApp</Badge>
               )}
             </div>
           </div>
@@ -192,7 +192,7 @@ export function ContactsList({ contacts, onSendMessage, onRefresh }: ContactsLis
         </Card>
       )}
 
-      {/* Outros Usuários */}
+      {/* Outros Usu�rios */}
       {otherUsers.length > 0 && (
         <Card className="border-0 shadow-md bg-gradient-to-br from-white to-slate-50">
           <CardHeader className="pb-3">
@@ -201,8 +201,8 @@ export function ContactsList({ contacts, onSendMessage, onRefresh }: ContactsLis
                 <User className="w-4 h-4 text-white" />
               </div>
               <div>
-                <h4 className="text-lg font-semibold text-slate-800">Outros Usuários</h4>
-                <p className="text-sm text-slate-500 font-normal">{otherUsers.length} usuários</p>
+                <h4 className="text-lg font-semibold text-slate-800">Outros Usu�rios</h4>
+                <p className="text-sm text-slate-500 font-normal">{otherUsers.length} usu�rios</p>
               </div>
             </CardTitle>
           </CardHeader>
@@ -227,7 +227,7 @@ export function ContactsList({ contacts, onSendMessage, onRefresh }: ContactsLis
             </div>
             <h3 className="text-lg font-semibold mb-2 text-slate-800">Nenhum contato encontrado</h3>
             <p className="text-slate-500">
-              {searchTerm ? 'Tente uma busca diferente' : 'Nenhum contato disponível'}
+              {searchTerm ? 'Tente uma busca diferente' : 'Nenhum contato dispon�vel'}
             </p>
           </CardContent>
         </Card>
@@ -263,7 +263,7 @@ export function ContactsList({ contacts, onSendMessage, onRefresh }: ContactsLis
               </div>
             )}
             <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-700">Mensagem</label>
+<Label className="text-sm">Mensagem</Label>
               <textarea
                 className="w-full p-3 border border-slate-200 rounded-xl resize-none focus:border-purple-300 focus:ring-purple-200 focus:ring-2"
                 rows={4}

@@ -53,7 +53,7 @@ export function TagModal({ open, onOpenChange, tag, onSubmit, isLoading }: TagMo
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Nome da Tag */}
           <div className="space-y-2">
-            <Label htmlFor="nome">
+            <Label htmlFor="nome" className="text-sm">
               Nome da Tag <span className="text-red-500">*</span>
             </Label>
             <Input
@@ -71,7 +71,7 @@ export function TagModal({ open, onOpenChange, tag, onSubmit, isLoading }: TagMo
 
           {/* Cor da Tag */}
           <div className="space-y-2">
-            <Label>Cor da Tag</Label>
+<Label className="text-sm">Cor da Tag</Label>
             <Select value={cor} onValueChange={setCor}>
               <SelectTrigger>
                 <SelectValue />
@@ -92,7 +92,7 @@ export function TagModal({ open, onOpenChange, tag, onSubmit, isLoading }: TagMo
 
           {/* Preview */}
           <div className="space-y-2">
-            <Label>Pré-visualização</Label>
+<Label className="text-sm">Pré-visualização</Label>
             <div className="p-4 border rounded-lg bg-gray-50 dark:bg-gray-900">
               <Badge className={cor}>
                 {nome || 'Nome da Tag'}

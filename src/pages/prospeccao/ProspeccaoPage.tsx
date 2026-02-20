@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+﻿import { useState, useEffect, useRef } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -690,7 +690,7 @@ export default function ProspeccaoPage() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div>
-                <Label htmlFor="tipo_estabelecimento">Tipo de Estabelecimento</Label>
+                <Label htmlFor="tipo_estabelecimento" className="text-sm">Tipo de Estabelecimento</Label>
                 <Input
                   id="tipo_estabelecimento"
                   placeholder="Ex: restaurante, farmácia, loja de roupas"
@@ -701,7 +701,7 @@ export default function ProspeccaoPage() {
               </div>
 
               <div>
-                <Label htmlFor="cidade">Cidade/Estado/País</Label>
+                <Label htmlFor="cidade" className="text-sm">Cidade/Estado/País</Label>
                 <Input
                   id="cidade"
                   placeholder="Ex: São Paulo, SP, Brasil"
@@ -712,7 +712,7 @@ export default function ProspeccaoPage() {
               </div>
 
               <div>
-                <Label htmlFor="mensagem">Mensagem a Enviar</Label>
+                <Label htmlFor="mensagem" className="text-sm">Mensagem a Enviar</Label>
                 <Textarea
                   id="mensagem"
                   placeholder="Mensagem fixa do sistema"
@@ -729,7 +729,7 @@ export default function ProspeccaoPage() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="tempo_disparos">Tempo entre Disparos</Label>
+                  <Label htmlFor="tempo_disparos" className="text-sm">Tempo entre Disparos</Label>
                   <Input
                     id="tempo_disparos"
                     type="text"
@@ -744,7 +744,7 @@ export default function ProspeccaoPage() {
                 </div>
 
                 <div>
-                  <Label htmlFor="limite_disparos">Limite Diário</Label>
+                  <Label htmlFor="limite_disparos" className="text-sm">Limite Diário</Label>
                   <Input
                     id="limite_disparos"
                     type="text"

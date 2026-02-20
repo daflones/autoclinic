@@ -58,7 +58,7 @@ export function ListaEsperaPage() {
           <div className="grid gap-3">
             <div className="grid gap-3 md:grid-cols-2">
               <div className="space-y-2">
-                <Label>Paciente cadastrado (opcional)</Label>
+<Label className="text-sm">Paciente cadastrado (opcional)</Label>
                 <Select value={waitlistForm.paciente_id} onValueChange={(v) => setWaitlistForm((s) => ({ ...s, paciente_id: v }))}>
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione" />
@@ -75,7 +75,7 @@ export function ListaEsperaPage() {
               </div>
 
               <div className="space-y-2">
-                <Label>Procedimento desejado (opcional)</Label>
+<Label className="text-sm">Procedimento desejado (opcional)</Label>
                 <Input
                   value={waitlistForm.procedimento_id === 'none' ? '' : waitlistForm.procedimento_id}
                   onChange={(e) => setWaitlistForm((s) => ({ ...s, procedimento_id: e.target.value || 'none' }))}
@@ -86,22 +86,22 @@ export function ListaEsperaPage() {
 
             <div className="grid gap-3 md:grid-cols-2">
               <div className="space-y-2">
-                <Label>Nome (se não cadastrado)</Label>
+<Label className="text-sm">Nome (se não cadastrado)</Label>
                 <Input value={waitlistForm.nome_paciente} onChange={(e) => setWaitlistForm((s) => ({ ...s, nome_paciente: e.target.value }))} />
               </div>
               <div className="space-y-2">
-                <Label>Telefone</Label>
+<Label className="text-sm">Telefone</Label>
                 <Input value={waitlistForm.telefone} onChange={(e) => setWaitlistForm((s) => ({ ...s, telefone: e.target.value }))} />
               </div>
             </div>
 
             <div className="grid gap-3 md:grid-cols-2">
               <div className="space-y-2">
-                <Label>Preferência de horário</Label>
+<Label className="text-sm">Preferência de horário</Label>
                 <Input value={waitlistForm.preferencia_horario} onChange={(e) => setWaitlistForm((s) => ({ ...s, preferencia_horario: e.target.value }))} placeholder="Ex: manhã, tarde, seg/qua" />
               </div>
               <div className="space-y-2">
-                <Label>Prioridade</Label>
+<Label className="text-sm">Prioridade</Label>
                 <Select value={waitlistForm.prioridade} onValueChange={(v) => setWaitlistForm((s) => ({ ...s, prioridade: v as ListaEsperaPrioridade }))}>
                   <SelectTrigger>
                     <SelectValue />
@@ -116,7 +116,7 @@ export function ListaEsperaPage() {
             </div>
 
             <div className="space-y-2">
-              <Label>Observações</Label>
+<Label className="text-sm">Observações</Label>
               <Textarea value={waitlistForm.observacoes} onChange={(e) => setWaitlistForm((s) => ({ ...s, observacoes: e.target.value }))} rows={3} />
             </div>
 

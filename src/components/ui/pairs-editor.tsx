@@ -114,7 +114,7 @@ export function PairsEditor({
 
               <div className="mt-3 grid gap-3 md:grid-cols-2">
                 <div className="grid gap-2">
-                  <Label>{leftLabel}</Label>
+<Label className="text-sm">{leftLabel}</Label>
                   <Input
                     value={it.left}
                     disabled={disabled}
@@ -122,7 +122,7 @@ export function PairsEditor({
                   />
                 </div>
                 <div className="grid gap-2">
-                  <Label>{rightLabel}</Label>
+<Label className="text-sm">{rightLabel}</Label>
                   <Textarea
                     value={it.right}
                     disabled={disabled}

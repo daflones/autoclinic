@@ -249,43 +249,43 @@ export function IAConfigPage() {
           <CardContent className="space-y-4">
             <div className="grid gap-4 md:grid-cols-2">
               <div className="grid gap-2">
-                <Label>Nome da clínica</Label>
+<Label className="text-sm">Nome da clínica</Label>
                 <Input value={identidade.nome_clinica || ''} onChange={(e) => setIdentidade({ ...identidade, nome_clinica: e.target.value })} />
               </div>
               <div className="grid gap-2">
-                <Label>Nome fantasia</Label>
+<Label className="text-sm">Nome fantasia</Label>
                 <Input value={identidade.nome_fantasia || ''} onChange={(e) => setIdentidade({ ...identidade, nome_fantasia: e.target.value })} />
               </div>
               <div className="grid gap-2">
-                <Label>CNPJ (opcional)</Label>
+<Label className="text-sm">CNPJ (opcional)</Label>
                 <Input value={identidade.cnpj || ''} onChange={(e) => setIdentidade({ ...identidade, cnpj: e.target.value })} />
               </div>
               <div className="grid gap-2">
-                <Label>Cidade / Estado</Label>
+<Label className="text-sm">Cidade / Estado</Label>
                 <Input value={identidade.cidade_estado || ''} onChange={(e) => setIdentidade({ ...identidade, cidade_estado: e.target.value })} />
               </div>
               <div className="grid gap-2">
-                <Label>Endereço completo</Label>
+<Label className="text-sm">Endereço completo</Label>
                 <Input value={identidade.endereco_completo || ''} onChange={(e) => setIdentidade({ ...identidade, endereco_completo: e.target.value })} />
               </div>
               <div className="grid gap-2">
-                <Label>Zona / Bairro</Label>
+<Label className="text-sm">Zona / Bairro</Label>
                 <Input value={identidade.bairro || ''} onChange={(e) => setIdentidade({ ...identidade, bairro: e.target.value })} />
               </div>
               <div className="grid gap-2">
-                <Label>Telefone principal</Label>
+<Label className="text-sm">Telefone principal</Label>
                 <Input value={identidade.telefone_principal || ''} onChange={(e) => setIdentidade({ ...identidade, telefone_principal: e.target.value })} />
               </div>
               <div className="grid gap-2">
-                <Label>Telefone da recepção</Label>
+<Label className="text-sm">Telefone da recepção</Label>
                 <Input value={identidade.telefone_recepcao || ''} onChange={(e) => setIdentidade({ ...identidade, telefone_recepcao: e.target.value })} />
               </div>
               <div className="grid gap-2">
-                <Label>Site (opcional)</Label>
+<Label className="text-sm">Site (opcional)</Label>
                 <Input value={identidade.site || ''} onChange={(e) => setIdentidade({ ...identidade, site: e.target.value })} />
               </div>
               <div className="grid gap-2">
-                <Label>Redes sociais (uma por linha)</Label>
+<Label className="text-sm">Redes sociais (uma por linha)</Label>
                 <Textarea
                   value={(identidade.redes_sociais || []).join('\n')}
                   onChange={(e) => setIdentidade({ ...identidade, redes_sociais: e.target.value.split('\n').map((s: string) => s.trim()).filter(Boolean) })}
@@ -295,11 +295,11 @@ export function IAConfigPage() {
             </div>
 
             <div className="space-y-3 pt-4 border-t">
-              <Label>Horário de funcionamento</Label>
+<Label className="text-sm">Horário de funcionamento</Label>
               {Object.entries(identidade.horarios_funcionamento || defaultHorarios).map(([dia, config]: [string, any]) => (
                 <div key={dia} className="flex items-center gap-4 p-3 border rounded-lg">
                   <div className="w-24">
-                    <Label className="capitalize">{dia}</Label>
+<Label className="text-sm">{dia}</Label>
                   </div>
                   <Switch
                     checked={config?.ativo || false}
@@ -352,7 +352,7 @@ export function IAConfigPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid gap-2">
-              <Label htmlFor="tamanho-textos">Tamanho dos Textos</Label>
+              <Label htmlFor="tamanho-textos" className="text-sm">Tamanho dos Textos</Label>
               <Select 
                 value={iaConfig.tamanho_textos || 'medio'} 
                 onValueChange={(value) => setIaConfig({...iaConfig, tamanho_textos: value as any})}
@@ -370,7 +370,7 @@ export function IAConfigPage() {
             </div>
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
-                <Label>Usar Emojis</Label>
+<Label className="text-sm">Usar Emojis</Label>
                 <p className="text-sm text-gray-500">
                   Permitir que a IA use emojis nas respostas.
                 </p>
@@ -394,7 +394,7 @@ export function IAConfigPage() {
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
-                <Label>IA enviará documentos?</Label>
+<Label className="text-sm">IA enviará documentos?</Label>
                 <p className="text-sm text-gray-500">
                   Quando ativado, a área de Arquivos IA ficará visível e funcional.
                 </p>
@@ -407,7 +407,7 @@ export function IAConfigPage() {
             
             <div className="flex items-center justify-between pt-4 border-t">
               <div className="space-y-0.5">
-                <Label>Agendamentos com IA?</Label>
+<Label className="text-sm">Agendamentos com IA?</Label>
                 <p className="text-sm text-gray-500">
                   Permitir que a IA realize agendamentos automaticamente.
                 </p>
@@ -421,7 +421,7 @@ export function IAConfigPage() {
             {iaConfig.agendamento_ia && (
               <>
                 <div className="space-y-3">
-                  <Label>Vendedores e Horários Disponíveis</Label>
+<Label className="text-sm">Vendedores e Horários Disponíveis</Label>
                   <p className="text-sm text-gray-500">
                     Horários dos vendedores que a IA pode usar para agendamentos.
                   </p>
@@ -498,7 +498,7 @@ export function IAConfigPage() {
           <CardContent className="space-y-6">
             {/* Campos Obrigatórios (Apenas Leitura) */}
             <div className="space-y-3">
-              <Label className="text-base font-semibold">Campos Obrigatórios</Label>
+<Label className="text-sm">Campos Obrigatórios</Label>
               <p className="text-sm text-gray-500">
                 Estes campos são sempre obrigatórios na qualificação de leads.
               </p>
@@ -512,7 +512,7 @@ export function IAConfigPage() {
                   { label: 'Análise do Cliente', key: 'analise_cliente' }
                 ].map(({ label, key }) => (
                   <div key={key} className="flex items-center justify-between p-2 bg-white dark:bg-gray-900 rounded border">
-                    <Label className="text-sm">{label}</Label>
+<Label className="text-sm">{label}</Label>
                     <div className="flex items-center gap-2">
                       <Check className="w-4 h-4 text-green-500" />
                       <span className="text-xs text-gray-500">Obrigatório</span>
@@ -524,7 +524,7 @@ export function IAConfigPage() {
 
             {/* Campos Opcionais Configuráveis */}
             <div className="space-y-4 pt-4 border-t">
-              <Label className="text-base font-semibold">Campos Opcionais</Label>
+<Label className="text-sm">Campos Opcionais</Label>
               <p className="text-sm text-gray-500">
                 Configure quais campos adicionais a IA deve coletar.
               </p>
@@ -532,7 +532,7 @@ export function IAConfigPage() {
               {/* Nome da Empresa */}
               <div className="flex items-center justify-between p-3 border rounded-lg">
                 <div className="space-y-0.5">
-                  <Label>Nome da Empresa</Label>
+<Label className="text-sm">Nome da Empresa</Label>
                   <p className="text-sm text-gray-500">
                     Solicitar nome da empresa do lead.
                   </p>
@@ -552,7 +552,7 @@ export function IAConfigPage() {
               {/* CPF */}
               <div className="flex items-center justify-between p-3 border rounded-lg">
                 <div className="space-y-0.5">
-                  <Label>CPF</Label>
+<Label className="text-sm">CPF</Label>
                   <p className="text-sm text-gray-500">
                     Solicitar CPF do lead (pessoa física).
                   </p>
@@ -572,7 +572,7 @@ export function IAConfigPage() {
               {/* CNPJ */}
               <div className="flex items-center justify-between p-3 border rounded-lg">
                 <div className="space-y-0.5">
-                  <Label>CNPJ</Label>
+<Label className="text-sm">CNPJ</Label>
                   <p className="text-sm text-gray-500">
                     Solicitar CNPJ do lead (pessoa jurídica).
                   </p>
@@ -592,7 +592,7 @@ export function IAConfigPage() {
               {/* Email */}
               <div className="flex items-center justify-between p-3 border rounded-lg">
                 <div className="space-y-0.5">
-                  <Label>Email</Label>
+<Label className="text-sm">Email</Label>
                   <p className="text-sm text-gray-500">
                     Solicitar endereço de email do lead.
                   </p>
@@ -612,7 +612,7 @@ export function IAConfigPage() {
               {/* Segmento */}
               <div className="flex items-center justify-between p-3 border rounded-lg">
                 <div className="space-y-0.5">
-                  <Label>Segmento</Label>
+<Label className="text-sm">Segmento</Label>
                   <p className="text-sm text-gray-500">
                     Solicitar segmento de atuação do lead.
                   </p>
@@ -632,7 +632,7 @@ export function IAConfigPage() {
               {/* Volume Mensal */}
               <div className="flex items-center justify-between p-3 border rounded-lg">
                 <div className="space-y-0.5">
-                  <Label>Volume Mensal</Label>
+<Label className="text-sm">Volume Mensal</Label>
                   <p className="text-sm text-gray-500">
                     Solicitar volume mensal estimado do lead.
                   </p>
@@ -653,7 +653,7 @@ export function IAConfigPage() {
               <div className="space-y-3 p-3 border rounded-lg">
                 <div className="flex items-center justify-between">
                   <div className="space-y-0.5">
-                    <Label>Endereço</Label>
+<Label className="text-sm">Endereço</Label>
                     <p className="text-sm text-gray-500">
                       Solicitar endereço completo do lead.
                     </p>
@@ -679,7 +679,7 @@ export function IAConfigPage() {
                     <p className="text-xs text-gray-500 mb-2">Campos do endereço:</p>
                     
                     <div className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-800 rounded">
-                      <Label className="text-sm">Rua</Label>
+<Label className="text-sm">Rua</Label>
                       <Switch
                         checked={iaConfig.regras_qualificacao?.endereco?.rua || false}
                         onCheckedChange={(checked) => setIaConfig({
@@ -696,7 +696,7 @@ export function IAConfigPage() {
                     </div>
 
                     <div className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-800 rounded">
-                      <Label className="text-sm">Número</Label>
+<Label className="text-sm">Número</Label>
                       <Switch
                         checked={iaConfig.regras_qualificacao?.endereco?.numero || false}
                         onCheckedChange={(checked) => setIaConfig({
@@ -713,7 +713,7 @@ export function IAConfigPage() {
                     </div>
 
                     <div className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-800 rounded">
-                      <Label className="text-sm">Cidade</Label>
+<Label className="text-sm">Cidade</Label>
                       <Switch
                         checked={iaConfig.regras_qualificacao?.endereco?.cidade || false}
                         onCheckedChange={(checked) => setIaConfig({
@@ -730,7 +730,7 @@ export function IAConfigPage() {
                     </div>
 
                     <div className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-800 rounded">
-                      <Label className="text-sm">CEP</Label>
+<Label className="text-sm">CEP</Label>
                       <Switch
                         checked={iaConfig.regras_qualificacao?.endereco?.cep || false}
                         onCheckedChange={(checked) => setIaConfig({
@@ -764,7 +764,7 @@ export function IAConfigPage() {
             {Object.entries(iaConfig.horarios_funcionamento || {}).map(([dia, config]: [string, any]) => (
               <div key={dia} className="flex items-center gap-4 p-3 border rounded-lg">
                 <div className="w-20">
-                  <Label className="capitalize">{dia}</Label>
+<Label className="text-sm">{dia}</Label>
                 </div>
                 <Switch
                   checked={config?.ativo || false}
@@ -819,7 +819,7 @@ export function IAConfigPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid gap-2">
-              <Label htmlFor="tempo-resposta">Tempo de Resposta (segundos)</Label>
+              <Label htmlFor="tempo-resposta" className="text-sm">Tempo de Resposta (segundos)</Label>
               <Input
                 id="tempo-resposta"
                 type="number"
@@ -830,7 +830,7 @@ export function IAConfigPage() {
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="mensagem-ausencia">Mensagem de Ausência</Label>
+              <Label htmlFor="mensagem-ausencia" className="text-sm">Mensagem de Ausência</Label>
               <Textarea
                 id="mensagem-ausencia"
                 placeholder="Mensagem exibida fora do horário de atendimento..."
@@ -852,7 +852,7 @@ export function IAConfigPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid gap-2">
-              <Label htmlFor="sobre-empresa">Sobre a empresa</Label>
+              <Label htmlFor="sobre-empresa" className="text-sm">Sobre a empresa</Label>
               <Textarea
                 id="sobre-empresa"
                 placeholder="Descreva a empresa, sua história e propósito..."
@@ -862,7 +862,7 @@ export function IAConfigPage() {
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="diferenciais-competitivos">Diferenciais competitivos</Label>
+              <Label htmlFor="diferenciais-competitivos" className="text-sm">Diferenciais competitivos</Label>
               <Textarea
                 id="diferenciais-competitivos"
                 placeholder="Quais são os principais diferenciais da empresa no mercado?"
@@ -872,7 +872,7 @@ export function IAConfigPage() {
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="portfolio-produtos-servicos">Portfólio: Produtos e Serviços</Label>
+              <Label htmlFor="portfolio-produtos-servicos" className="text-sm">Portfólio: Produtos e Serviços</Label>
               <Textarea
                 id="portfolio-produtos-servicos"
                 placeholder="Descreva todos os produtos e serviços oferecidos pela empresa..."
@@ -882,7 +882,7 @@ export function IAConfigPage() {
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="principais-clientes">Principais Clientes</Label>
+              <Label htmlFor="principais-clientes" className="text-sm">Principais Clientes</Label>
               <Textarea
                 id="principais-clientes"
                 placeholder="Descreva os principais tipos de clientes ou segmentos que a empresa atende..."
@@ -892,7 +892,7 @@ export function IAConfigPage() {
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="produtos-servicos-mais-vendidos">Produtos ou Serviços mais vendidos</Label>
+              <Label htmlFor="produtos-servicos-mais-vendidos" className="text-sm">Produtos ou Serviços mais vendidos</Label>
               <Textarea
                 id="produtos-servicos-mais-vendidos"
                 placeholder="Liste os produtos ou serviços que mais vendem e suas características..."
@@ -914,7 +914,7 @@ export function IAConfigPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid gap-2">
-              <Label htmlFor="informacoes-ia-pode-fornecer">Informações que a IA pode fornecer</Label>
+              <Label htmlFor="informacoes-ia-pode-fornecer" className="text-sm">Informações que a IA pode fornecer</Label>
               <Textarea
                 id="informacoes-ia-pode-fornecer"
                 placeholder="Descreva quais informações a IA está autorizada a fornecer aos clientes..."
@@ -924,7 +924,7 @@ export function IAConfigPage() {
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="informacoes-ia-nao-pode-fornecer">Informações que a IA não pode fornecer</Label>
+              <Label htmlFor="informacoes-ia-nao-pode-fornecer" className="text-sm">Informações que a IA não pode fornecer</Label>
               <Textarea
                 id="informacoes-ia-nao-pode-fornecer"
                 placeholder="Descreva quais informações a IA NÃO deve fornecer ou temas que deve evitar..."
@@ -946,7 +946,7 @@ export function IAConfigPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid gap-2">
-              <Label htmlFor="argumentos-venda-por-perfil">Argumentos de venda por perfil</Label>
+              <Label htmlFor="argumentos-venda-por-perfil" className="text-sm">Argumentos de venda por perfil</Label>
               <Textarea
                 id="argumentos-venda-por-perfil"
                 placeholder="Descreva os argumentos de venda específicos para diferentes perfis de clientes..."
@@ -956,7 +956,7 @@ export function IAConfigPage() {
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="objecoes-comuns-respostas">Objeções comuns e respostas</Label>
+              <Label htmlFor="objecoes-comuns-respostas" className="text-sm">Objeções comuns e respostas</Label>
               <Textarea
                 id="objecoes-comuns-respostas"
                 placeholder="Liste as objeções mais comuns dos clientes e como a IA deve responder..."

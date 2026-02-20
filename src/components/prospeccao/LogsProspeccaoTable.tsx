@@ -1,4 +1,4 @@
-import { useState } from 'react'
+﻿import { useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -233,7 +233,7 @@ export default function LogsProspeccaoTable() {
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
             <div>
-              <Label htmlFor="tipo_estabelecimento">Tipo Estabelecimento</Label>
+              <Label htmlFor="tipo_estabelecimento" className="text-sm">Tipo Estabelecimento</Label>
               <Input
                 id="tipo_estabelecimento"
                 placeholder="Ex: restaurante"
@@ -243,7 +243,7 @@ export default function LogsProspeccaoTable() {
             </div>
 
             <div>
-              <Label htmlFor="cidade">Cidade</Label>
+              <Label htmlFor="cidade" className="text-sm">Cidade</Label>
               <Input
                 id="cidade"
                 placeholder="Ex: São Paulo"
@@ -253,7 +253,7 @@ export default function LogsProspeccaoTable() {
             </div>
 
             <div>
-              <Label htmlFor="whatsapp_valido">WhatsApp Válido</Label>
+              <Label htmlFor="whatsapp_valido" className="text-sm">WhatsApp Válido</Label>
               <Select value={filtros.whatsapp_valido} onValueChange={(value) => setFiltros(prev => ({ ...prev, whatsapp_valido: value }))}>
                 <SelectTrigger>
                   <SelectValue placeholder="Todos" />
@@ -267,7 +267,7 @@ export default function LogsProspeccaoTable() {
             </div>
 
             <div>
-              <Label htmlFor="mensagem_enviada">Mensagem Enviada</Label>
+              <Label htmlFor="mensagem_enviada" className="text-sm">Mensagem Enviada</Label>
               <Select value={filtros.mensagem_enviada} onValueChange={(value) => setFiltros(prev => ({ ...prev, mensagem_enviada: value }))}>
                 <SelectTrigger>
                   <SelectValue placeholder="Todos" />
@@ -281,7 +281,7 @@ export default function LogsProspeccaoTable() {
             </div>
 
             <div>
-              <Label htmlFor="cliente_salvo">Cliente Salvo</Label>
+              <Label htmlFor="cliente_salvo" className="text-sm">Cliente Salvo</Label>
               <Select value={filtros.cliente_salvo} onValueChange={(value) => setFiltros(prev => ({ ...prev, cliente_salvo: value }))}>
                 <SelectTrigger>
                   <SelectValue placeholder="Todos" />
@@ -295,7 +295,7 @@ export default function LogsProspeccaoTable() {
             </div>
 
             <div>
-              <Label htmlFor="data_inicio">Data Início</Label>
+              <Label htmlFor="data_inicio" className="text-sm">Data Início</Label>
               <Input
                 id="data_inicio"
                 type="date"
@@ -305,7 +305,7 @@ export default function LogsProspeccaoTable() {
             </div>
 
             <div>
-              <Label htmlFor="data_fim">Data Fim</Label>
+              <Label htmlFor="data_fim" className="text-sm">Data Fim</Label>
               <Input
                 id="data_fim"
                 type="date"

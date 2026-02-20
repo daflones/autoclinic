@@ -198,7 +198,7 @@ export function ClientesProspeccaoPage() {
   // Log de erros de validação
   useEffect(() => {
     if (Object.keys(errors).length > 0) {
-      console.log('❌ [Form] Erros de validação:', errors)
+      console.log('? [Form] Erros de validação:', errors)
     }
   }, [errors])
 
@@ -348,7 +348,7 @@ export function ClientesProspeccaoPage() {
         tags: selectedTags.length > 0 ? selectedTags : null,
       }
 
-      console.log('📤 Enviando dados para criação:', clienteData)
+      console.log('?? Enviando dados para criação:', clienteData)
       
       const result = await createCliente.mutateAsync(clienteData)
       
@@ -368,16 +368,16 @@ export function ClientesProspeccaoPage() {
         prioridade: 'normal'
       })
     } catch (error) {
-      console.error('❌ Erro ao criar cliente:', error)
+      console.error('? Erro ao criar cliente:', error)
       toast.error('Erro ao criar cliente')
     }
   }
 
   const handleUpdateCliente = async (data: ClienteFormData) => {
-    console.log('🟡 [Cliente] handleUpdateCliente chamado', { data, selectedCliente })
+    console.log('?? [Cliente] handleUpdateCliente chamado', { data, selectedCliente })
     
     if (!selectedCliente) {
-      console.error('❌ [Cliente] selectedCliente não encontrado')
+      console.error('? [Cliente] selectedCliente não encontrado')
       return
     }
     
@@ -433,14 +433,14 @@ export function ClientesProspeccaoPage() {
         tags: selectedTags.length > 0 ? selectedTags : null,
       }
 
-      console.log('🔵 [Cliente] Iniciando atualização...', { id: selectedCliente.id, clienteData })
+      console.log('?? [Cliente] Iniciando atualização...', { id: selectedCliente.id, clienteData })
       
       await updateCliente.mutateAsync({
         id: selectedCliente.id,
         data: clienteData
       })
       
-      console.log('✅ [Cliente] Atualização bem-sucedida')
+      console.log('? [Cliente] Atualização bem-sucedida')
       
       setIsEditModalOpen(false)
       setSelectedCliente(null)
@@ -458,7 +458,7 @@ export function ClientesProspeccaoPage() {
         prioridade: 'normal'
       })
     } catch (error) {
-      console.error('❌ [Cliente] Erro ao atualizar:', error)
+      console.error('? [Cliente] Erro ao atualizar:', error)
       toast.error(`Erro ao atualizar cliente: ${error instanceof Error ? error.message : 'Erro desconhecido'}`)
     }
   }
@@ -935,13 +935,13 @@ export function ClientesProspeccaoPage() {
                 </div>
 
                 <div className="space-y-4">
-                  <Label className="text-sm font-medium text-gray-700">
+<Label className="text-sm">
                     Documento <span className="text-gray-400">(Opcional)</span>
                   </Label>
                   
                   <div className="space-y-3">
                     <div className="flex gap-4">
-                      <label className="flex items-center gap-2 cursor-pointer">
+<Label className="text-sm">
                         <input
                           type="radio"
                           value="cpf"
@@ -950,7 +950,7 @@ export function ClientesProspeccaoPage() {
                         />
                         <span className="text-sm text-gray-700">CPF</span>
                       </label>
-                      <label className="flex items-center gap-2 cursor-pointer">
+<Label className="text-sm">
                         <input
                           type="radio"
                           value="cnpj"
@@ -1016,7 +1016,7 @@ export function ClientesProspeccaoPage() {
                   </div>
                   
                   <div className="space-y-2">
-                    <Label className="text-sm font-medium text-gray-700">
+<Label className="text-sm">
                       WhatsApp <span className="text-red-500">*</span>
                     </Label>
                     <div className="grid grid-cols-3 gap-2">
@@ -1078,7 +1078,7 @@ export function ClientesProspeccaoPage() {
 
                 <div className="grid grid-cols-3 gap-4">
                   <div>
-                    <Label htmlFor="numero">Número</Label>
+                    <Label htmlFor="numero" className="text-sm">Número</Label>
                     <Input id="numero" {...register('numero')} />
                   </div>
                 </div>
@@ -1086,22 +1086,22 @@ export function ClientesProspeccaoPage() {
 
               <div className="grid grid-cols-3 gap-4">
                 <div>
-                  <Label htmlFor="cep">CEP</Label>
+                  <Label htmlFor="cep" className="text-sm">CEP</Label>
                   <Input id="cep" {...register('cep')} />
                 </div>
                 <div>
-                  <Label htmlFor="cidade">Cidade</Label>
+                  <Label htmlFor="cidade" className="text-sm">Cidade</Label>
                   <Input id="cidade" {...register('cidade')} />
                 </div>
                 <div>
-                  <Label htmlFor="estado">Estado</Label>
+                  <Label htmlFor="estado" className="text-sm">Estado</Label>
                   <Input id="estado" {...register('estado')} />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="etapa_pipeline">Etapa do Pipeline</Label>
+                  <Label htmlFor="etapa_pipeline" className="text-sm">Etapa do Pipeline</Label>
                   <Select
                     defaultValue="novo"
                     onValueChange={(value: string) => setValue('etapa_pipeline', value)}
@@ -1119,7 +1119,7 @@ export function ClientesProspeccaoPage() {
                   </Select>
                 </div>
                 <div>
-                  <Label htmlFor="classificacao">Classificação</Label>
+                  <Label htmlFor="classificacao" className="text-sm">Classificação</Label>
                   <Select
                     defaultValue="morno"
                     onValueChange={(value: string) => setValue('classificacao', value)}
@@ -1140,7 +1140,7 @@ export function ClientesProspeccaoPage() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="origem">Origem</Label>
+                  <Label htmlFor="origem" className="text-sm">Origem</Label>
                   <Select
                     defaultValue="manual"
                     onValueChange={(value: string) => setValue('origem', value)}
@@ -1181,7 +1181,7 @@ export function ClientesProspeccaoPage() {
 
 
               <div>
-                <Label htmlFor="observacoes">Observações</Label>
+                <Label htmlFor="observacoes" className="text-sm">Observações</Label>
                 <Textarea
                   id="observacoes"
                   {...register('observacoes')}
@@ -1213,7 +1213,7 @@ export function ClientesProspeccaoPage() {
                           : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700'
                       }`}
                     >
-                      {selectedTags.includes(tag) && <span className="mr-1">✓</span>}
+                      {selectedTags.includes(tag) && <span className="mr-1">?</span>}
                       {tag}
                     </button>
                   ))}
@@ -1226,7 +1226,7 @@ export function ClientesProspeccaoPage() {
               </div>
 
               <div>
-                <Label htmlFor="produtos_interesse">Produto de Interesse</Label>
+                <Label htmlFor="produtos_interesse" className="text-sm">Produto de Interesse</Label>
                 <Input
                   id="produtos_interesse"
                   {...register('produtos_interesse')}
@@ -1236,7 +1236,7 @@ export function ClientesProspeccaoPage() {
               </div>
 
               <div>
-                <Label htmlFor="volume_mensal">Volume Mensal</Label>
+                <Label htmlFor="volume_mensal" className="text-sm">Volume Mensal</Label>
                 <Input
                   id="volume_mensal"
                   {...register('volume_mensal')}
@@ -1246,7 +1246,7 @@ export function ClientesProspeccaoPage() {
               </div>
 
               <div>
-                <Label htmlFor="analise_cliente">Análise do Cliente</Label>
+                <Label htmlFor="analise_cliente" className="text-sm">Análise do Cliente</Label>
                 <Textarea
                   id="analise_cliente"
                   {...register('analise_cliente')}
@@ -1256,7 +1256,7 @@ export function ClientesProspeccaoPage() {
               </div>
 
               <div>
-                <Label htmlFor="dores_atuais">Dores Atuais</Label>
+                <Label htmlFor="dores_atuais" className="text-sm">Dores Atuais</Label>
                 <Textarea
                   id="dores_atuais"
                   {...register('dores_atuais')}
@@ -1266,7 +1266,7 @@ export function ClientesProspeccaoPage() {
               </div>
 
               <div>
-                <Label htmlFor="motivacao">Motivação</Label>
+                <Label htmlFor="motivacao" className="text-sm">Motivação</Label>
                 <Textarea
                   id="motivacao"
                   {...register('motivacao')}
@@ -1276,7 +1276,7 @@ export function ClientesProspeccaoPage() {
               </div>
 
               <div>
-                <Label htmlFor="expectativa">Expectativa</Label>
+                <Label htmlFor="expectativa" className="text-sm">Expectativa</Label>
                 <Textarea
                   id="expectativa"
                   {...register('expectativa')}
@@ -1311,7 +1311,7 @@ export function ClientesProspeccaoPage() {
             <div className="grid gap-4 py-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="edit-nome_contato">Nome do Contato</Label>
+                  <Label htmlFor="edit-nome_contato" className="text-sm">Nome do Contato</Label>
                   <Input
                     id="edit-nome_contato"
                     {...register('nome_contato')}
@@ -1322,7 +1322,7 @@ export function ClientesProspeccaoPage() {
                   )}
                 </div>
                 <div>
-                  <Label htmlFor="edit-nome_empresa">Nome da Empresa <span className="text-gray-400">(Opcional)</span></Label>
+                  <Label htmlFor="edit-nome_empresa" className="text-sm">Nome da Empresa <span className="text-gray-400">(Opcional)</span></Label>
                   <Input 
                     id="edit-nome_empresa" 
                     {...register('nome_empresa')} 
@@ -1336,21 +1336,21 @@ export function ClientesProspeccaoPage() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="edit-razao_social">Razão Social</Label>
+                  <Label htmlFor="edit-razao_social" className="text-sm">Razão Social</Label>
                   <Input id="edit-razao_social" {...register('razao_social')} placeholder="Ex: Empresa ABC Sociedade Limitada" />
                 </div>
                 <div>
-                  <Label htmlFor="edit-cargo">Cargo</Label>
+                  <Label htmlFor="edit-cargo" className="text-sm">Cargo</Label>
                   <Input id="edit-cargo" {...register('cargo')} placeholder="Ex: Gerente de Vendas" />
                 </div>
               </div>
 
               <div className="space-y-4">
-                <Label className="text-sm font-medium text-gray-700">Documento</Label>
+<Label className="text-sm">Documento</Label>
                 
                 <div className="space-y-3">
                   <div className="flex gap-4">
-                    <label className="flex items-center gap-2 cursor-pointer">
+<Label className="text-sm">
                       <input
                         type="radio"
                         value="cpf"
@@ -1359,7 +1359,7 @@ export function ClientesProspeccaoPage() {
                       />
                       <span className="text-sm text-gray-700">CPF</span>
                     </label>
-                    <label className="flex items-center gap-2 cursor-pointer">
+<Label className="text-sm">
                       <input
                         type="radio"
                         value="cnpj"
@@ -1384,13 +1384,13 @@ export function ClientesProspeccaoPage() {
               </div>
 
               <div>
-                <Label htmlFor="edit-inscricao_estadual">Inscrição Estadual</Label>
+                <Label htmlFor="edit-inscricao_estadual" className="text-sm">Inscrição Estadual</Label>
                 <Input id="edit-inscricao_estadual" {...register('inscricao_estadual')} placeholder="Ex: 123.456.789.123" />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="edit-email">Email <span className="text-gray-400">(Opcional)</span></Label>
+                  <Label htmlFor="edit-email" className="text-sm">Email <span className="text-gray-400">(Opcional)</span></Label>
                   <Input
                     id="edit-email"
                     type="email"
@@ -1402,7 +1402,7 @@ export function ClientesProspeccaoPage() {
                   )}
                 </div>
                 <div>
-                  <Label>WhatsApp</Label>
+<Label className="text-sm">WhatsApp</Label>
                   <div className="grid grid-cols-3 gap-2">
                     <Input 
                       id="edit-ddd" 
@@ -1423,40 +1423,40 @@ export function ClientesProspeccaoPage() {
               </div>
 
               <div>
-                <Label htmlFor="edit-telefone_empresa">Telefone da Empresa</Label>
+                <Label htmlFor="edit-telefone_empresa" className="text-sm">Telefone da Empresa</Label>
                 <Input id="edit-telefone_empresa" {...register('telefone_empresa')} placeholder="Ex: (11) 3333-4444" />
               </div>
 
               <div>
-                <Label htmlFor="edit-endereco">Endereço</Label>
+                <Label htmlFor="edit-endereco" className="text-sm">Endereço</Label>
                 <Input id="edit-endereco" {...register('endereco')} />
               </div>
 
               <div className="grid grid-cols-3 gap-4">
                 <div>
-                  <Label htmlFor="edit-numero">Número</Label>
+                  <Label htmlFor="edit-numero" className="text-sm">Número</Label>
                   <Input id="edit-numero" {...register('numero')} />
                 </div>
               </div>
 
               <div className="grid grid-cols-3 gap-4">
                 <div>
-                  <Label htmlFor="edit-cep">CEP</Label>
+                  <Label htmlFor="edit-cep" className="text-sm">CEP</Label>
                   <Input id="edit-cep" {...register('cep')} />
                 </div>
                 <div>
-                  <Label htmlFor="edit-cidade">Cidade</Label>
+                  <Label htmlFor="edit-cidade" className="text-sm">Cidade</Label>
                   <Input id="edit-cidade" {...register('cidade')} />
                 </div>
                 <div>
-                  <Label htmlFor="edit-estado">Estado</Label>
+                  <Label htmlFor="edit-estado" className="text-sm">Estado</Label>
                   <Input id="edit-estado" {...register('estado')} />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="edit-etapa_pipeline">Etapa do Pipeline</Label>
+                  <Label htmlFor="edit-etapa_pipeline" className="text-sm">Etapa do Pipeline</Label>
                   <Select
                     value={form.watch('etapa_pipeline')}
                     onValueChange={(value: string) => setValue('etapa_pipeline', value)}
@@ -1474,7 +1474,7 @@ export function ClientesProspeccaoPage() {
                   </Select>
                 </div>
                 <div>
-                  <Label htmlFor="edit-classificacao">Classificação</Label>
+                  <Label htmlFor="edit-classificacao" className="text-sm">Classificação</Label>
                   <Select
                     value={form.watch('classificacao')}
                     onValueChange={(value: string) => setValue('classificacao', value)}
@@ -1495,7 +1495,7 @@ export function ClientesProspeccaoPage() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="edit-origem">Origem</Label>
+                  <Label htmlFor="edit-origem" className="text-sm">Origem</Label>
                   <Select
                     value={form.watch('origem')}
                     onValueChange={(value: string) => setValue('origem', value)}
@@ -1513,7 +1513,7 @@ export function ClientesProspeccaoPage() {
                   </Select>
                 </div>
                 <div>
-                  <Label htmlFor="edit-segmento_cliente">Segmento</Label>
+                  <Label htmlFor="edit-segmento_cliente" className="text-sm">Segmento</Label>
                   <Input 
                     id="edit-segmento_cliente" 
                     {...register('segmento_cliente')} 
@@ -1533,7 +1533,7 @@ export function ClientesProspeccaoPage() {
 
 
               <div>
-                <Label htmlFor="edit-observacoes">Observações</Label>
+                <Label htmlFor="edit-observacoes" className="text-sm">Observações</Label>
                 <Textarea
                   id="edit-observacoes"
                   {...register('observacoes')}
@@ -1565,7 +1565,7 @@ export function ClientesProspeccaoPage() {
                           : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700'
                       }`}
                     >
-                      {selectedTags.includes(tag) && <span className="mr-1">✓</span>}
+                      {selectedTags.includes(tag) && <span className="mr-1">?</span>}
                       {tag}
                     </button>
                   ))}
@@ -1578,18 +1578,18 @@ export function ClientesProspeccaoPage() {
               </div>
 
               <div>
-                <Label htmlFor="edit-produtos_interesse">Produto de Interesse</Label>
+                <Label htmlFor="edit-produtos_interesse" className="text-sm">Produto de Interesse</Label>
                 <Input id="edit-produtos_interesse" {...register('produtos_interesse')} placeholder="Ex: Software de gestão, Consultoria" />
               </div>
 
               <div>
-                <Label htmlFor="edit-volume_mensal">Volume Mensal</Label>
+                <Label htmlFor="edit-volume_mensal" className="text-sm">Volume Mensal</Label>
                 <Input id="edit-volume_mensal" {...register('volume_mensal')} placeholder="Ex: 1000 unidades, 500kg, 10 toneladas" />
                 <p className="text-xs text-gray-500 mt-1">Informe o volume mensal estimado</p>
               </div>
 
               <div>
-                <Label htmlFor="edit-analise_cliente">Análise do Cliente</Label>
+                <Label htmlFor="edit-analise_cliente" className="text-sm">Análise do Cliente</Label>
                 <Textarea
                   id="edit-analise_cliente"
                   {...register('analise_cliente')}
@@ -1599,7 +1599,7 @@ export function ClientesProspeccaoPage() {
               </div>
 
               <div>
-                <Label htmlFor="edit-dores_atuais">Dores Atuais</Label>
+                <Label htmlFor="edit-dores_atuais" className="text-sm">Dores Atuais</Label>
                 <Textarea
                   id="edit-dores_atuais"
                   {...register('dores_atuais')}
@@ -1609,7 +1609,7 @@ export function ClientesProspeccaoPage() {
               </div>
 
               <div>
-                <Label htmlFor="edit-motivacao">Motivação</Label>
+                <Label htmlFor="edit-motivacao" className="text-sm">Motivação</Label>
                 <Textarea
                   id="edit-motivacao"
                   {...register('motivacao')}
@@ -1619,7 +1619,7 @@ export function ClientesProspeccaoPage() {
               </div>
 
               <div>
-                <Label htmlFor="edit-expectativa">Expectativa</Label>
+                <Label htmlFor="edit-expectativa" className="text-sm">Expectativa</Label>
                 <Textarea
                   id="edit-expectativa"
                   {...register('expectativa')}
@@ -2202,7 +2202,7 @@ export function ClientesProspeccaoPage() {
                         className="w-full text-indigo-600 hover:text-indigo-700 hover:bg-indigo-100"
                         onClick={() => window.open(`/app/planos-tratamento?paciente_id=${selectedCliente.id}`, '_blank')}
                       >
-                        Ver planos de tratamento ({propostasCliente.length}) →
+                        Ver planos de tratamento ({propostasCliente.length}) ?
                       </Button>
                     )}
                   </div>
@@ -2383,7 +2383,7 @@ export function ClientesProspeccaoPage() {
                             <td className="px-6 py-4">
                               <div className="flex items-center gap-2">
                                 <Badge variant="outline" className="text-xs">
-                                  {item.tipo === 'produto' ? '📦 Produto' : '⚙️ Serviço'}
+                                  {item.tipo === 'produto' ? '?? Produto' : '?? Serviço'}
                                 </Badge>
                                 <div>
                                   <p className="font-medium text-gray-900 dark:text-gray-100">{item.nome}</p>
@@ -2475,7 +2475,7 @@ export function ClientesProspeccaoPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {selectedProposta.forma_pagamento && (
                   <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
-                    <p className="text-sm text-blue-600 dark:text-blue-400 mb-1 font-semibold">💳 Forma de Pagamento</p>
+                    <p className="text-sm text-blue-600 dark:text-blue-400 mb-1 font-semibold">?? Forma de Pagamento</p>
                     <p className="text-blue-900 dark:text-blue-100">
                       {selectedProposta.forma_pagamento}
                     </p>
@@ -2484,7 +2484,7 @@ export function ClientesProspeccaoPage() {
                 
                 {selectedProposta.condicoes_pagamento && (
                   <div className="bg-purple-50 dark:bg-purple-900/20 p-4 rounded-lg border border-purple-200 dark:border-purple-800">
-                    <p className="text-sm text-purple-600 dark:text-purple-400 mb-1 font-semibold">📋 Condições de Pagamento</p>
+                    <p className="text-sm text-purple-600 dark:text-purple-400 mb-1 font-semibold">?? Condições de Pagamento</p>
                     <p className="text-purple-900 dark:text-purple-100">
                       {selectedProposta.condicoes_pagamento}
                     </p>
@@ -2493,7 +2493,7 @@ export function ClientesProspeccaoPage() {
                 
                 {selectedProposta.prazo_entrega && (
                   <div className="bg-orange-50 dark:bg-orange-900/20 p-4 rounded-lg border border-orange-200 dark:border-orange-800">
-                    <p className="text-sm text-orange-600 dark:text-orange-400 mb-1 font-semibold">🚚 Prazo de Entrega</p>
+                    <p className="text-sm text-orange-600 dark:text-orange-400 mb-1 font-semibold">?? Prazo de Entrega</p>
                     <p className="text-orange-900 dark:text-orange-100">
                       {selectedProposta.prazo_entrega}
                     </p>
@@ -2502,7 +2502,7 @@ export function ClientesProspeccaoPage() {
                 
                 {selectedProposta.local_entrega && (
                   <div className="bg-teal-50 dark:bg-teal-900/20 p-4 rounded-lg border border-teal-200 dark:border-teal-800">
-                    <p className="text-sm text-teal-600 dark:text-teal-400 mb-1 font-semibold">📍 Local de Entrega</p>
+                    <p className="text-sm text-teal-600 dark:text-teal-400 mb-1 font-semibold">?? Local de Entrega</p>
                     <p className="text-teal-900 dark:text-teal-100">
                       {selectedProposta.local_entrega}
                     </p>
@@ -2511,7 +2511,7 @@ export function ClientesProspeccaoPage() {
                 
                 {selectedProposta.garantia && (
                   <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg border border-green-200 dark:border-green-800">
-                    <p className="text-sm text-green-600 dark:text-green-400 mb-1 font-semibold">✅ Garantia</p>
+                    <p className="text-sm text-green-600 dark:text-green-400 mb-1 font-semibold">? Garantia</p>
                     <p className="text-green-900 dark:text-green-100">
                       {selectedProposta.garantia}
                     </p>
@@ -2523,12 +2523,12 @@ export function ClientesProspeccaoPage() {
                   <div className="space-y-1">
                     {selectedProposta.suporte_incluido && (
                       <p className="text-gray-900 dark:text-gray-100 flex items-center gap-2">
-                        <span className="text-green-500">✓</span> Suporte Técnico
+                        <span className="text-green-500">?</span> Suporte Técnico
                       </p>
                     )}
                     {selectedProposta.treinamento_incluido && (
                       <p className="text-gray-900 dark:text-gray-100 flex items-center gap-2">
-                        <span className="text-green-500">✓</span> Treinamento
+                        <span className="text-green-500">?</span> Treinamento
                       </p>
                     )}
                   </div>
@@ -2538,7 +2538,7 @@ export function ClientesProspeccaoPage() {
               {/* Descrição */}
               {selectedProposta.descricao && (
                 <div className="bg-gray-50 dark:bg-gray-800 p-6 rounded-lg border border-gray-200 dark:border-gray-700">
-                  <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">📄 Descrição</h4>
+                  <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">?? Descrição</h4>
                   <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed">
                     {selectedProposta.descricao}
                   </p>
@@ -2548,7 +2548,7 @@ export function ClientesProspeccaoPage() {
               {/* Termos e Condições */}
               {selectedProposta.termos_condicoes && (
                 <div className="bg-blue-50 dark:bg-blue-900/20 p-6 rounded-lg border border-blue-200 dark:border-blue-800">
-                  <h4 className="text-lg font-semibold text-blue-900 dark:text-blue-100 mb-3">📜 Termos e Condições</h4>
+                  <h4 className="text-lg font-semibold text-blue-900 dark:text-blue-100 mb-3">?? Termos e Condições</h4>
                   <p className="text-blue-800 dark:text-blue-200 whitespace-pre-wrap text-sm leading-relaxed">
                     {selectedProposta.termos_condicoes}
                   </p>
@@ -2558,7 +2558,7 @@ export function ClientesProspeccaoPage() {
               {/* Observações */}
               {selectedProposta.observacoes && (
                 <div className="bg-yellow-50 dark:bg-yellow-900/20 p-6 rounded-lg border-l-4 border-yellow-400 dark:border-yellow-600">
-                  <h4 className="text-lg font-semibold text-yellow-800 dark:text-yellow-200 mb-3">⚠️ Observações Importantes</h4>
+                  <h4 className="text-lg font-semibold text-yellow-800 dark:text-yellow-200 mb-3">?? Observações Importantes</h4>
                   <p className="text-yellow-900 dark:text-yellow-100 whitespace-pre-wrap leading-relaxed">
                     {selectedProposta.observacoes}
                   </p>
@@ -2568,7 +2568,7 @@ export function ClientesProspeccaoPage() {
               {/* Condições Especiais */}
               {selectedProposta.condicoes_especiais && (
                 <div className="bg-purple-50 dark:bg-purple-900/20 p-6 rounded-lg border border-purple-200 dark:border-purple-800">
-                  <h4 className="text-lg font-semibold text-purple-900 dark:text-purple-100 mb-3">⭐ Condições Especiais</h4>
+                  <h4 className="text-lg font-semibold text-purple-900 dark:text-purple-100 mb-3">? Condições Especiais</h4>
                   <p className="text-purple-800 dark:text-purple-200 whitespace-pre-wrap leading-relaxed">
                     {selectedProposta.condicoes_especiais}
                   </p>

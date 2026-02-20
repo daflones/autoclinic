@@ -159,7 +159,7 @@ export function AgendamentosRealizadosList({ periodo }: AgendamentosRealizadosLi
           {showFilters && (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 p-4 bg-muted/20 rounded-lg">
               <div className="space-y-2">
-                <Label>Profissional</Label>
+<Label className="text-sm">Profissional</Label>
                 <Select value={profissionalFilter} onValueChange={setProfissionalFilter}>
                   <SelectTrigger>
                     <SelectValue />
@@ -176,7 +176,7 @@ export function AgendamentosRealizadosList({ periodo }: AgendamentosRealizadosLi
               </div>
 
               <div className="space-y-2">
-                <Label>Paciente</Label>
+<Label className="text-sm">Paciente</Label>
                 <Select value={pacienteFilter} onValueChange={setPacienteFilter}>
                   <SelectTrigger>
                     <SelectValue />
@@ -193,7 +193,7 @@ export function AgendamentosRealizadosList({ periodo }: AgendamentosRealizadosLi
               </div>
 
               <div className="space-y-2">
-                <Label>Data Início</Label>
+<Label className="text-sm">Data Início</Label>
                 <DateTimePicker
                   value={dataInicio}
                   onChange={(value) => setDataInicio(value || '')}
@@ -202,7 +202,7 @@ export function AgendamentosRealizadosList({ periodo }: AgendamentosRealizadosLi
               </div>
 
               <div className="space-y-2">
-                <Label>Data Fim</Label>
+<Label className="text-sm">Data Fim</Label>
                 <DateTimePicker
                   value={dataFim}
                   onChange={(value) => setDataFim(value || '')}

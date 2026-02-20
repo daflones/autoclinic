@@ -821,7 +821,7 @@ export default function WhatsAppPage() {
             ) : (
               <div className="space-y-4">
                 <div>
-                  <Label htmlFor="instanceName">Nome da Conexão</Label>
+                  <Label htmlFor="instanceName" className="text-sm">Nome da Conexão</Label>
                   <Input
                     id="instanceName"
                     placeholder="Nome gerado automaticamente"
@@ -836,7 +836,7 @@ export default function WhatsAppPage() {
                 </div>
                 
                 <div>
-                  <Label htmlFor="phoneNumber">Número do WhatsApp</Label>
+                  <Label htmlFor="phoneNumber" className="text-sm">Número do WhatsApp</Label>
                   <Input
                     id="phoneNumber"
                     placeholder="Ex: 5511999999999"
@@ -951,7 +951,7 @@ export default function WhatsAppPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="disparos-message">{disparosType === 'media' ? 'Legenda base' : 'Mensagem base'}</Label>
+              <Label htmlFor="disparos-message" className="text-sm">{disparosType === 'media' ? 'Legenda base' : 'Mensagem base'}</Label>
               <Textarea
                 id="disparos-message"
                 value={disparosType === 'media' ? disparosCaption : disparosMessage}
@@ -1008,7 +1008,7 @@ export default function WhatsAppPage() {
 
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
-                  <Label>Tom de fala</Label>
+<Label className="text-sm">Tom de fala</Label>
                   <Select value={disparosTone} onValueChange={(v) => setDisparosTone(v as any)}>
                     <SelectTrigger>
                       <SelectValue />
@@ -1023,7 +1023,7 @@ export default function WhatsAppPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Limite de caracteres (opcional)</Label>
+<Label className="text-sm">Limite de caracteres (opcional)</Label>
                   <Input
                     type="number"
                     inputMode="numeric"
@@ -1050,7 +1050,7 @@ export default function WhatsAppPage() {
             {disparosType === 'media' && (
               <div className="rounded-lg border border-border/60 bg-background p-4 space-y-3">
                 <div>
-                  <Label htmlFor="disparos-media">Mídia (imagem ou vídeo)</Label>
+                  <Label htmlFor="disparos-media" className="text-sm">Mídia (imagem ou vídeo)</Label>
                   <FileUploadButton
                     label="Selecionar mídia"
                     accept="image/*,video/*"
@@ -1483,12 +1483,12 @@ export default function WhatsAppPage() {
 
           <div className="grid gap-4">
             <div className="grid gap-2">
-              <Label>Nome completo</Label>
+<Label className="text-sm">Nome completo</Label>
               <Input value={editNomeCompleto} onChange={(e) => setEditNomeCompleto(e.target.value)} />
             </div>
 
             <div className="grid gap-2">
-              <Label>WhatsApp</Label>
+<Label className="text-sm">WhatsApp</Label>
               <Input value={editWhatsapp} onChange={(e) => setEditWhatsapp(e.target.value)} />
             </div>
           </div>

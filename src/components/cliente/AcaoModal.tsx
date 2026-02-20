@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+﻿import { useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import {
   Dialog,
@@ -163,7 +163,7 @@ export default function AcaoModal({
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 mt-4">
           {/* Título */}
           <div>
-            <Label htmlFor="titulo">
+            <Label htmlFor="titulo" className="text-sm">
               Título <span className="text-red-500">*</span>
             </Label>
             <Input
@@ -181,7 +181,7 @@ export default function AcaoModal({
 
           {/* Descrição */}
           <div>
-            <Label htmlFor="descricao">Descrição</Label>
+            <Label htmlFor="descricao" className="text-sm">Descrição</Label>
             <Textarea
               id="descricao"
               placeholder="Detalhes adicionais sobre a ação..."
@@ -193,7 +193,7 @@ export default function AcaoModal({
           {/* Tipo e Status */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="tipo">
+              <Label htmlFor="tipo" className="text-sm">
                 Tipo <span className="text-red-500">*</span>
               </Label>
               <Select 
@@ -214,7 +214,7 @@ export default function AcaoModal({
             </div>
 
             <div>
-              <Label htmlFor="status">
+              <Label htmlFor="status" className="text-sm">
                 Status <span className="text-red-500">*</span>
               </Label>
               <Select 
@@ -237,7 +237,7 @@ export default function AcaoModal({
 
           {/* Data Prevista */}
           <div>
-            <Label htmlFor="data_prevista">
+            <Label htmlFor="data_prevista" className="text-sm">
               Data/Hora Prevista <span className="text-red-500">*</span>
             </Label>
             <Input
@@ -254,7 +254,7 @@ export default function AcaoModal({
 
           {/* Responsável */}
           <div>
-            <Label htmlFor="responsavel_id">
+            <Label htmlFor="responsavel_id" className="text-sm">
               Responsável pela Ação
             </Label>
             <Select 

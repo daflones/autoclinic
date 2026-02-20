@@ -1,4 +1,4 @@
-import { useVendedores } from '@/hooks/useVendedores'
+﻿import { useVendedores } from '@/hooks/useVendedores'
 import { useIsAdmin, useCurrentVendedorId } from '@/hooks/useAuth'
 import {
   Select,
@@ -33,7 +33,7 @@ export function VendedorSelector({
 
   return (
     <div>
-      <Label htmlFor="vendedor_id">
+      <Label htmlFor="vendedor_id" className="text-sm">
         Vendedor Responsável {required && <span className="text-red-500">*</span>}
       </Label>
       <Select

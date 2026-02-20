@@ -661,7 +661,7 @@ export function PlanosTratamentoPage() {
           <div className="grid gap-6 py-4">
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label>Paciente *</Label>
+<Label className="text-sm">Paciente *</Label>
                 <Select
                   value={formState.paciente_id}
                   onValueChange={(value) => setFormState((prev) => ({ ...prev, paciente_id: value }))}
@@ -680,7 +680,7 @@ export function PlanosTratamentoPage() {
               </div>
 
               <div className="space-y-2">
-                <Label>Responsável clínico</Label>
+<Label className="text-sm">Responsável clínico</Label>
                 <Select
                   value={formState.responsavel_profissional_id || 'none'}
                   onValueChange={(value) =>
@@ -706,7 +706,7 @@ export function PlanosTratamentoPage() {
             </div>
 
             <div className="space-y-2">
-              <Label>Protocolo/Pacote</Label>
+<Label className="text-sm">Protocolo/Pacote</Label>
               <Select
                 value={formState.protocolo_pacote_id || 'none'}
                 onValueChange={(value) =>
@@ -732,7 +732,7 @@ export function PlanosTratamentoPage() {
 
             <Separator />
             <div className="space-y-3">
-              <Label className="text-base font-semibold">Procedimentos do plano</Label>
+<Label className="text-sm">Procedimentos do plano</Label>
               <p className="text-xs text-muted-foreground">Adicione procedimentos que farão parte deste plano de tratamento.</p>
               {createItens.map((item, idx) => {
                 const proc = item.procedimento_id ? procedimentosMap.get(item.procedimento_id) : null
@@ -740,7 +740,7 @@ export function PlanosTratamentoPage() {
                   <div key={idx} className="rounded-lg border p-3 space-y-3">
                     <div className="grid gap-3 sm:grid-cols-2">
                       <div className="space-y-2">
-                        <Label>Procedimento</Label>
+<Label className="text-sm">Procedimento</Label>
                         <Select
                           value={item.procedimento_id || 'none'}
                           onValueChange={(v) => {
@@ -769,7 +769,7 @@ export function PlanosTratamentoPage() {
                         </Select>
                       </div>
                       <div className="space-y-2">
-                        <Label>{item.procedimento_id ? 'Descrição personalizada' : 'Descrição do item *'}</Label>
+<Label className="text-sm">{item.procedimento_id ? 'Descrição personalizada' : 'Descrição do item *'}</Label>
                         <Input
                           value={item.descricao_personalizada || ''}
                           onChange={(e) => {
@@ -785,7 +785,7 @@ export function PlanosTratamentoPage() {
                     </div>
                     <div className="grid gap-3 sm:grid-cols-3">
                       <div className="space-y-2">
-                        <Label>Quantidade</Label>
+<Label className="text-sm">Quantidade</Label>
                         <Input
                           type="number"
                           min={1}
@@ -800,7 +800,7 @@ export function PlanosTratamentoPage() {
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label>Valor unitário (R$)</Label>
+<Label className="text-sm">Valor unitário (R$)</Label>
                         <Input
                           type="number"
                           min={0}
@@ -816,7 +816,7 @@ export function PlanosTratamentoPage() {
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label>Desconto (%)</Label>
+<Label className="text-sm">Desconto (%)</Label>
                         <Input
                           type="number"
                           min={0}
@@ -866,7 +866,7 @@ export function PlanosTratamentoPage() {
             <Separator />
 
             <div className="space-y-2">
-              <Label>Título *</Label>
+<Label className="text-sm">Título *</Label>
               <Input
                 placeholder="Ex: Plano de Rejuvenescimento Facial"
                 value={formState.titulo}
@@ -875,7 +875,7 @@ export function PlanosTratamentoPage() {
             </div>
 
             <div className="space-y-2">
-              <Label>Descrição clínica</Label>
+<Label className="text-sm">Descrição clínica</Label>
               <Textarea
                 placeholder="Resumo do diagnóstico, objetivos terapêuticos e abordagem sugerida"
                 value={formState.descricao}
@@ -886,7 +886,7 @@ export function PlanosTratamentoPage() {
 
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <div className="space-y-2">
-                <Label>Status inicial</Label>
+<Label className="text-sm">Status inicial</Label>
                 <Select
                   value={formState.status}
                   onValueChange={(value) => setFormState((prev) => ({ ...prev, status: value as StatusPlanoTratamento }))}
@@ -905,7 +905,7 @@ export function PlanosTratamentoPage() {
               </div>
 
               <div className="space-y-2">
-                <Label>Validade (dias)</Label>
+<Label className="text-sm">Validade (dias)</Label>
                 <Input
                   type="number"
                   min={0}
@@ -915,7 +915,7 @@ export function PlanosTratamentoPage() {
               </div>
 
               <div className="space-y-2">
-                <Label>Valor previsto (R$)</Label>
+<Label className="text-sm">Valor previsto (R$)</Label>
                 <Input
                   type="number"
                   min="0"
@@ -926,7 +926,7 @@ export function PlanosTratamentoPage() {
               </div>
 
               <div className="space-y-2">
-                <Label>Valor pago (R$)</Label>
+<Label className="text-sm">Valor pago (R$)</Label>
                 <Input
                   type="number"
                   min="0"
@@ -939,7 +939,7 @@ export function PlanosTratamentoPage() {
 
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label>Início previsto</Label>
+<Label className="text-sm">Início previsto</Label>
                 <SimpleDateTime
                   showTime={false}
                   value={formState.data_prevista_inicio || ''}
@@ -947,7 +947,7 @@ export function PlanosTratamentoPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label>Conclusão prevista</Label>
+<Label className="text-sm">Conclusão prevista</Label>
                 <SimpleDateTime
                   showTime={false}
                   value={formState.data_prevista_conclusao || ''}
@@ -957,7 +957,7 @@ export function PlanosTratamentoPage() {
             </div>
 
             <div className="space-y-2">
-              <Label>Observações adicionais</Label>
+<Label className="text-sm">Observações adicionais</Label>
               <Textarea
                 placeholder="Orientações específicas, restrições ou cuidados importantes"
                 value={formState.observacoes}
@@ -1142,7 +1142,7 @@ export function PlanosTratamentoPage() {
                       <div className="rounded-lg border border-border/60 p-3">
                         <div className="grid gap-3 sm:grid-cols-3 sm:items-end">
                           <div className="space-y-2">
-                            <Label>Adicionar sessões</Label>
+<Label className="text-sm">Adicionar sessões</Label>
                             <Input
                               type="number"
                               min={0}
@@ -1151,7 +1151,7 @@ export function PlanosTratamentoPage() {
                             />
                           </div>
                           <div className="space-y-2">
-                            <Label>Intervalo (dias)</Label>
+<Label className="text-sm">Intervalo (dias)</Label>
                             <Input
                               type="number"
                               min={0}
@@ -1448,7 +1448,7 @@ export function PlanosTratamentoPage() {
             <div className="grid gap-6 py-4">
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
-                  <Label>Paciente *</Label>
+<Label className="text-sm">Paciente *</Label>
                   <Select
                     value={editFormState.paciente_id}
                     onValueChange={(value) =>
@@ -1469,7 +1469,7 @@ export function PlanosTratamentoPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Responsável clínico</Label>
+<Label className="text-sm">Responsável clínico</Label>
                   <Select
                     value={editFormState.responsavel_profissional_id || 'none'}
                     onValueChange={(value) =>
@@ -1499,7 +1499,7 @@ export function PlanosTratamentoPage() {
               </div>
 
               <div className="space-y-2">
-                <Label>Protocolo/Pacote</Label>
+<Label className="text-sm">Protocolo/Pacote</Label>
                 <Select
                   value={editFormState.protocolo_pacote_id || 'none'}
                   onValueChange={(value) =>
@@ -1529,7 +1529,7 @@ export function PlanosTratamentoPage() {
 
               <Separator />
               <div className="space-y-3">
-                <Label className="text-base font-semibold">Procedimentos do plano</Label>
+<Label className="text-sm">Procedimentos do plano</Label>
                 <p className="text-xs text-muted-foreground">Gerencie os procedimentos incluídos neste plano de tratamento.</p>
                 {editItens.map((item, idx) => {
                   const proc = item.procedimento_id ? procedimentosMap.get(item.procedimento_id) : null
@@ -1537,7 +1537,7 @@ export function PlanosTratamentoPage() {
                     <div key={idx} className="rounded-lg border p-3 space-y-3">
                       <div className="grid gap-3 sm:grid-cols-2">
                         <div className="space-y-2">
-                          <Label>Procedimento</Label>
+<Label className="text-sm">Procedimento</Label>
                           <Select
                             value={item.procedimento_id || 'none'}
                             onValueChange={(v) => {
@@ -1566,7 +1566,7 @@ export function PlanosTratamentoPage() {
                           </Select>
                         </div>
                         <div className="space-y-2">
-                          <Label>{item.procedimento_id ? 'Descrição personalizada' : 'Descrição do item *'}</Label>
+<Label className="text-sm">{item.procedimento_id ? 'Descrição personalizada' : 'Descrição do item *'}</Label>
                           <Input
                             value={item.descricao_personalizada || ''}
                             onChange={(e) => {
@@ -1582,7 +1582,7 @@ export function PlanosTratamentoPage() {
                       </div>
                       <div className="grid gap-3 sm:grid-cols-3">
                         <div className="space-y-2">
-                          <Label>Quantidade</Label>
+<Label className="text-sm">Quantidade</Label>
                           <Input
                             type="number"
                             min={1}
@@ -1597,7 +1597,7 @@ export function PlanosTratamentoPage() {
                           />
                         </div>
                         <div className="space-y-2">
-                          <Label>Valor unitário (R$)</Label>
+<Label className="text-sm">Valor unitário (R$)</Label>
                           <Input
                             type="number"
                             min={0}
@@ -1613,7 +1613,7 @@ export function PlanosTratamentoPage() {
                           />
                         </div>
                         <div className="space-y-2">
-                          <Label>Desconto (%)</Label>
+<Label className="text-sm">Desconto (%)</Label>
                           <Input
                             type="number"
                             min={0}
@@ -1663,7 +1663,7 @@ export function PlanosTratamentoPage() {
               <Separator />
 
               <div className="space-y-2">
-                <Label>Título *</Label>
+<Label className="text-sm">Título *</Label>
                 <Input
                   value={editFormState.titulo}
                   onChange={(event) =>
@@ -1675,7 +1675,7 @@ export function PlanosTratamentoPage() {
               </div>
 
               <div className="space-y-2">
-                <Label>Descrição clínica</Label>
+<Label className="text-sm">Descrição clínica</Label>
                 <Textarea
                   value={editFormState.descricao}
                   onChange={(event) =>
@@ -1689,7 +1689,7 @@ export function PlanosTratamentoPage() {
 
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 <div className="space-y-2">
-                  <Label>Status</Label>
+<Label className="text-sm">Status</Label>
                   <Select
                     value={editFormState.status}
                     onValueChange={(value) =>
@@ -1714,7 +1714,7 @@ export function PlanosTratamentoPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Validade (dias)</Label>
+<Label className="text-sm">Validade (dias)</Label>
                   <Input
                     type="number"
                     min={0}
@@ -1733,7 +1733,7 @@ export function PlanosTratamentoPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Valor previsto (R$)</Label>
+<Label className="text-sm">Valor previsto (R$)</Label>
                   <Input
                     type="number"
                     min="0"
@@ -1750,7 +1750,7 @@ export function PlanosTratamentoPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Valor pago (R$)</Label>
+<Label className="text-sm">Valor pago (R$)</Label>
                   <Input
                     type="number"
                     min="0"
@@ -1768,7 +1768,7 @@ export function PlanosTratamentoPage() {
               </div>
 
               <div className="space-y-2">
-                <Label>Observações adicionais</Label>
+<Label className="text-sm">Observações adicionais</Label>
                 <Textarea
                   value={editFormState.observacoes}
                   onChange={(event) =>

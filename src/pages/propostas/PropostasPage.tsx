@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
@@ -12,7 +12,6 @@ import {
   Search, 
   Filter,
   FileText,
-  Clock,
   CheckCircle,
   XCircle,
   AlertCircle,
@@ -655,7 +654,7 @@ export function PropostasPage() {
             <div className="grid gap-4 py-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="cliente_id">Cliente <span className="text-red-500">*</span></Label>
+                  <Label htmlFor="cliente_id" className="text-sm">Cliente <span className="text-red-500">*</span></Label>
                   <Select
                     value={newProposta.cliente_id}
                     onValueChange={(value) => setNewProposta(prev => ({ ...prev, cliente_id: value }))}
@@ -673,7 +672,7 @@ export function PropostasPage() {
                   </Select>
                 </div>
                 <div>
-                  <Label htmlFor="vendedor_id">Vendedor <span className="text-red-500">*</span></Label>
+                  <Label htmlFor="vendedor_id" className="text-sm">Vendedor <span className="text-red-500">*</span></Label>
                   <Select
                     value={newProposta.vendedor_id}
                     onValueChange={(value) => setNewProposta(prev => ({ ...prev, vendedor_id: value }))}
@@ -692,7 +691,7 @@ export function PropostasPage() {
                 </div>
               </div>
               <div>
-                <Label htmlFor="titulo">Título da Proposta <span className="text-red-500">*</span></Label>
+                <Label htmlFor="titulo" className="text-sm">Título da Proposta <span className="text-red-500">*</span></Label>
                 <Input
                   id="titulo"
                   value={newProposta.titulo}
@@ -701,7 +700,7 @@ export function PropostasPage() {
                 />
               </div>
             <div>
-              <Label htmlFor="descricao">Descrição</Label>
+              <Label htmlFor="descricao" className="text-sm">Descrição</Label>
               <Textarea
                 id="descricao"
                 value={newProposta.descricao || ''}
@@ -712,7 +711,7 @@ export function PropostasPage() {
             </div>
             <div className="grid grid-cols-3 gap-4">
               <div>
-                <Label htmlFor="versao">Versão</Label>
+                <Label htmlFor="versao" className="text-sm">Versão</Label>
                 <Input
                   id="versao"
                   type="number"
@@ -722,7 +721,7 @@ export function PropostasPage() {
                 />
               </div>
               <div>
-                <Label htmlFor="template_usado">Template Usado</Label>
+                <Label htmlFor="template_usado" className="text-sm">Template Usado</Label>
                 <Input
                   id="template_usado"
                   value={newProposta.template_usado || ''}
@@ -731,7 +730,7 @@ export function PropostasPage() {
                 />
               </div>
               <div>
-                <Label htmlFor="data_vencimento">Data de Vencimento</Label>
+                <Label htmlFor="data_vencimento" className="text-sm">Data de Vencimento</Label>
                 <SimpleDateTime
                   value={newProposta.data_vencimento}
                   onChange={(value) => setNewProposta(prev => ({ ...prev, data_vencimento: value }))}
@@ -741,7 +740,7 @@ export function PropostasPage() {
             </div>
             <div className="grid grid-cols-3 gap-4">
               <div>
-                <Label htmlFor="valor_produtos">Valor Produtos <span className="text-red-500">*</span></Label>
+                <Label htmlFor="valor_produtos" className="text-sm">Valor Produtos <span className="text-red-500">*</span></Label>
                 <div className="flex gap-2">
                   <Input
                     id="valor_produtos"
@@ -770,7 +769,7 @@ export function PropostasPage() {
                     }}
                     title="Calcular automaticamente baseado nos itens"
                   >
-                    ∑
+                    ?
                   </Button>
                 </div>
                 {(() => {
@@ -783,7 +782,7 @@ export function PropostasPage() {
                 })()}
               </div>
               <div>
-                <Label htmlFor="valor_servicos">Valor Serviços</Label>
+                <Label htmlFor="valor_servicos" className="text-sm">Valor Serviços</Label>
                 <div className="flex gap-2">
                   <Input
                     id="valor_servicos"
@@ -812,7 +811,7 @@ export function PropostasPage() {
                     }}
                     title="Calcular automaticamente baseado nos itens"
                   >
-                    ∑
+                    ?
                   </Button>
                 </div>
                 {(() => {
@@ -825,7 +824,7 @@ export function PropostasPage() {
                 })()}
               </div>
               <div>
-                <Label htmlFor="valor_total">Valor Total *</Label>
+                <Label htmlFor="valor_total" className="text-sm">Valor Total *</Label>
                 <Input
                   id="valor_total"
                   type="number"
@@ -838,7 +837,7 @@ export function PropostasPage() {
             </div>
             <div className="grid grid-cols-3 gap-4">
               <div>
-                <Label htmlFor="valor_frete">Valor Frete</Label>
+                <Label htmlFor="valor_frete" className="text-sm">Valor Frete</Label>
                 <Input
                   id="valor_frete"
                   type="number"
@@ -855,7 +854,7 @@ export function PropostasPage() {
                 />
               </div>
               <div>
-                <Label htmlFor="percentual_desconto">Desconto (%)</Label>
+                <Label htmlFor="percentual_desconto" className="text-sm">Desconto (%)</Label>
                 <Input
                   id="percentual_desconto"
                   type="number"
@@ -875,7 +874,7 @@ export function PropostasPage() {
                 />
               </div>
               <div>
-                <Label htmlFor="validade_dias">Validade (dias)</Label>
+                <Label htmlFor="validade_dias" className="text-sm">Validade (dias)</Label>
                 <Input
                   id="validade_dias"
                   type="number"
@@ -898,7 +897,7 @@ export function PropostasPage() {
               </div>
               {newProposta.recompra_ativada && (
                 <div>
-                  <Label htmlFor="data_recompra">Data de Recompra</Label>
+                  <Label htmlFor="data_recompra" className="text-sm">Data de Recompra</Label>
                   <SimpleDateTime
                     value={newProposta.data_recompra}
                     onChange={(value) => setNewProposta(prev => ({ ...prev, data_recompra: value }))}
@@ -909,7 +908,7 @@ export function PropostasPage() {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="forma_pagamento">Forma de Pagamento</Label>
+                <Label htmlFor="forma_pagamento" className="text-sm">Forma de Pagamento</Label>
                 <Select
                   value={newProposta.forma_pagamento || ''}
                   onValueChange={(value) => setNewProposta(prev => ({ ...prev, forma_pagamento: value }))}
@@ -929,7 +928,7 @@ export function PropostasPage() {
                 </Select>
               </div>
               <div>
-                <Label htmlFor="responsavel_frete">Responsável pelo Frete</Label>
+                <Label htmlFor="responsavel_frete" className="text-sm">Responsável pelo Frete</Label>
                 <Select
                   value={newProposta.responsavel_frete || 'cliente'}
                   onValueChange={(value) => setNewProposta(prev => ({ ...prev, responsavel_frete: value as any }))}
@@ -947,7 +946,7 @@ export function PropostasPage() {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="condicoes_pagamento">Condições de Pagamento</Label>
+                <Label htmlFor="condicoes_pagamento" className="text-sm">Condições de Pagamento</Label>
                 <Input
                   id="condicoes_pagamento"
                   value={newProposta.condicoes_pagamento || ''}
@@ -956,7 +955,7 @@ export function PropostasPage() {
                 />
               </div>
               <div>
-                <Label htmlFor="prazo_entrega">Prazo de Entrega</Label>
+                <Label htmlFor="prazo_entrega" className="text-sm">Prazo de Entrega</Label>
                 <Input
                   id="prazo_entrega"
                   value={newProposta.prazo_entrega || ''}
@@ -966,7 +965,7 @@ export function PropostasPage() {
               </div>
             </div>
             <div>
-              <Label htmlFor="local_entrega">Local de Entrega</Label>
+              <Label htmlFor="local_entrega" className="text-sm">Local de Entrega</Label>
               <Input
                 id="local_entrega"
                 value={newProposta.local_entrega || ''}
@@ -982,7 +981,7 @@ export function PropostasPage() {
                   checked={newProposta.suporte_incluido || false}
                   onChange={(e) => setNewProposta(prev => ({ ...prev, suporte_incluido: e.target.checked }))}
                 />
-                <Label htmlFor="suporte_incluido">Suporte Incluído</Label>
+                <Label htmlFor="suporte_incluido" className="text-sm">Suporte Incluído</Label>
               </div>
               <div className="flex items-center space-x-2">
                 <input
@@ -991,7 +990,7 @@ export function PropostasPage() {
                   checked={newProposta.treinamento_incluido || false}
                   onChange={(e) => setNewProposta(prev => ({ ...prev, treinamento_incluido: e.target.checked }))}
                 />
-                <Label htmlFor="treinamento_incluido">Treinamento Incluído</Label>
+                <Label htmlFor="treinamento_incluido" className="text-sm">Treinamento Incluído</Label>
               </div>
               <div className="flex items-center space-x-2">
                 <input
@@ -1000,11 +999,11 @@ export function PropostasPage() {
                   checked={newProposta.requer_aprovacao || false}
                   onChange={(e) => setNewProposta(prev => ({ ...prev, requer_aprovacao: e.target.checked }))}
                 />
-                <Label htmlFor="requer_aprovacao">Requer Aprovação</Label>
+                <Label htmlFor="requer_aprovacao" className="text-sm">Requer Aprovação</Label>
               </div>
             </div>
             <div>
-              <Label htmlFor="garantia">Garantia</Label>
+              <Label htmlFor="garantia" className="text-sm">Garantia</Label>
               <Input
                 id="garantia"
                 value={newProposta.garantia || ''}
@@ -1013,7 +1012,7 @@ export function PropostasPage() {
               />
             </div>
             <div>
-              <Label htmlFor="condicoes_especiais">Condições Especiais</Label>
+              <Label htmlFor="condicoes_especiais" className="text-sm">Condições Especiais</Label>
               <Textarea
                 id="condicoes_especiais"
                 value={newProposta.condicoes_especiais || ''}
@@ -1023,7 +1022,7 @@ export function PropostasPage() {
               />
             </div>
             <div>
-              <Label htmlFor="status">Status <span className="text-red-500">*</span></Label>
+              <Label htmlFor="status" className="text-sm">Status <span className="text-red-500">*</span></Label>
               <Select
                 value={newProposta.status}
                 onValueChange={(value) => setNewProposta(prev => ({ ...prev, status: value as any }))}
@@ -1040,7 +1039,7 @@ export function PropostasPage() {
               </Select>
             </div>
             <div>
-              <Label htmlFor="termos_condicoes">Termos e Condições</Label>
+              <Label htmlFor="termos_condicoes" className="text-sm">Termos e Condições</Label>
               <Textarea
                 id="termos_condicoes"
                 value={newProposta.termos_condicoes || ''}
@@ -1051,7 +1050,7 @@ export function PropostasPage() {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="feedback_cliente">Feedback do Cliente</Label>
+                <Label htmlFor="feedback_cliente" className="text-sm">Feedback do Cliente</Label>
                 <Textarea
                   id="feedback_cliente"
                   value={newProposta.feedback_cliente || ''}
@@ -1061,7 +1060,7 @@ export function PropostasPage() {
                 />
               </div>
               <div>
-                <Label htmlFor="objecoes">Objeções</Label>
+                <Label htmlFor="objecoes" className="text-sm">Objeções</Label>
                 <Textarea
                   id="objecoes"
                   value={newProposta.objecoes || ''}
@@ -1073,7 +1072,7 @@ export function PropostasPage() {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="pontos_negociacao">Pontos de Negociação</Label>
+                <Label htmlFor="pontos_negociacao" className="text-sm">Pontos de Negociação</Label>
                 <Textarea
                   id="pontos_negociacao"
                   value={newProposta.pontos_negociacao || ''}
@@ -1083,7 +1082,7 @@ export function PropostasPage() {
                 />
               </div>
               <div>
-                <Label htmlFor="motivo_rejeicao">Motivo da Rejeição</Label>
+                <Label htmlFor="motivo_rejeicao" className="text-sm">Motivo da Rejeição</Label>
                 <Textarea
                   id="motivo_rejeicao"
                   value={newProposta.motivo_rejeicao || ''}
@@ -1094,7 +1093,7 @@ export function PropostasPage() {
               </div>
             </div>
             <div>
-              <Label htmlFor="motivo_aprovacao">Motivo da Aprovação</Label>
+              <Label htmlFor="motivo_aprovacao" className="text-sm">Motivo da Aprovação</Label>
               <Textarea
                 id="motivo_aprovacao"
                 value={newProposta.motivo_aprovacao || ''}
@@ -1104,7 +1103,7 @@ export function PropostasPage() {
               />
             </div>
             <div>
-              <Label htmlFor="observacoes">Observações</Label>
+              <Label htmlFor="observacoes" className="text-sm">Observações</Label>
               <Textarea
                 id="observacoes"
                 value={newProposta.observacoes || ''}
@@ -1117,7 +1116,7 @@ export function PropostasPage() {
             {/* Seção de Itens da Proposta */}
             <div className="border-t pt-4 mt-4">
               <div className="flex justify-between items-center mb-3">
-                <Label className="text-base font-semibold">Itens da Proposta</Label>
+<Label className="text-sm">Itens da Proposta</Label>
                 <Button
                   type="button"
                   variant="outline"
@@ -1170,7 +1169,7 @@ export function PropostasPage() {
                       
                       <div className="grid grid-cols-2 gap-3 mb-3">
                         <div>
-                          <Label>Tipo *</Label>
+<Label className="text-sm">Tipo *</Label>
                           <Select
                             value={item.tipo}
                             onValueChange={(value) => {
@@ -1189,7 +1188,7 @@ export function PropostasPage() {
                           </Select>
                         </div>
                         <div>
-                          <Label>Produto/Serviço *</Label>
+<Label className="text-sm">Produto/Serviço *</Label>
                           {item.tipo === 'produto' ? (
                             <Select
                               value={item.produto_id || ''}
@@ -1236,7 +1235,7 @@ export function PropostasPage() {
                       
                       <div className="grid grid-cols-4 gap-3 mb-3">
                         <div>
-                          <Label>Quantidade</Label>
+<Label className="text-sm">Quantidade</Label>
                           <Input
                             type="number"
                             step="1"
@@ -1251,7 +1250,7 @@ export function PropostasPage() {
                           />
                         </div>
                         <div>
-                          <Label>Unidade</Label>
+<Label className="text-sm">Unidade</Label>
                           <Input
                             value={item.unidade}
                             onChange={(e) => {
@@ -1263,7 +1262,7 @@ export function PropostasPage() {
                           />
                         </div>
                         <div>
-                          <Label>Valor Unitário</Label>
+<Label className="text-sm">Valor Unitário</Label>
                           <Input
                             type="number"
                             step="1"
@@ -1278,7 +1277,7 @@ export function PropostasPage() {
                           />
                         </div>
                         <div>
-                          <Label>Valor Total</Label>
+<Label className="text-sm">Valor Total</Label>
                           <Input
                             type="number"
                             step="0.01"
@@ -1290,7 +1289,7 @@ export function PropostasPage() {
                       </div>
                       
                       <div>
-                        <Label>Descrição</Label>
+<Label className="text-sm">Descrição</Label>
                         <Textarea
                           value={item.descricao || ''}
                           onChange={(e) => {
@@ -1376,27 +1375,27 @@ export function PropostasPage() {
                 {/* Informações Básicas */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label className="text-sm font-medium text-gray-500">Cliente</Label>
+<Label className="text-sm">Cliente</Label>
                     <p className="text-sm">{getClienteName(selectedProposta.cliente_id)}</p>
                   </div>
                   <div>
-                    <Label className="text-sm font-medium text-gray-500">Vendedor</Label>
+<Label className="text-sm">Vendedor</Label>
                     <p className="text-sm">{getVendedorName(selectedProposta.vendedor_id)}</p>
                   </div>
                   <div>
-                    <Label className="text-sm font-medium text-gray-500">Título</Label>
+<Label className="text-sm">Título</Label>
                     <p className="text-sm">{selectedProposta.titulo}</p>
                   </div>
                   <div>
-                    <Label className="text-sm font-medium text-gray-500">Número</Label>
+<Label className="text-sm">Número</Label>
                     <p className="text-sm">{selectedProposta.numero_proposta}</p>
                   </div>
                   <div>
-                    <Label className="text-sm font-medium text-gray-500">Status</Label>
+<Label className="text-sm">Status</Label>
                     <p className="text-sm">{statusOptions.find(s => s.value === selectedProposta.status)?.label}</p>
                   </div>
                   <div>
-                    <Label className="text-sm font-medium text-gray-500">Versão</Label>
+<Label className="text-sm">Versão</Label>
                     <p className="text-sm">{selectedProposta.versao}</p>
                   </div>
                 </div>
@@ -1404,7 +1403,7 @@ export function PropostasPage() {
                 {/* Descrição */}
                 {selectedProposta.descricao && (
                   <div>
-                    <Label className="text-sm font-medium text-gray-500">Descrição</Label>
+<Label className="text-sm">Descrição</Label>
                     <p className="text-sm mt-1">{selectedProposta.descricao}</p>
                   </div>
                 )}
@@ -1414,27 +1413,27 @@ export function PropostasPage() {
                   <h3 className="text-lg font-medium mb-3">Valores Financeiros</h3>
                   <div className="grid grid-cols-3 gap-4">
                     <div>
-                      <Label className="text-sm font-medium text-gray-500">Valor Produtos</Label>
+<Label className="text-sm">Valor Produtos</Label>
                       <p className="text-sm">R$ {(selectedProposta.valor_produtos || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
                     </div>
                     <div>
-                      <Label className="text-sm font-medium text-gray-500">Valor Serviços</Label>
+<Label className="text-sm">Valor Serviços</Label>
                       <p className="text-sm">R$ {(selectedProposta.valor_servicos || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
                     </div>
                     <div>
-                      <Label className="text-sm font-medium text-gray-500">Valor Desconto</Label>
+<Label className="text-sm">Valor Desconto</Label>
                       <p className="text-sm">R$ {(selectedProposta.valor_desconto || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
                     </div>
                     <div>
-                      <Label className="text-sm font-medium text-gray-500">Valor Frete</Label>
+<Label className="text-sm">Valor Frete</Label>
                       <p className="text-sm">R$ {(selectedProposta.valor_frete || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
                     </div>
                     <div>
-                      <Label className="text-sm font-medium text-gray-500">Valor Impostos</Label>
+<Label className="text-sm">Valor Impostos</Label>
                       <p className="text-sm">R$ {(selectedProposta.valor_impostos || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
                     </div>
                     <div>
-                      <Label className="text-sm font-medium text-gray-500">Valor Total</Label>
+<Label className="text-sm">Valor Total</Label>
                       <p className="text-lg font-bold text-green-600">R$ {selectedProposta.valor_total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
                     </div>
                   </div>
@@ -1445,27 +1444,27 @@ export function PropostasPage() {
                   <h3 className="text-lg font-medium mb-3">Condições Comerciais</h3>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <Label className="text-sm font-medium text-gray-500">Forma de Pagamento</Label>
+<Label className="text-sm">Forma de Pagamento</Label>
                       <p className="text-sm">{selectedProposta.forma_pagamento || 'Não informado'}</p>
                     </div>
                     <div>
-                      <Label className="text-sm font-medium text-gray-500">Condições de Pagamento</Label>
+<Label className="text-sm">Condições de Pagamento</Label>
                       <p className="text-sm">{selectedProposta.condicoes_pagamento || 'Não informado'}</p>
                     </div>
                     <div>
-                      <Label className="text-sm font-medium text-gray-500">Prazo de Entrega</Label>
+<Label className="text-sm">Prazo de Entrega</Label>
                       <p className="text-sm">{selectedProposta.prazo_entrega || 'Não informado'}</p>
                     </div>
                     <div>
-                      <Label className="text-sm font-medium text-gray-500">Local de Entrega</Label>
+<Label className="text-sm">Local de Entrega</Label>
                       <p className="text-sm">{selectedProposta.local_entrega || 'Não informado'}</p>
                     </div>
                     <div>
-                      <Label className="text-sm font-medium text-gray-500">Responsável pelo Frete</Label>
+<Label className="text-sm">Responsável pelo Frete</Label>
                       <p className="text-sm">{selectedProposta.responsavel_frete === 'cliente' ? 'Cliente' : 'Fornecedor'}</p>
                     </div>
                     <div>
-                      <Label className="text-sm font-medium text-gray-500">Validade</Label>
+<Label className="text-sm">Validade</Label>
                       <p className="text-sm">{selectedProposta.data_vencimento ? new Date(selectedProposta.data_vencimento).toLocaleDateString('pt-BR') : 'Não informado'}</p>
                     </div>
                   </div>
@@ -1480,25 +1479,25 @@ export function PropostasPage() {
                         <div key={index} className="border rounded-lg p-4 bg-gray-50">
                           <div className="grid grid-cols-4 gap-4">
                             <div>
-                              <Label className="text-sm font-medium text-gray-500">Nome</Label>
+<Label className="text-sm">Nome</Label>
                               <p className="text-sm">{item.nome}</p>
                             </div>
                             <div>
-                              <Label className="text-sm font-medium text-gray-500">Quantidade</Label>
+<Label className="text-sm">Quantidade</Label>
                               <p className="text-sm">{item.quantidade} {item.unidade}</p>
                             </div>
                             <div>
-                              <Label className="text-sm font-medium text-gray-500">Valor Unitário</Label>
+<Label className="text-sm">Valor Unitário</Label>
                               <p className="text-sm">R$ {(item.valor_unitario || 0).toFixed(2)}</p>
                             </div>
                             <div>
-                              <Label className="text-sm font-medium text-gray-500">Valor Total</Label>
+<Label className="text-sm">Valor Total</Label>
                               <p className="text-sm font-bold">R$ {(item.valor_total || 0).toFixed(2)}</p>
                             </div>
                           </div>
                           {item.descricao && (
                             <div className="mt-2">
-                              <Label className="text-sm font-medium text-gray-500">Descrição</Label>
+<Label className="text-sm">Descrição</Label>
                               <p className="text-sm">{item.descricao}</p>
                             </div>
                           )}
@@ -1511,7 +1510,7 @@ export function PropostasPage() {
                 {/* Observações */}
                 {selectedProposta.observacoes && (
                   <div>
-                    <Label className="text-sm font-medium text-gray-500">Observações</Label>
+<Label className="text-sm">Observações</Label>
                     <p className="text-sm mt-1">{selectedProposta.observacoes}</p>
                   </div>
                 )}
@@ -1539,7 +1538,7 @@ export function PropostasPage() {
             <div className="grid gap-4 py-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="edit_cliente_id">Cliente <span className="text-red-500">*</span></Label>
+                  <Label htmlFor="edit_cliente_id" className="text-sm">Cliente <span className="text-red-500">*</span></Label>
                   <Select
                     value={editProposta.cliente_id}
                     onValueChange={(value) => setEditProposta(prev => ({ ...prev, cliente_id: value }))}
@@ -1557,7 +1556,7 @@ export function PropostasPage() {
                   </Select>
                 </div>
                 <div>
-                  <Label htmlFor="edit_vendedor_id">Vendedor <span className="text-red-500">*</span></Label>
+                  <Label htmlFor="edit_vendedor_id" className="text-sm">Vendedor <span className="text-red-500">*</span></Label>
                   <Select
                     value={editProposta.vendedor_id}
                     onValueChange={(value) => setEditProposta(prev => ({ ...prev, vendedor_id: value }))}
@@ -1576,7 +1575,7 @@ export function PropostasPage() {
                 </div>
               </div>
               <div>
-                <Label htmlFor="edit_titulo">Título da Proposta <span className="text-red-500">*</span></Label>
+                <Label htmlFor="edit_titulo" className="text-sm">Título da Proposta <span className="text-red-500">*</span></Label>
                 <Input
                   id="edit_titulo"
                   value={editProposta.titulo}
@@ -1585,7 +1584,7 @@ export function PropostasPage() {
                 />
               </div>
               <div>
-                <Label htmlFor="edit_descricao">Descrição</Label>
+                <Label htmlFor="edit_descricao" className="text-sm">Descrição</Label>
                 <Textarea
                   id="edit_descricao"
                   value={editProposta.descricao || ''}
@@ -1596,7 +1595,7 @@ export function PropostasPage() {
               </div>
               <div className="grid grid-cols-3 gap-4">
                 <div>
-                  <Label htmlFor="edit_versao">Versão</Label>
+                  <Label htmlFor="edit_versao" className="text-sm">Versão</Label>
                   <Input
                     id="edit_versao"
                     type="number"
@@ -1606,7 +1605,7 @@ export function PropostasPage() {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="edit_template_usado">Template Usado</Label>
+                  <Label htmlFor="edit_template_usado" className="text-sm">Template Usado</Label>
                   <Input
                     id="edit_template_usado"
                     value={editProposta.template_usado || ''}
@@ -1615,7 +1614,7 @@ export function PropostasPage() {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="edit_data_vencimento">Data de Vencimento</Label>
+                  <Label htmlFor="edit_data_vencimento" className="text-sm">Data de Vencimento</Label>
                   <SimpleDateTime
                     value={editProposta.data_vencimento}
                     onChange={(value) => setEditProposta(prev => ({ ...prev, data_vencimento: value }))}
@@ -1625,7 +1624,7 @@ export function PropostasPage() {
               </div>
               <div className="grid grid-cols-3 gap-4">
                 <div>
-                  <Label htmlFor="edit_valor_produtos">Valor Produtos <span className="text-red-500">*</span></Label>
+                  <Label htmlFor="edit_valor_produtos" className="text-sm">Valor Produtos <span className="text-red-500">*</span></Label>
                   <div className="flex gap-2">
                     <Input
                       id="edit_valor_produtos"
@@ -1656,7 +1655,7 @@ export function PropostasPage() {
                       }}
                       title="Calcular automaticamente baseado nos itens"
                     >
-                      ∑
+                      ?
                     </Button>
                   </div>
                   {(() => {
@@ -1669,7 +1668,7 @@ export function PropostasPage() {
                   })()}
                 </div>
                 <div>
-                  <Label htmlFor="edit_valor_servicos">Valor Serviços</Label>
+                  <Label htmlFor="edit_valor_servicos" className="text-sm">Valor Serviços</Label>
                   <div className="flex gap-2">
                     <Input
                       id="edit_valor_servicos"
@@ -1700,7 +1699,7 @@ export function PropostasPage() {
                       }}
                       title="Calcular automaticamente baseado nos itens"
                     >
-                      ∑
+                      ?
                     </Button>
                   </div>
                   {(() => {
@@ -1713,7 +1712,7 @@ export function PropostasPage() {
                   })()}
                 </div>
                 <div>
-                  <Label htmlFor="edit_valor_desconto">Valor Desconto</Label>
+                  <Label htmlFor="edit_valor_desconto" className="text-sm">Valor Desconto</Label>
                   <Input
                     id="edit_valor_desconto"
                     type="number"
@@ -1733,7 +1732,7 @@ export function PropostasPage() {
               </div>
               <div className="grid grid-cols-3 gap-4">
                 <div>
-                  <Label htmlFor="edit_valor_frete">Valor Frete</Label>
+                  <Label htmlFor="edit_valor_frete" className="text-sm">Valor Frete</Label>
                   <Input
                     id="edit_valor_frete"
                     type="number"
@@ -1751,7 +1750,7 @@ export function PropostasPage() {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="edit_percentual_desconto">Desconto (%)</Label>
+                  <Label htmlFor="edit_percentual_desconto" className="text-sm">Desconto (%)</Label>
                   <Input
                     id="edit_percentual_desconto"
                     type="number"
@@ -1773,7 +1772,7 @@ export function PropostasPage() {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="edit_valor_impostos">Valor Impostos</Label>
+                  <Label htmlFor="edit_valor_impostos" className="text-sm">Valor Impostos</Label>
                   <Input
                     id="edit_valor_impostos"
                     type="number"
@@ -1793,7 +1792,7 @@ export function PropostasPage() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="edit_forma_pagamento">Forma de Pagamento</Label>
+                  <Label htmlFor="edit_forma_pagamento" className="text-sm">Forma de Pagamento</Label>
                   <Select
                     value={editProposta.forma_pagamento || ''}
                     onValueChange={(value) => setEditProposta(prev => ({ ...prev, forma_pagamento: value }))}
@@ -1813,7 +1812,7 @@ export function PropostasPage() {
                   </Select>
                 </div>
                 <div>
-                  <Label htmlFor="edit_responsavel_frete">Responsável pelo Frete</Label>
+                  <Label htmlFor="edit_responsavel_frete" className="text-sm">Responsável pelo Frete</Label>
                   <Select
                     value={editProposta.responsavel_frete || 'cliente'}
                     onValueChange={(value) => setEditProposta(prev => ({ ...prev, responsavel_frete: value as any }))}
@@ -1831,7 +1830,7 @@ export function PropostasPage() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="edit_condicoes_pagamento">Condições de Pagamento</Label>
+                  <Label htmlFor="edit_condicoes_pagamento" className="text-sm">Condições de Pagamento</Label>
                   <Input
                     id="edit_condicoes_pagamento"
                     value={editProposta.condicoes_pagamento || ''}
@@ -1840,7 +1839,7 @@ export function PropostasPage() {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="edit_prazo_entrega">Prazo de Entrega</Label>
+                  <Label htmlFor="edit_prazo_entrega" className="text-sm">Prazo de Entrega</Label>
                   <Input
                     id="edit_prazo_entrega"
                     value={editProposta.prazo_entrega || ''}
@@ -1851,7 +1850,7 @@ export function PropostasPage() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="edit_local_entrega">Local de Entrega</Label>
+                  <Label htmlFor="edit_local_entrega" className="text-sm">Local de Entrega</Label>
                   <Input
                     id="edit_local_entrega"
                     value={editProposta.local_entrega || ''}
@@ -1860,7 +1859,7 @@ export function PropostasPage() {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="edit_validade_dias">Validade (dias)</Label>
+                  <Label htmlFor="edit_validade_dias" className="text-sm">Validade (dias)</Label>
                   <Input
                     id="edit_validade_dias"
                     type="number"
@@ -1883,7 +1882,7 @@ export function PropostasPage() {
                 </div>
                 {editProposta.recompra_ativada && (
                   <div>
-                    <Label htmlFor="edit_data_recompra">Data de Recompra</Label>
+                    <Label htmlFor="edit_data_recompra" className="text-sm">Data de Recompra</Label>
                     <SimpleDateTime
                       value={editProposta.data_recompra}
                       onChange={(value) => setEditProposta(prev => ({ ...prev, data_recompra: value }))}
@@ -1900,7 +1899,7 @@ export function PropostasPage() {
                     checked={editProposta.suporte_incluido || false}
                     onChange={(e) => setEditProposta(prev => ({ ...prev, suporte_incluido: e.target.checked }))}
                   />
-                  <Label htmlFor="edit_suporte_incluido">Suporte Incluído</Label>
+                  <Label htmlFor="edit_suporte_incluido" className="text-sm">Suporte Incluído</Label>
                 </div>
                 <div className="flex items-center space-x-2">
                   <input
@@ -1909,7 +1908,7 @@ export function PropostasPage() {
                     checked={editProposta.treinamento_incluido || false}
                     onChange={(e) => setEditProposta(prev => ({ ...prev, treinamento_incluido: e.target.checked }))}
                   />
-                  <Label htmlFor="edit_treinamento_incluido">Treinamento Incluído</Label>
+                  <Label htmlFor="edit_treinamento_incluido" className="text-sm">Treinamento Incluído</Label>
                 </div>
                 <div className="flex items-center space-x-2">
                   <input
@@ -1918,12 +1917,12 @@ export function PropostasPage() {
                     checked={editProposta.requer_aprovacao || false}
                     onChange={(e) => setEditProposta(prev => ({ ...prev, requer_aprovacao: e.target.checked }))}
                   />
-                  <Label htmlFor="edit_requer_aprovacao">Requer Aprovação</Label>
+                  <Label htmlFor="edit_requer_aprovacao" className="text-sm">Requer Aprovação</Label>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="edit_garantia">Garantia</Label>
+                  <Label htmlFor="edit_garantia" className="text-sm">Garantia</Label>
                   <Input
                     id="edit_garantia"
                     value={editProposta.garantia || ''}
@@ -1932,7 +1931,7 @@ export function PropostasPage() {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="edit_condicoes_especiais">Condições Especiais</Label>
+                  <Label htmlFor="edit_condicoes_especiais" className="text-sm">Condições Especiais</Label>
                   <Input
                     id="edit_condicoes_especiais"
                     value={editProposta.condicoes_especiais || ''}
@@ -1942,7 +1941,7 @@ export function PropostasPage() {
                 </div>
               </div>
               <div>
-                <Label htmlFor="edit_termos_condicoes">Termos e Condições</Label>
+                <Label htmlFor="edit_termos_condicoes" className="text-sm">Termos e Condições</Label>
                 <Textarea
                   id="edit_termos_condicoes"
                   value={editProposta.termos_condicoes || ''}
@@ -1952,7 +1951,7 @@ export function PropostasPage() {
                 />
               </div>
               <div>
-                <Label htmlFor="edit_status">Status <span className="text-red-500">*</span></Label>
+                <Label htmlFor="edit_status" className="text-sm">Status <span className="text-red-500">*</span></Label>
                 <Select
                   value={editProposta.status}
                   onValueChange={(value) => setEditProposta(prev => ({ ...prev, status: value as any }))}
@@ -1969,7 +1968,7 @@ export function PropostasPage() {
                 </Select>
               </div>
               <div>
-                <Label htmlFor="edit_observacoes">Observações</Label>
+                <Label htmlFor="edit_observacoes" className="text-sm">Observações</Label>
                 <Textarea
                   id="edit_observacoes"
                   value={editProposta.observacoes || ''}
@@ -1982,7 +1981,7 @@ export function PropostasPage() {
               {/* Itens da Proposta - Edit */}
               <div>
                 <div className="flex justify-between items-center mb-3">
-                  <Label className="text-base font-medium">Itens da Proposta</Label>
+<Label className="text-sm">Itens da Proposta</Label>
                   <Button
                     type="button"
                     variant="outline"
@@ -2035,7 +2034,7 @@ export function PropostasPage() {
                         
                         <div className="grid grid-cols-2 gap-3 mb-3">
                           <div>
-                            <Label>Tipo *</Label>
+<Label className="text-sm">Tipo *</Label>
                             <Select
                               value={item.tipo}
                               onValueChange={(value) => {
@@ -2054,7 +2053,7 @@ export function PropostasPage() {
                             </Select>
                           </div>
                           <div>
-                            <Label>Produto/Serviço *</Label>
+<Label className="text-sm">Produto/Serviço *</Label>
                             {item.tipo === 'produto' ? (
                               <Select
                                 value={item.produto_id || ''}
@@ -2101,7 +2100,7 @@ export function PropostasPage() {
                         
                         <div className="grid grid-cols-4 gap-3 mb-3">
                           <div>
-                            <Label>Quantidade</Label>
+<Label className="text-sm">Quantidade</Label>
                             <Input
                               type="number"
                               step="1"
@@ -2116,7 +2115,7 @@ export function PropostasPage() {
                             />
                           </div>
                           <div>
-                            <Label>Unidade</Label>
+<Label className="text-sm">Unidade</Label>
                             <Input
                               value={item.unidade}
                               onChange={(e) => {
@@ -2128,7 +2127,7 @@ export function PropostasPage() {
                             />
                           </div>
                           <div>
-                            <Label>Valor Unitário</Label>
+<Label className="text-sm">Valor Unitário</Label>
                             <Input
                               type="number"
                               step="1"
@@ -2144,7 +2143,7 @@ export function PropostasPage() {
                             />
                           </div>
                           <div>
-                            <Label>Valor Total</Label>
+<Label className="text-sm">Valor Total</Label>
                             <Input
                               type="number"
                               step="0.01"
@@ -2156,7 +2155,7 @@ export function PropostasPage() {
                         </div>
                         
                         <div>
-                          <Label>Descrição</Label>
+<Label className="text-sm">Descrição</Label>
                           <Textarea
                             value={item.descricao || ''}
                             onChange={(e) => {
@@ -2339,7 +2338,7 @@ export function PropostasPage() {
                             ? selectedPropostaForWhatsApp.cliente.remotejid.replace('@s.whatsapp.net', '')
                             : selectedPropostaForWhatsApp.cliente.whatsapp}
                           {selectedPropostaForWhatsApp.cliente.remotejid && (
-                            <span className="text-[10px] bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 px-1 rounded">✓ Validado</span>
+                            <span className="text-[10px] bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 px-1 rounded">? Validado</span>
                           )}
                         </p>
                       )}
@@ -2357,7 +2356,7 @@ export function PropostasPage() {
                 {!selectedPropostaForWhatsApp.cliente?.remotejid && !selectedPropostaForWhatsApp.cliente?.whatsapp && (
                   <div className="bg-yellow-50 dark:bg-yellow-900/20 rounded-lg p-4 border border-yellow-200 dark:border-yellow-800">
                     <p className="text-sm text-yellow-800 dark:text-yellow-200">
-                      ⚠️ O cliente não possui WhatsApp cadastrado. Por favor, cadastre um número antes de enviar.
+                      ?? O cliente não possui WhatsApp cadastrado. Por favor, cadastre um número antes de enviar.
                     </p>
                   </div>
                 )}
@@ -2365,7 +2364,7 @@ export function PropostasPage() {
                 {selectedPropostaForWhatsApp.cliente?.remotejid && (
                   <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-3 border border-green-200 dark:border-green-800">
                     <p className="text-xs text-green-800 dark:text-green-200">
-                      ✓ WhatsApp validado pela Evolution API. Envio otimizado.
+                      ? WhatsApp validado pela Evolution API. Envio otimizado.
                     </p>
                   </div>
                 )}
@@ -2373,7 +2372,7 @@ export function PropostasPage() {
                 {/* Seletor de Cor do PDF */}
                 <div>
                   <Label htmlFor="pdf-color" className="flex items-center gap-2">
-                    🎨 Cor do PDF
+                    ?? Cor do PDF
                   </Label>
                   <p className="text-xs text-gray-500 mb-3">
                     Escolha a cor principal do documento
@@ -2410,7 +2409,7 @@ export function PropostasPage() {
                 </div>
 
                 <div>
-                  <Label htmlFor="whatsapp-message">Mensagem (opcional)</Label>
+                  <Label htmlFor="whatsapp-message" className="text-sm">Mensagem (opcional)</Label>
                   <Textarea
                     id="whatsapp-message"
                     value={whatsappMessage}
@@ -2420,7 +2419,7 @@ export function PropostasPage() {
                     className="mt-2"
                   />
                   <p className="text-xs text-gray-500 mt-2">
-                    💡 Você pode personalizar a mensagem ou enviar apenas o PDF
+                    ?? Você pode personalizar a mensagem ou enviar apenas o PDF
                   </p>
                 </div>
               </>
@@ -2469,9 +2468,9 @@ export function PropostasPage() {
                       const base64 = reader.result as string
                       const base64Data = base64.split(',')[1] // Remover "data:application/pdf;base64,"
                       
-                      console.log('📤 Enviando para:', whatsappContact)
-                      console.log('📄 Arquivo:', `Proposta_${selectedPropostaForWhatsApp.numero_proposta}.pdf`)
-                      console.log('💬 Mensagem:', whatsappMessage || '(sem mensagem)')
+                      console.log('?? Enviando para:', whatsappContact)
+                      console.log('?? Arquivo:', `Proposta_${selectedPropostaForWhatsApp.numero_proposta}.pdf`)
+                      console.log('?? Mensagem:', whatsappMessage || '(sem mensagem)')
                       
                       // Enviar via WhatsApp (usa remotejid se disponível, senão formata whatsapp)
                       await whatsappService.sendDocument(

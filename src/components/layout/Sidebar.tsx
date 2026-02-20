@@ -346,7 +346,7 @@ export function Sidebar() {
                           'flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-medium transition-all duration-200',
                           isSubActive
                             ? 'bg-primary-500/90 text-white shadow-md shadow-primary-500/30'
-                            : 'text-neutral-500 hover:bg-white/70 hover:text-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-900/50'
+                            : 'text-neutral-500 dark:text-neutral-300'
                         )}
                       >
                         <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-white/40 text-primary-500 dark:bg-neutral-800/70">

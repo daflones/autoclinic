@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -16,7 +17,9 @@ interface DateTimePickerProps {
 export function DateTimePicker({ value, onChange, label, required, min }: DateTimePickerProps) {
   const [showPicker, setShowPicker] = useState(false)
   const [selectedDate, setSelectedDate] = useState<Date>(value ? new Date(value) : new Date())
+  const [coords, setCoords] = useState({ top: 0, left: 0 })
   const rootRef = useRef<HTMLDivElement | null>(null)
+  const popupRef = useRef<HTMLDivElement | null>(null)
 
   const formatLocalDateTime = (date: Date) => {
     const pad = (n: number) => String(n).padStart(2, '0')
@@ -40,28 +43,60 @@ export function DateTimePicker({ value, onChange, label, required, min }: DateTi
     if (!Number.isNaN(next.getTime())) setSelectedDate(next)
   }, [showPicker, value])
 
+  // Detecta o container do portal: dialog se dentro de modal, ou null
+  const getPortalContainer = useCallback((): HTMLElement | null => {
+    if (!rootRef.current) return null
+    return rootRef.current.closest('[role="dialog"]') as HTMLElement | null
+  }, [])
+
+  const updateCoords = useCallback(() => {
+    if (!rootRef.current) return
+    const rect = rootRef.current.getBoundingClientRect()
+    const dialog = getPortalContainer()
+    const W = 320
+
+    if (dialog) {
+      // Dentro de um modal: coordenadas relativas ao dialog
+      const dialogRect = dialog.getBoundingClientRect()
+      let left = rect.left - dialogRect.left
+      if (left + W > dialogRect.width) left = Math.max(0, dialogRect.width - W)
+      const top = rect.bottom - dialogRect.top + 4
+      setCoords({ top, left })
+    } else {
+      // Fora de modal: coordenadas absolutas na viewport
+      let left = rect.left
+      if (left + W > window.innerWidth - 8) left = Math.max(8, window.innerWidth - W - 8)
+      const spaceBelow = window.innerHeight - rect.bottom
+      const top = spaceBelow >= 380 ? rect.bottom + 4 : rect.top - 380
+      setCoords({ top, left })
+    }
+  }, [getPortalContainer])
+
   useEffect(() => {
     if (!showPicker) return
+    updateCoords()
+    window.addEventListener('resize', updateCoords)
+    window.addEventListener('scroll', updateCoords, true)
+    return () => {
+      window.removeEventListener('resize', updateCoords)
+      window.removeEventListener('scroll', updateCoords, true)
+    }
+  }, [showPicker, updateCoords])
 
+  useEffect(() => {
+    if (!showPicker) return
     const handleOutside = (ev: MouseEvent | TouchEvent) => {
-      const root = rootRef.current
-      if (!root) return
-      const target = ev.target as Node | null
-      if (target && root.contains(target)) return
+      const target = ev.target as Node
+      if (rootRef.current?.contains(target)) return
+      if (popupRef.current?.contains(target)) return
       setShowPicker(false)
     }
-
     document.addEventListener('mousedown', handleOutside)
     document.addEventListener('touchstart', handleOutside)
     return () => {
       document.removeEventListener('mousedown', handleOutside)
       document.removeEventListener('touchstart', handleOutside)
     }
-  }, [showPicker])
-
-  useEffect(() => {
-    if (!showPicker || !rootRef.current) return
-    // Calendar now always appears below, no positioning calculation needed
   }, [showPicker])
 
   const formatDisplayValue = (dateTime: string) => {
@@ -103,7 +138,6 @@ export function DateTimePicker({ value, onChange, label, required, min }: DateTi
     }
     setSelectedDate(newDate)
     
-    // Formatar para YYYY-MM-DDTHH:MM (horário local)
     const formatted = formatLocalDateTime(newDate)
     onChange(formatted)
   }
@@ -129,163 +163,180 @@ export function DateTimePicker({ value, onChange, label, required, min }: DateTi
 
   const weekDays = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
 
+  const handleOpen = () => {
+    if (showPicker) { setShowPicker(false); return }
+    updateCoords()
+    setShowPicker(true)
+  }
+
+  const calendarPopup = (
+    <div ref={popupRef}>
+      <Card
+        className="shadow-xl w-[320px] bg-background border"
+        style={{
+          position: getPortalContainer() ? 'absolute' : 'fixed',
+          top: coords.top,
+          left: coords.left,
+          zIndex: 9999,
+        }}
+      >
+        <CardContent className="p-2">
+          {/* Header do calendário */}
+          <div className="flex items-center justify-between mb-1">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-6 w-6 p-0"
+              onClick={() => {
+                const newDate = new Date(selectedDate)
+                newDate.setMonth(newDate.getMonth() - 1)
+                setSelectedDate(newDate)
+              }}
+            >
+              <ChevronLeft className="h-3.5 w-3.5" />
+            </Button>
+            <span className="font-medium text-xs">
+              {monthNames[selectedDate.getMonth()]} {selectedDate.getFullYear()}
+            </span>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-6 w-6 p-0"
+              onClick={() => {
+                const newDate = new Date(selectedDate)
+                newDate.setMonth(newDate.getMonth() + 1)
+                setSelectedDate(newDate)
+              }}
+            >
+              <ChevronRight className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+
+          {/* Dias da semana */}
+          <div className="grid grid-cols-7 gap-0 mb-0.5">
+            {weekDays.map((day) => (
+              <div key={day} className="text-center text-[10px] font-medium py-0.5">
+                {day}
+              </div>
+            ))}
+          </div>
+
+          {/* Calendário */}
+          <div className="grid grid-cols-7 gap-0">
+            {generateCalendar().map((date, index) => {
+              const isCurrentMonth = date.getMonth() === selectedDate.getMonth()
+              const isSelected = date.toDateString() === selectedDate.toDateString()
+              const isToday = date.toDateString() === new Date().toDateString()
+
+              return (
+                <Button
+                  key={index}
+                  type="button"
+                  variant={isSelected ? 'default' : 'ghost'}
+                  size="sm"
+                  className={`h-6 w-6 p-0 text-[10px] ${!isCurrentMonth ? 'text-gray-400' : ''} ${isToday && !isSelected ? 'ring-1 ring-primary' : ''}`}
+                  onClick={() => handleDateSelect(date)}
+                >
+                  {date.getDate()}
+                </Button>
+              )
+            })}
+          </div>
+
+          {/* Seletor de hora */}
+          <div className="border-t mt-1.5 pt-1.5">
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-1">
+                <Clock className="h-3 w-3 text-muted-foreground" />
+                <span className="text-xs font-medium">Hora</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <Input
+                  type="number"
+                  min="0"
+                  max="23"
+                  value={selectedDate.getHours()}
+                  onChange={(e) => handleTimeChange(parseInt(e.target.value) || 0, selectedDate.getMinutes())}
+                  className="w-12 h-7 text-xs text-center px-1"
+                />
+                <span className="text-xs">:</span>
+                <Input
+                  type="number"
+                  min="0"
+                  max="59"
+                  step="5"
+                  value={selectedDate.getMinutes()}
+                  onChange={(e) => handleTimeChange(selectedDate.getHours(), parseInt(e.target.value) || 0)}
+                  className="w-12 h-7 text-xs text-center px-1"
+                />
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-7 text-[10px] px-2 ml-auto"
+                onClick={() => {
+                  const now = new Date()
+                  setSelectedDate(now)
+                  onChange(formatLocalDateTime(now))
+                }}
+              >
+                Agora
+              </Button>
+            </div>
+            <div className="grid grid-cols-6 gap-1 mt-1.5">
+              {['08:00', '09:00', '10:00', '14:00', '15:00', '16:00'].map((time) => (
+                <Button
+                  key={time}
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="text-[10px] h-5 px-0.5"
+                  onClick={() => {
+                    const [hours, minutes] = time.split(':').map(Number)
+                    handleTimeChange(hours, minutes)
+                  }}
+                >
+                  {time}
+                </Button>
+              ))}
+            </div>
+            <Button type="button" size="sm" onClick={() => setShowPicker(false)} className="w-full mt-1.5 h-7 text-xs">
+              Confirmar
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  )
+
   return (
-    <div className="space-y-2">
-      {label && <Label className="text-foreground font-medium">
+    <div className="space-y-1">
+      {label && <Label className="text-sm">
         {label} {required && <span className="text-red-500">*</span>}
       </Label>}
-      <div className="relative" ref={rootRef}>
+      <div ref={rootRef}>
         <Button
           type="button"
           variant="outline"
-          className="w-full justify-start text-left font-normal text-foreground"
-          onClick={() => setShowPicker(!showPicker)}
+          className="h-8 justify-start text-left font-normal text-foreground text-xs px-2 whitespace-nowrap"
+          onClick={handleOpen}
         >
-          <CalendarIcon className="mr-2 h-4 w-4" />
+          <CalendarIcon className="mr-1.5 h-3.5 w-3.5" />
           {value ? formatDisplayValue(value) : 'Selecione data e hora'}
         </Button>
 
-        {showPicker && (
-          <Card
-            className="absolute left-0 top-full mt-2 z-[999] w-[320px] max-w-[92vw]"
-          >
-            <CardContent className="p-2">
-              {/* Botão Agora no topo */}
-              <div className="flex justify-center mb-1">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="text-xs w-full"
-                  onClick={() => {
-                    const now = new Date()
-                    setSelectedDate(now)
-                    onChange(formatLocalDateTime(now))
-                  }}
-                >
-                  Agora
-                </Button>
-              </div>
-
-              {/* Header do calendário */}
-              <div className="flex items-center justify-between mb-1">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    const newDate = new Date(selectedDate)
-                    newDate.setMonth(newDate.getMonth() - 1)
-                    setSelectedDate(newDate)
-                  }}
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </Button>
-                <span className="font-medium text-sm">
-                  {monthNames[selectedDate.getMonth()]} {selectedDate.getFullYear()}
-                </span>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    const newDate = new Date(selectedDate)
-                    newDate.setMonth(newDate.getMonth() + 1)
-                    setSelectedDate(newDate)
-                  }}
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-              </div>
-
-              {/* Dias da semana */}
-              <div className="grid grid-cols-7 gap-1 mb-1">
-                {weekDays.map((day) => (
-                  <div key={day} className="text-center text-[11px] font-medium p-1">
-                    {day}
-                  </div>
-                ))}
-              </div>
-
-              {/* Calendário */}
-              <div className="grid grid-cols-7 gap-1">
-                {generateCalendar().map((date, index) => {
-                  const isCurrentMonth = date.getMonth() === selectedDate.getMonth()
-                  const isSelected = date.toDateString() === selectedDate.toDateString()
-                  const isToday = date.toDateString() === new Date().toDateString()
-
-                  return (
-                    <Button
-                      key={index}
-                      type="button"
-                      variant={isSelected ? 'default' : 'ghost'}
-                      size="sm"
-                      className={`h-6 w-6 p-0 text-[11px] ${!isCurrentMonth ? 'text-gray-400' : ''} ${isToday ? 'ring-2 ring-blue-500' : ''}`}
-                      onClick={() => handleDateSelect(date)}
-                    >
-                      {date.getDate()}
-                    </Button>
-                  )
-                })}
-              </div>
-
-              {/* Seletor de hora */}
-              <div className="border-t mt-2 pt-2">
-                <div className="flex items-center gap-2 mb-2">
-                  <Clock className="h-4 w-4" />
-                  <span className="text-sm font-medium">Hora</span>
-                </div>
-                <div className="flex gap-2">
-                  <Input
-                    type="number"
-                    min="0"
-                    max="23"
-                    value={selectedDate.getHours()}
-                    onChange={(e) => handleTimeChange(parseInt(e.target.value) || 0, selectedDate.getMinutes())}
-                    className="w-16"
-                  />
-                  <span className="self-center">:</span>
-                  <Input
-                    type="number"
-                    min="0"
-                    max="59"
-                    step="5"
-                    value={selectedDate.getMinutes()}
-                    onChange={(e) => handleTimeChange(selectedDate.getHours(), parseInt(e.target.value) || 0)}
-                    className="w-16"
-                  />
-                </div>
-
-                <div className="mt-2">
-                  <div className="text-xs text-gray-600 mb-1">Horários comuns:</div>
-                  <div className="grid grid-cols-3 gap-1">
-                    {['08:00', '09:00', '10:00', '14:00', '15:00', '16:00'].map((time) => (
-                      <Button
-                        key={time}
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        className="text-xs h-6 px-1"
-                        onClick={() => {
-                          const [hours, minutes] = time.split(':').map(Number)
-                          handleTimeChange(hours, minutes)
-                        }}
-                      >
-                        {time}
-                      </Button>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="flex gap-2 mt-2">
-                  <Button type="button" size="sm" onClick={() => setShowPicker(false)} className="flex-1">
-                    Confirmar
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
+        {showPicker && (() => {
+          const dialog = getPortalContainer()
+          if (dialog) {
+            // Dentro de modal: portal no dialog (pointer-events funciona)
+            return createPortal(calendarPopup, dialog)
+          }
+          // Fora de modal: portal no body (sem overlay bloqueando)
+          return createPortal(calendarPopup, document.body)
+        })()}
       </div>
     </div>
   )

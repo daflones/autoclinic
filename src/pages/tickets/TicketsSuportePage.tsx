@@ -273,7 +273,7 @@ export function TicketsSuportePage() {
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label>Cliente *</Label>
+<Label className="text-sm">Cliente *</Label>
               <Select
                 value={formData.cliente_id}
                 onValueChange={(value) => setFormData({ ...formData, cliente_id: value })}
@@ -299,29 +299,29 @@ export function TicketsSuportePage() {
                 </SelectContent>
               </Select>
             </div>
-            <div><Label>Título *</Label><Input value={formData.titulo} onChange={(e) => setFormData({ ...formData, titulo: e.target.value })} placeholder="Ex: Problema com acesso ao sistema" /></div>
-            <div><Label>Descrição *</Label><Textarea value={formData.descricao} onChange={(e) => setFormData({ ...formData, descricao: e.target.value })} placeholder="Descreva o problema..." rows={4} /></div>
+            <div><Label className="text-sm">Título *</Label><Input value={formData.titulo} onChange={(e) => setFormData({ ...formData, titulo: e.target.value })} placeholder="Ex: Problema com acesso ao sistema" /></div>
+            <div><Label className="text-sm">Descrição *</Label><Textarea value={formData.descricao} onChange={(e) => setFormData({ ...formData, descricao: e.target.value })} placeholder="Descreva o problema..." rows={4} /></div>
             <div className="grid grid-cols-2 gap-4">
-              <div><Label>Prioridade</Label>
+              <div><Label className="text-sm">Prioridade</Label>
                 <Select value={formData.prioridade} onValueChange={(value) => setFormData({ ...formData, prioridade: value as PrioridadeTicket })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent><SelectItem value="baixa">Baixa</SelectItem><SelectItem value="media">Média</SelectItem><SelectItem value="alta">Alta</SelectItem><SelectItem value="urgente">Urgente</SelectItem></SelectContent>
                 </Select>
               </div>
-              <div><Label>Status</Label>
+              <div><Label className="text-sm">Status</Label>
                 <Select value={formData.status} onValueChange={(value) => setFormData({ ...formData, status: value as StatusTicket })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent><SelectItem value="aberto">Aberto</SelectItem><SelectItem value="em_andamento">Em Andamento</SelectItem><SelectItem value="aguardando_cliente">Aguardando Cliente</SelectItem><SelectItem value="resolvido">Resolvido</SelectItem><SelectItem value="fechado">Fechado</SelectItem><SelectItem value="cancelado">Cancelado</SelectItem></SelectContent>
                 </Select>
               </div>
             </div>
-            <div><Label>Vendedor (Opcional)</Label>
+            <div><Label className="text-sm">Vendedor (Opcional)</Label>
               <Select value={formData.vendedor_id || 'none'} onValueChange={(value) => setFormData({ ...formData, vendedor_id: value === 'none' ? null : value })}>
                 <SelectTrigger><SelectValue placeholder="Nenhum" /></SelectTrigger>
                 <SelectContent><SelectItem value="none">Nenhum</SelectItem>{vendedores.map((v: any) => (<SelectItem key={v.id} value={v.id}>{v.nome}</SelectItem>))}</SelectContent>
               </Select>
             </div>
-            <div><Label>Setor (Opcional)</Label>
+            <div><Label className="text-sm">Setor (Opcional)</Label>
               <Select value={formData.setor_id || 'none'} onValueChange={(value) => setFormData({ ...formData, setor_id: value === 'none' ? null : value })}>
                 <SelectTrigger><SelectValue placeholder="Nenhum" /></SelectTrigger>
                 <SelectContent><SelectItem value="none">Nenhum</SelectItem>{setores.map((s: any) => (<SelectItem key={s.id} value={s.id}>{s.nome}</SelectItem>))}</SelectContent>
@@ -344,29 +344,29 @@ export function TicketsSuportePage() {
             <DialogDescription>Atualize as informações do ticket</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            <div><Label>Título *</Label><Input value={formData.titulo} onChange={(e) => setFormData({ ...formData, titulo: e.target.value })} /></div>
-            <div><Label>Descrição *</Label><Textarea value={formData.descricao} onChange={(e) => setFormData({ ...formData, descricao: e.target.value })} rows={4} /></div>
+            <div><Label className="text-sm">Título *</Label><Input value={formData.titulo} onChange={(e) => setFormData({ ...formData, titulo: e.target.value })} /></div>
+            <div><Label className="text-sm">Descrição *</Label><Textarea value={formData.descricao} onChange={(e) => setFormData({ ...formData, descricao: e.target.value })} rows={4} /></div>
             <div className="grid grid-cols-2 gap-4">
-              <div><Label>Prioridade</Label>
+              <div><Label className="text-sm">Prioridade</Label>
                 <Select value={formData.prioridade} onValueChange={(value) => setFormData({ ...formData, prioridade: value as PrioridadeTicket })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent><SelectItem value="baixa">Baixa</SelectItem><SelectItem value="media">Média</SelectItem><SelectItem value="alta">Alta</SelectItem><SelectItem value="urgente">Urgente</SelectItem></SelectContent>
                 </Select>
               </div>
-              <div><Label>Status</Label>
+              <div><Label className="text-sm">Status</Label>
                 <Select value={formData.status} onValueChange={(value) => setFormData({ ...formData, status: value as StatusTicket })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent><SelectItem value="aberto">Aberto</SelectItem><SelectItem value="em_andamento">Em Andamento</SelectItem><SelectItem value="aguardando_cliente">Aguardando Cliente</SelectItem><SelectItem value="resolvido">Resolvido</SelectItem><SelectItem value="fechado">Fechado</SelectItem><SelectItem value="cancelado">Cancelado</SelectItem></SelectContent>
                 </Select>
               </div>
             </div>
-            <div><Label>Vendedor</Label>
+            <div><Label className="text-sm">Vendedor</Label>
               <Select value={formData.vendedor_id || 'none'} onValueChange={(value) => setFormData({ ...formData, vendedor_id: value === 'none' ? null : value })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent><SelectItem value="none">Nenhum</SelectItem>{vendedores.map((v: any) => (<SelectItem key={v.id} value={v.id}>{v.nome}</SelectItem>))}</SelectContent>
               </Select>
             </div>
-            <div><Label>Setor</Label>
+            <div><Label className="text-sm">Setor</Label>
               <Select value={formData.setor_id || 'none'} onValueChange={(value) => setFormData({ ...formData, setor_id: value === 'none' ? null : value })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent><SelectItem value="none">Nenhum</SelectItem>{setores.map((s: any) => (<SelectItem key={s.id} value={s.id}>{s.nome}</SelectItem>))}</SelectContent>

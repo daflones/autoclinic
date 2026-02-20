@@ -102,7 +102,7 @@ export function SimpleDateTime({ value, onChange, label, required, popoverDirect
 
   return (
     <div className="space-y-2">
-      <Label>
+<Label className="text-sm">
         {label} {required && <span className="text-red-500">*</span>}
       </Label>
       
@@ -123,7 +123,7 @@ export function SimpleDateTime({ value, onChange, label, required, popoverDirect
               onClick={() => setShowCalendar(!showCalendar)}
             />
           </div>
-          <Label className="text-xs text-gray-500">Data</Label>
+<Label className="text-sm">Data</Label>
 
           {/* Calendário Popup */}
           {showCalendar && (
@@ -146,7 +146,7 @@ export function SimpleDateTime({ value, onChange, label, required, popoverDirect
                   }}
                   className="h-8 w-8 p-0"
                 >
-                  ←
+                  ?
                 </Button>
                 <div className="font-medium">
                   {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
@@ -162,7 +162,7 @@ export function SimpleDateTime({ value, onChange, label, required, popoverDirect
                   }}
                   className="h-8 w-8 p-0"
                 >
-                  →
+                  ?
                 </Button>
               </div>
               
@@ -244,7 +244,7 @@ export function SimpleDateTime({ value, onChange, label, required, popoverDirect
               onClick={() => setShowTime(!showTime)}
             />
           </div>
-          <Label className="text-xs text-gray-500">Hora</Label>
+<Label className="text-sm">Hora</Label>
 
           {/* Seletor de Hora Popup */}
           {showTime && (

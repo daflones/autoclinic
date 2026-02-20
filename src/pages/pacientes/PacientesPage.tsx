@@ -917,26 +917,26 @@ export function PacientesPage() {
                 <div className="text-sm font-medium text-foreground">Dados do paciente</div>
                 <div className="mt-3 grid gap-3">
                   <div className="space-y-2">
-                    <Label htmlFor="nome_completo">Nome completo *</Label>
+                    <Label htmlFor="nome_completo" className="text-sm">Nome completo *</Label>
                     <Input id="nome_completo" placeholder="Nome do paciente" {...register('nome_completo')} />
                     {errors.nome_completo && <p className="text-xs text-rose-500">{errors.nome_completo.message}</p>}
                   </div>
 
                   <div className="grid gap-3 sm:grid-cols-2">
                     <div className="space-y-2">
-                      <Label htmlFor="cpf">CPF</Label>
+                      <Label htmlFor="cpf" className="text-sm">CPF</Label>
                       <Input id="cpf" placeholder="Somente números" {...register('cpf')} />
                       {errors.cpf && <p className="text-xs text-rose-500">{errors.cpf.message}</p>}
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="rg">RG</Label>
+                      <Label htmlFor="rg" className="text-sm">RG</Label>
                       <Input id="rg" placeholder="Somente números" {...register('rg')} />
                     </div>
                   </div>
 
                   <div className="grid gap-3 sm:grid-cols-2">
                     <div className="space-y-2">
-                      <Label htmlFor="genero">Gênero</Label>
+                      <Label htmlFor="genero" className="text-sm">Gênero</Label>
                       <select
                         id="genero"
                         className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
@@ -949,14 +949,14 @@ export function PacientesPage() {
                       </select>
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="data_nascimento">Data de nascimento</Label>
+                      <Label htmlFor="data_nascimento" className="text-sm">Data de nascimento</Label>
                       <Input id="data_nascimento" type="date" {...register('data_nascimento')} />
                     </div>
                   </div>
 
                   <div className="grid gap-3 sm:grid-cols-2">
                     <div className="space-y-2">
-                      <Label htmlFor="status">Status</Label>
+                      <Label htmlFor="status" className="text-sm">Status</Label>
                       <select
                         id="status"
                         className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
@@ -968,7 +968,7 @@ export function PacientesPage() {
                       </select>
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="tags">Tags</Label>
+                      <Label htmlFor="tags" className="text-sm">Tags</Label>
                       <Input id="tags" placeholder="Separadas por vírgula (ex: botox, vip)" {...register('tags')} />
                     </div>
                   </div>
@@ -980,23 +980,23 @@ export function PacientesPage() {
                 <div className="mt-3 grid gap-3">
                   <div className="grid gap-3 sm:grid-cols-2">
                     <div className="space-y-2">
-                      <Label htmlFor="email">E-mail</Label>
+                      <Label htmlFor="email" className="text-sm">E-mail</Label>
                       <Input id="email" placeholder="email@paciente.com" {...register('email')} />
                       {errors.email && <p className="text-xs text-rose-500">{errors.email.message}</p>}
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="telefone">Telefone</Label>
+                      <Label htmlFor="telefone" className="text-sm">Telefone</Label>
                       <Input id="telefone" placeholder="(00) 00000-0000" {...register('telefone')} />
                     </div>
                   </div>
 
                   <div className="grid gap-3 sm:grid-cols-2">
                     <div className="space-y-2">
-                      <Label htmlFor="whatsapp">Whatsapp</Label>
+                      <Label htmlFor="whatsapp" className="text-sm">Whatsapp</Label>
                       <Input id="whatsapp" placeholder="(00) 00000-0000" {...register('whatsapp')} />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="fonte_captacao">Fonte de captação</Label>
+                      <Label htmlFor="fonte_captacao" className="text-sm">Fonte de captação</Label>
                       <Input id="fonte_captacao" placeholder="Indicação, Instagram, Evento..." {...register('fonte_captacao')} />
                     </div>
                   </div>
@@ -1007,39 +1007,39 @@ export function PacientesPage() {
                 <div className="text-sm font-medium text-foreground">Endereço</div>
                 <div className="mt-3 grid gap-3">
                   <div className="space-y-2">
-                    <Label htmlFor="endereco_logradouro">Logradouro</Label>
+                    <Label htmlFor="endereco_logradouro" className="text-sm">Logradouro</Label>
                     <Input id="endereco_logradouro" placeholder="Rua, avenida..." {...register('endereco_logradouro')} />
                   </div>
 
                   <div className="grid gap-3 sm:grid-cols-3">
                     <div className="space-y-2 sm:col-span-1">
-                      <Label htmlFor="endereco_numero">Número</Label>
+                      <Label htmlFor="endereco_numero" className="text-sm">Número</Label>
                       <Input id="endereco_numero" placeholder="Nº" {...register('endereco_numero')} />
                     </div>
                     <div className="space-y-2 sm:col-span-2">
-                      <Label htmlFor="endereco_complemento">Complemento</Label>
+                      <Label htmlFor="endereco_complemento" className="text-sm">Complemento</Label>
                       <Input id="endereco_complemento" placeholder="Apto, sala..." {...register('endereco_complemento')} />
                     </div>
                   </div>
 
                   <div className="grid gap-3 sm:grid-cols-2">
                     <div className="space-y-2">
-                      <Label htmlFor="endereco_bairro">Bairro</Label>
+                      <Label htmlFor="endereco_bairro" className="text-sm">Bairro</Label>
                       <Input id="endereco_bairro" {...register('endereco_bairro')} />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="endereco_cidade">Cidade</Label>
+                      <Label htmlFor="endereco_cidade" className="text-sm">Cidade</Label>
                       <Input id="endereco_cidade" {...register('endereco_cidade')} />
                     </div>
                   </div>
 
                   <div className="grid gap-3 sm:grid-cols-2">
                     <div className="space-y-2">
-                      <Label htmlFor="endereco_estado">Estado</Label>
+                      <Label htmlFor="endereco_estado" className="text-sm">Estado</Label>
                       <Input id="endereco_estado" placeholder="UF" {...register('endereco_estado')} />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="endereco_cep">CEP</Label>
+                      <Label htmlFor="endereco_cep" className="text-sm">CEP</Label>
                       <Input id="endereco_cep" placeholder="Somente números" {...register('endereco_cep')} />
                       {errors.endereco_cep && <p className="text-xs text-rose-500">{errors.endereco_cep.message}</p>}
                     </div>
@@ -1051,11 +1051,11 @@ export function PacientesPage() {
                 <div className="text-sm font-medium text-foreground">Saúde</div>
                 <div className="mt-3 grid gap-3 sm:grid-cols-2">
                   <div className="space-y-2">
-                    <Label htmlFor="alergias">Alergias</Label>
+                    <Label htmlFor="alergias" className="text-sm">Alergias</Label>
                     <Textarea id="alergias" rows={2} placeholder="Informe alergias relevantes" {...register('alergias')} />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="restricoes">Restrições</Label>
+                    <Label htmlFor="restricoes" className="text-sm">Restrições</Label>
                     <Textarea id="restricoes" rows={2} placeholder="Restrições médicas importantes" {...register('restricoes')} />
                   </div>
                 </div>
@@ -1065,7 +1065,7 @@ export function PacientesPage() {
                 <div className="text-sm font-medium text-foreground">Informações clínicas</div>
                 <div className="mt-3 grid gap-3">
                   <div className="space-y-2">
-                    <Label htmlFor="observacoes">Observações clínicas</Label>
+                    <Label htmlFor="observacoes" className="text-sm">Observações clínicas</Label>
                     <Textarea
                       id="observacoes"
                       rows={3}
@@ -1076,7 +1076,7 @@ export function PacientesPage() {
 
                   <div className="grid gap-3 sm:grid-cols-2">
                     <div className="space-y-2">
-                      <Label htmlFor="analise_cliente">Análise do paciente</Label>
+                      <Label htmlFor="analise_cliente" className="text-sm">Análise do paciente</Label>
                       <Textarea
                         id="analise_cliente"
                         rows={3}
@@ -1085,7 +1085,7 @@ export function PacientesPage() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="produto_interesse">Procedimento de interesse</Label>
+                      <Label htmlFor="produto_interesse" className="text-sm">Procedimento de interesse</Label>
                       <Textarea
                         id="produto_interesse"
                         rows={3}
@@ -1500,7 +1500,7 @@ export function PacientesPage() {
                                         />
                                       </div>
                                       <div className="max-w-xs">
-                                        <Label className="text-xs text-muted-foreground">Status</Label>
+<Label className="text-sm">Status</Label>
                                         <Select
                                           value={String(editingAgendamentoDraft?.status ?? 'agendado')}
                                           onValueChange={(v) =>
@@ -1708,7 +1708,7 @@ export function PacientesPage() {
                                         />
                                         <div className="grid gap-3 sm:grid-cols-2">
                                           <div>
-                                            <Label className="text-xs text-muted-foreground">Status</Label>
+<Label className="text-sm">Status</Label>
                                             <Select
                                               value={String(editingPlanoDraft?.status ?? plano.status)}
                                               onValueChange={(v) => setEditingPlanoDraft((prev) => ({ ...(prev || {}), status: v }))}
@@ -1727,7 +1727,7 @@ export function PacientesPage() {
                                             </Select>
                                           </div>
                                           <div>
-                                            <Label className="text-xs text-muted-foreground">Pacote/Protocolo</Label>
+<Label className="text-sm">Pacote/Protocolo</Label>
                                             <Select
                                               value={String(editingPlanoDraft?.protocolo_pacote_id ?? 'none')}
                                               onValueChange={(v) =>
@@ -1926,7 +1926,7 @@ export function PacientesPage() {
                                                         label="Realizada"
                                                       />
                                                       <div className="sm:col-span-2 max-w-xs">
-                                                        <Label className="text-xs text-muted-foreground">Status</Label>
+<Label className="text-sm">Status</Label>
                                                         <Select
                                                           value={String(editingSessaoDraft?.status ?? 'planejada')}
                                                           onValueChange={(v) =>

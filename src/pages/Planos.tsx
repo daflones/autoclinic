@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+﻿import React, { useState, useEffect } from 'react'
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
@@ -590,7 +590,7 @@ function Planos() {
                   <>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">Nome</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Nome</label>
                         <input
                           type="text"
                           required
@@ -601,7 +601,7 @@ function Planos() {
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">Sobrenome</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Sobrenome</label>
                         <input
                           type="text"
                           required
@@ -614,7 +614,7 @@ function Planos() {
                     </div>
 
                     <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">Email</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
                       <input
                         type="email"
                         required
@@ -627,7 +627,7 @@ function Planos() {
 
                     <div className="grid grid-cols-3 gap-4">
                       <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">Tipo</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Tipo</label>
                         <select
                           value={formData.documentType}
                           onChange={(e) => setFormData({...formData, documentType: e.target.value})}
@@ -638,7 +638,7 @@ function Planos() {
                         </select>
                       </div>
                       <div className="col-span-2">
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">Documento</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Documento</label>
                         <input
                           type="text"
                           required
@@ -855,7 +855,7 @@ function Planos() {
                 {/* Código PIX */}
                 {paymentResult.qr_code_string && (
                   <div className="mb-8">
-                    <label className="block text-sm font-semibold text-gray-700 mb-3">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
                       Código PIX (Copia e Cola):
                     </label>
                     <div className="relative">

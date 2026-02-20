@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef } from 'react'
+﻿import { useState, useMemo, useRef } from 'react'
 // Card components removed after style standardization
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -47,7 +47,7 @@ import {
   useDeleteAgendamentoClinica,
   useUpdateAgendamentoClinicaStatus,
 } from '@/hooks/useAgendamentosClinica'
-import { usePacientes } from '@/hooks/usePacientes'
+import { usePacientes, useCreatePaciente } from '@/hooks/usePacientes'
 import { useProfissionaisClinica } from '@/hooks/useProfissionaisClinica'
 import { useProcedimentos } from '@/hooks/useProcedimentos'
 import { useProtocolosPacotes } from '@/hooks/useProtocolosPacotes'
@@ -182,6 +182,25 @@ export function AgendamentosClinicaPage() {
   const updateMutation = useUpdateAgendamentoClinica()
   const deleteMutation = useDeleteAgendamentoClinica()
   const updateStatusMutation = useUpdateAgendamentoClinicaStatus()
+  const createPacienteMutation = useCreatePaciente()
+
+  const handleCreatePaciente = async (nome: string) => {
+    if (!nome || nome.trim().length < 2) {
+      toast.error('Informe o nome do paciente (mínimo 2 caracteres)')
+      return
+    }
+    try {
+      const novoPaciente = await createPacienteMutation.mutateAsync({
+        nome_completo: nome.trim(),
+      })
+      if (novoPaciente?.id) {
+        setFormState((prev) => ({ ...prev, paciente_id: novoPaciente.id }))
+        toast.success(`Paciente "${nome.trim()}" cadastrado!`)
+      }
+    } catch {
+      // error handled by mutation hook
+    }
+  }
 
   const [isRescheduleModalOpen, setIsRescheduleModalOpen] = useState(false)
   const [rescheduleState, setRescheduleState] = useState({
@@ -633,8 +652,8 @@ export function AgendamentosClinicaPage() {
       </section>
 
       <section className="relative z-20 overflow-visible rounded-2xl border border-border/40 bg-background/60 px-4 py-3 shadow-sm backdrop-blur">
-        <div className="flex items-end gap-2 overflow-x-auto">
-          <div className="relative min-w-[140px]">
+        <div className="flex items-end gap-2 overflow-visible">
+          <div className="relative min-w-[120px]">
             <span className="mb-1 block text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Buscar</span>
             <div className="relative">
               <Search className="absolute left-2 top-2 h-3.5 w-3.5 text-muted-foreground" />
@@ -650,7 +669,7 @@ export function AgendamentosClinicaPage() {
           <div>
             <span className="mb-1 block text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Status</span>
             <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as any)}>
-              <SelectTrigger className="h-8 w-[110px] text-xs">
+              <SelectTrigger className="h-8 w-[90px] text-xs">
                 <SelectValue placeholder="Todos" />
               </SelectTrigger>
               <SelectContent>
@@ -665,7 +684,7 @@ export function AgendamentosClinicaPage() {
           <div>
             <span className="mb-1 block text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Pacientes</span>
             <Select value={pacienteFilter} onValueChange={(v) => { setPacienteFilter(v); setPacienteSearch('') }}>
-              <SelectTrigger className="h-8 w-[140px] text-xs">
+              <SelectTrigger className="h-8 w-[110px] text-xs">
                 <SelectValue placeholder="Todos" />
               </SelectTrigger>
               <SelectContent>
@@ -680,7 +699,7 @@ export function AgendamentosClinicaPage() {
           <div>
             <span className="mb-1 block text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Pacotes/Procedimentos</span>
             <Select value={procedimentoFilter} onValueChange={setProcedimentoFilter}>
-              <SelectTrigger className="h-8 w-[150px] text-xs">
+              <SelectTrigger className="h-8 w-[120px] text-xs">
                 <SelectValue placeholder="Todos" />
               </SelectTrigger>
               <SelectContent>
@@ -704,7 +723,7 @@ export function AgendamentosClinicaPage() {
           <div>
             <span className="mb-1 block text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Avaliação</span>
             <Select value={avaliacaoFilter} onValueChange={(v) => setAvaliacaoFilter(v as any)}>
-              <SelectTrigger className="h-8 w-[110px] text-xs">
+              <SelectTrigger className="h-8 w-[90px] text-xs">
                 <SelectValue placeholder="Todos" />
               </SelectTrigger>
               <SelectContent>
@@ -793,13 +812,13 @@ export function AgendamentosClinicaPage() {
 
               <div className="flex flex-wrap items-center gap-2">
                 <Button type="button" variant="outline" onClick={handleCalendarPrev}>
-                  ◀
+                  ?
                 </Button>
                 <Button type="button" variant="outline" onClick={handleCalendarToday}>
                   Hoje
                 </Button>
                 <Button type="button" variant="outline" onClick={handleCalendarNext}>
-                  ▶
+                  ?
                 </Button>
 
                 <Button
@@ -940,8 +959,30 @@ export function AgendamentosClinicaPage() {
                           className="h-8 w-8 p-0"
                           onClick={(e) => {
                             e.stopPropagation()
-                            // TODO: Implement edit functionality
-                            console.log('Edit agendamento:', agendamento.id)
+                            setSelectedAgendamento(agendamento)
+                            setIsDetailsModalOpen(false)
+                            const procedimentosIds = Array.isArray((agendamento as any).procedimentos_ids)
+                              ? ((agendamento as any).procedimentos_ids as string[])
+                              : agendamento.procedimento_id ? [agendamento.procedimento_id] : []
+                            const pacotesIds = Array.isArray((agendamento as any).protocolos_pacotes_ids)
+                              ? ((agendamento as any).rotocolos_pacotes_ids as string[]) : []
+                            setEditFormState({
+                              titulo: agendamento.titulo,
+                              descricao: agendamento.descricao || '',
+                              is_avaliacao: Boolean((agendamento as any).is_avaliacao),
+                              valor: calcValorAgendamento(procedimentosIds, pacotesIds),
+                              data_inicio: agendamento.data_inicio,
+                              data_fim: agendamento.data_fim,
+                              paciente_id: agendamento.paciente_id || null,
+                              profissional_id: agendamento.profissional_id || null,
+                              plano_tratamento_id: agendamento.plano_tratamento_id ?? null,
+                              procedimento_id: agendamento.procedimento_id ?? null,
+                              procedimentos_ids: procedimentosIds,
+                              protocolos_pacotes_ids: pacotesIds,
+                              sala: agendamento.sala || '',
+                              status: agendamento.status,
+                            })
+                            setIsEditModalOpen(true)
                           }}
                         >
                           <Edit className="h-4 w-4" />
@@ -1022,7 +1063,7 @@ export function AgendamentosClinicaPage() {
               </div>
 
               <div className="space-y-2">
-                <Label>Motivo (opcional)</Label>
+<Label className="text-sm">Motivo (opcional)</Label>
                 <Textarea
                   value={rescheduleState.motivo}
                   onChange={(e) => setRescheduleState((s) => ({ ...s, motivo: e.target.value }))}
@@ -1073,6 +1114,7 @@ export function AgendamentosClinicaPage() {
         deletePending={deleteMutation.isPending}
         updateStatusPending={updateStatusMutation.isPending}
         agendamentos={agendamentos}
+        onCreatePaciente={handleCreatePaciente}
       />
     </div>
   )

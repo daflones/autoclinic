@@ -1,4 +1,4 @@
-import { useState } from 'react'
+﻿import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -215,7 +215,7 @@ export function CategoriasClinicaPage() {
 
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="create-nome">Nome *</Label>
+              <Label htmlFor="create-nome" className="text-sm">Nome *</Label>
               <Input
                 id="create-nome"
                 value={formState.nome}
@@ -225,7 +225,7 @@ export function CategoriasClinicaPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="create-descricao">Descrição</Label>
+              <Label htmlFor="create-descricao" className="text-sm">Descrição</Label>
               <Textarea
                 id="create-descricao"
                 value={formState.descricao || ''}
@@ -237,7 +237,7 @@ export function CategoriasClinicaPage() {
 
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="create-cor">Cor</Label>
+                <Label htmlFor="create-cor" className="text-sm">Cor</Label>
                 <Input
                   id="create-cor"
                   type="color"
@@ -247,7 +247,7 @@ export function CategoriasClinicaPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="create-ordem">Ordem</Label>
+                <Label htmlFor="create-ordem" className="text-sm">Ordem</Label>
                 <Input
                   id="create-ordem"
                   type="number"
@@ -261,7 +261,7 @@ export function CategoriasClinicaPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="create-status">Status</Label>
+              <Label htmlFor="create-status" className="text-sm">Status</Label>
               <Select
                 value={formState.status}
                 onValueChange={(v) => setFormState({ ...formState, status: v as StatusCategoria })}
@@ -301,7 +301,7 @@ export function CategoriasClinicaPage() {
 
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="edit-nome">Nome *</Label>
+              <Label htmlFor="edit-nome" className="text-sm">Nome *</Label>
               <Input
                 id="edit-nome"
                 value={formState.nome}
@@ -310,7 +310,7 @@ export function CategoriasClinicaPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="edit-descricao">Descrição</Label>
+              <Label htmlFor="edit-descricao" className="text-sm">Descrição</Label>
               <Textarea
                 id="edit-descricao"
                 value={formState.descricao || ''}
@@ -321,7 +321,7 @@ export function CategoriasClinicaPage() {
 
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="edit-cor">Cor</Label>
+                <Label htmlFor="edit-cor" className="text-sm">Cor</Label>
                 <Input
                   id="edit-cor"
                   type="color"
@@ -331,7 +331,7 @@ export function CategoriasClinicaPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="edit-ordem">Ordem</Label>
+                <Label htmlFor="edit-ordem" className="text-sm">Ordem</Label>
                 <Input
                   id="edit-ordem"
                   type="number"
@@ -344,7 +344,7 @@ export function CategoriasClinicaPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="edit-status">Status</Label>
+              <Label htmlFor="edit-status" className="text-sm">Status</Label>
               <Select
                 value={formState.status}
                 onValueChange={(v) => setFormState({ ...formState, status: v as StatusCategoria })}

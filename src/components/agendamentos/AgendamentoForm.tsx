@@ -770,7 +770,7 @@ export function AgendamentoForm({ agendamento, clientes, vendedores, onSubmit, o
             <CardContent className="space-y-4">
               {/* Seleção de Vendedores Existentes */}
               <div className="space-y-2">
-                <Label>Selecionar Vendedor da Empresa</Label>
+                <Label className="text-sm">Selecionar Vendedor da Empresa</Label>
                 <div className="flex gap-2">
                   <Select value={selectedVendedor} onValueChange={setSelectedVendedor}>
                     <SelectTrigger className="flex-1">
@@ -878,7 +878,7 @@ export function AgendamentoForm({ agendamento, clientes, vendedores, onSubmit, o
             <CardContent className="space-y-6">
           {/* Materiais Necessários */}
           <div className="space-y-4">
-            <Label>Materiais Necessários</Label>
+            <Label className="text-sm">Materiais Necessários</Label>
             <div className="flex gap-2">
               <Input
                 value={newMaterial}
@@ -926,7 +926,7 @@ export function AgendamentoForm({ agendamento, clientes, vendedores, onSubmit, o
             <CardContent className="space-y-6">
           {/* Produtos */}
           <div className="space-y-4">
-            <Label>Produtos a Apresentar</Label>
+            <Label className="text-sm">Produtos a Apresentar</Label>
             <div className="flex gap-2">
               <Input
                 value={newProduto}
@@ -966,7 +966,7 @@ export function AgendamentoForm({ agendamento, clientes, vendedores, onSubmit, o
 
           {/* Serviços */}
           <div className="space-y-4">
-            <Label>Serviços a Apresentar</Label>
+            <Label className="text-sm">Serviços a Apresentar</Label>
             <div className="flex gap-2">
               <Input
                 value={newServico}

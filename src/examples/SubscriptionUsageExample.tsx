@@ -147,7 +147,7 @@ export function ClienteFormModal({ isOpen, onClose }: { isOpen: boolean; onClose
           
           <form className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700">Nome</label>
+<Label className="text-sm">Nome</label>
               <input 
                 type="text" 
                 className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
@@ -155,7 +155,7 @@ export function ClienteFormModal({ isOpen, onClose }: { isOpen: boolean; onClose
             </div>
             
             <div>
-              <label className="block text-sm font-medium text-gray-700">Email</label>
+<Label className="text-sm">Email</label>
               <input 
                 type="email" 
                 className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"

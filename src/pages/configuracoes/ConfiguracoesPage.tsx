@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+﻿import { useState, useEffect } from 'react'
 // Card components no longer used after style standardization
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -208,7 +208,7 @@ export function ConfiguracoesPage() {
                   <>
                     <div className="grid gap-4">
                       <div className="grid gap-2">
-                        <Label htmlFor="name">Nome da Empresa *</Label>
+                        <Label htmlFor="name" className="text-sm">Nome da Empresa *</Label>
                         <Input 
                           id="name" 
                           placeholder="Nome da sua empresa"
@@ -217,7 +217,7 @@ export function ConfiguracoesPage() {
                         />
                       </div>
                       <div className="grid gap-2">
-                        <Label htmlFor="email">Email *</Label>
+                        <Label htmlFor="email" className="text-sm">Email *</Label>
                         <Input 
                           id="email" 
                           type="email" 
@@ -227,7 +227,7 @@ export function ConfiguracoesPage() {
                         />
                       </div>
                       <div className="grid gap-2">
-                        <Label htmlFor="phone">Telefone</Label>
+                        <Label htmlFor="phone" className="text-sm">Telefone</Label>
                         <Input 
                           id="phone" 
                           placeholder="(11) 99999-9999"
@@ -236,7 +236,7 @@ export function ConfiguracoesPage() {
                         />
                       </div>
                       <div className="grid gap-2">
-                        <Label htmlFor="role">Cargo</Label>
+                        <Label htmlFor="role" className="text-sm">Cargo</Label>
                         <Input 
                           id="role" 
                           value={profileData?.role === 'admin' ? 'Administrador' : 'Vendedor'}
@@ -286,7 +286,7 @@ export function ConfiguracoesPage() {
                     <h4 className="font-semibold mb-3">Contatos</h4>
                     <div className="grid gap-4">
                       <div className="grid gap-2">
-                        <Label htmlFor="empresa_telefone">Telefone</Label>
+                        <Label htmlFor="empresa_telefone" className="text-sm">Telefone</Label>
                         <Input 
                           id="empresa_telefone" 
                           placeholder="(11) 99999-9999"
@@ -298,7 +298,7 @@ export function ConfiguracoesPage() {
                         />
                       </div>
                       <div className="grid gap-2">
-                        <Label htmlFor="empresa_whatsapp">WhatsApp</Label>
+                        <Label htmlFor="empresa_whatsapp" className="text-sm">WhatsApp</Label>
                         <Input 
                           id="empresa_whatsapp" 
                           placeholder="(11) 99999-9999"
@@ -317,7 +317,7 @@ export function ConfiguracoesPage() {
                   <div>
                     <h4 className="font-semibold mb-3">Endereço</h4>
                     <div className="grid gap-2">
-                      <Label htmlFor="empresa_endereco">Endereço Completo</Label>
+                      <Label htmlFor="empresa_endereco" className="text-sm">Endereço Completo</Label>
                       <Input 
                         id="empresa_endereco" 
                         placeholder="Rua, número, bairro, cidade - UF"
@@ -336,7 +336,7 @@ export function ConfiguracoesPage() {
                     <h4 className="font-semibold mb-3">Redes Sociais</h4>
                     <div className="grid gap-4">
                       <div className="grid gap-2">
-                        <Label htmlFor="empresa_website">Website</Label>
+                        <Label htmlFor="empresa_website" className="text-sm">Website</Label>
                         <Input 
                           id="empresa_website" 
                           placeholder="https://www.suaempresa.com"
@@ -348,7 +348,7 @@ export function ConfiguracoesPage() {
                         />
                       </div>
                       <div className="grid gap-2">
-                        <Label htmlFor="empresa_facebook">Facebook</Label>
+                        <Label htmlFor="empresa_facebook" className="text-sm">Facebook</Label>
                         <Input 
                           id="empresa_facebook" 
                           placeholder="https://facebook.com/suaempresa"
@@ -360,7 +360,7 @@ export function ConfiguracoesPage() {
                         />
                       </div>
                       <div className="grid gap-2">
-                        <Label htmlFor="empresa_linkedin">LinkedIn</Label>
+                        <Label htmlFor="empresa_linkedin" className="text-sm">LinkedIn</Label>
                         <Input 
                           id="empresa_linkedin" 
                           placeholder="https://linkedin.com/company/suaempresa"
@@ -372,7 +372,7 @@ export function ConfiguracoesPage() {
                         />
                       </div>
                       <div className="grid gap-2">
-                        <Label htmlFor="empresa_instagram">Instagram</Label>
+                        <Label htmlFor="empresa_instagram" className="text-sm">Instagram</Label>
                         <Input 
                           id="empresa_instagram" 
                           placeholder="https://instagram.com/suaempresa"

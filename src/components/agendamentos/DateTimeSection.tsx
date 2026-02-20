@@ -1,4 +1,4 @@
-import React from 'react'
+﻿import React from 'react'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
@@ -38,7 +38,7 @@ export function DateTimeSection({ formData, updateField, calcularDataFim, calcul
 
         {/* Duração */}
         <div className="space-y-2">
-          <Label htmlFor="duracao_minutos">Duração (min) <span className="text-red-500">*</span></Label>
+          <Label htmlFor="duracao_minutos" className="text-sm">Duração (min) <span className="text-red-500">*</span></Label>
           <div className="space-y-2">
             <Input
               id="duracao_minutos"

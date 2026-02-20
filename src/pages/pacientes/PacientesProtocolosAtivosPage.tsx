@@ -200,7 +200,7 @@ export function PacientesProtocolosAtivosPage() {
         </CardHeader>
         <CardContent>
           <div className="space-y-2">
-            <Label htmlFor="search">Buscar paciente</Label>
+            <Label htmlFor="search" className="text-sm">Buscar paciente</Label>
             <Input
               id="search"
               placeholder="Nome do paciente..."
@@ -346,7 +346,7 @@ export function PacientesProtocolosAtivosPage() {
                             </DialogHeader>
                             <div className="space-y-4">
                               <div className="space-y-2">
-                                <Label>Status</Label>
+<Label className="text-sm">Status</Label>
                                 <Select value={editStatus} onValueChange={(value: StatusPlanoTratamento) => setEditStatus(value)}>
                                   <SelectTrigger>
                                     <SelectValue />
@@ -360,7 +360,7 @@ export function PacientesProtocolosAtivosPage() {
                                 </Select>
                               </div>
                               <div className="space-y-2">
-                                <Label>Total Previsto (R$)</Label>
+<Label className="text-sm">Total Previsto (R$)</Label>
                                 <Input
                                   type="number"
                                   step="0.01"
@@ -369,7 +369,7 @@ export function PacientesProtocolosAtivosPage() {
                                 />
                               </div>
                               <div className="space-y-2">
-                                <Label>Total Pago (R$)</Label>
+<Label className="text-sm">Total Pago (R$)</Label>
                                 <Input
                                   type="number"
                                   step="0.01"

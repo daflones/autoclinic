@@ -458,7 +458,7 @@ export function CategoriasPage() {
                 </DialogHeader>
                 <div className="space-y-4">
                   <div>
-                    <Label htmlFor="nome">Nome *</Label>
+                    <Label htmlFor="nome" className="text-sm">Nome *</Label>
                     <Input
                       id="nome"
                       value={newCategoria.nome}
@@ -467,7 +467,7 @@ export function CategoriasPage() {
                     />
                   </div>
                   <div>
-                    <Label htmlFor="codigo">Código *</Label>
+                    <Label htmlFor="codigo" className="text-sm">Código *</Label>
                     <Input
                       id="codigo"
                       value={newCategoria.codigo}
@@ -476,7 +476,7 @@ export function CategoriasPage() {
                     />
                   </div>
                   <div>
-                    <Label htmlFor="descricao">Descrição</Label>
+                    <Label htmlFor="descricao" className="text-sm">Descrição</Label>
                     <Textarea
                       id="descricao"
                       value={newCategoria.descricao}
@@ -487,47 +487,47 @@ export function CategoriasPage() {
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <Label htmlFor="icone">Ícone</Label>
+                      <Label htmlFor="icone" className="text-sm">Ícone</Label>
                       <Select value={newCategoria.icone} onValueChange={(value) => setNewCategoria({...newCategoria, icone: value})}>
                         <SelectTrigger>
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="Package">📦 Package</SelectItem>
-                          <SelectItem value="Box">📦 Box</SelectItem>
-                          <SelectItem value="ShoppingBag">🛍️ Shopping Bag</SelectItem>
-                          <SelectItem value="Gift">🎁 Gift</SelectItem>
-                          <SelectItem value="FileText">📄 File Text</SelectItem>
-                          <SelectItem value="Sticker">🏷️ Sticker</SelectItem>
-                          <SelectItem value="Monitor">🖥️ Monitor</SelectItem>
-                          <SelectItem value="Smartphone">📱 Smartphone</SelectItem>
-                          <SelectItem value="Laptop">💻 Laptop</SelectItem>
-                          <SelectItem value="Camera">📷 Camera</SelectItem>
-                          <SelectItem value="Headphones">🎧 Headphones</SelectItem>
-                          <SelectItem value="Shirt">👕 Shirt</SelectItem>
-                          <SelectItem value="Home">🏠 Home</SelectItem>
-                          <SelectItem value="Car">🚗 Car</SelectItem>
-                          <SelectItem value="Utensils">🍴 Utensils</SelectItem>
-                          <SelectItem value="Coffee">☕ Coffee</SelectItem>
-                          <SelectItem value="Gamepad2">🎮 Gamepad</SelectItem>
-                          <SelectItem value="Music">🎵 Music</SelectItem>
-                          <SelectItem value="Book">📚 Book</SelectItem>
-                          <SelectItem value="Heart">❤️ Heart</SelectItem>
-                          <SelectItem value="Star">⭐ Star</SelectItem>
-                          <SelectItem value="Crown">👑 Crown</SelectItem>
-                          <SelectItem value="Diamond">💎 Diamond</SelectItem>
-                          <SelectItem value="Sparkles">✨ Sparkles</SelectItem>
-                          <SelectItem value="Zap">⚡ Zap</SelectItem>
-                          <SelectItem value="Flame">🔥 Flame</SelectItem>
-                          <SelectItem value="Layers">📚 Layers</SelectItem>
+                          <SelectItem value="Package">?? Package</SelectItem>
+                          <SelectItem value="Box">?? Box</SelectItem>
+                          <SelectItem value="ShoppingBag">??? Shopping Bag</SelectItem>
+                          <SelectItem value="Gift">?? Gift</SelectItem>
+                          <SelectItem value="FileText">?? File Text</SelectItem>
+                          <SelectItem value="Sticker">??? Sticker</SelectItem>
+                          <SelectItem value="Monitor">??? Monitor</SelectItem>
+                          <SelectItem value="Smartphone">?? Smartphone</SelectItem>
+                          <SelectItem value="Laptop">?? Laptop</SelectItem>
+                          <SelectItem value="Camera">?? Camera</SelectItem>
+                          <SelectItem value="Headphones">?? Headphones</SelectItem>
+                          <SelectItem value="Shirt">?? Shirt</SelectItem>
+                          <SelectItem value="Home">?? Home</SelectItem>
+                          <SelectItem value="Car">?? Car</SelectItem>
+                          <SelectItem value="Utensils">?? Utensils</SelectItem>
+                          <SelectItem value="Coffee">? Coffee</SelectItem>
+                          <SelectItem value="Gamepad2">?? Gamepad</SelectItem>
+                          <SelectItem value="Music">?? Music</SelectItem>
+                          <SelectItem value="Book">?? Book</SelectItem>
+                          <SelectItem value="Heart">?? Heart</SelectItem>
+                          <SelectItem value="Star">? Star</SelectItem>
+                          <SelectItem value="Crown">?? Crown</SelectItem>
+                          <SelectItem value="Diamond">?? Diamond</SelectItem>
+                          <SelectItem value="Sparkles">? Sparkles</SelectItem>
+                          <SelectItem value="Zap">? Zap</SelectItem>
+                          <SelectItem value="Flame">?? Flame</SelectItem>
+                          <SelectItem value="Layers">?? Layers</SelectItem>
                           <SelectItem value="Hash"># Hash</SelectItem>
-                          <SelectItem value="Palette">🎨 Palette</SelectItem>
-                          <SelectItem value="Settings">⚙️ Settings</SelectItem>
+                          <SelectItem value="Palette">?? Palette</SelectItem>
+                          <SelectItem value="Settings">?? Settings</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
                     <div>
-                      <Label htmlFor="cor">Cor</Label>
+                      <Label htmlFor="cor" className="text-sm">Cor</Label>
                       <Input
                         id="cor"
                         type="color"
@@ -538,7 +538,7 @@ export function CategoriasPage() {
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <Label htmlFor="status">Status</Label>
+                      <Label htmlFor="status" className="text-sm">Status</Label>
                       <Select value={newCategoria.status} onValueChange={(value: 'ativo' | 'inativo') => setNewCategoria({...newCategoria, status: value})}>
                         <SelectTrigger>
                           <SelectValue />
@@ -550,7 +550,7 @@ export function CategoriasPage() {
                       </Select>
                     </div>
                     <div>
-                      <Label htmlFor="ordem">Ordem</Label>
+                      <Label htmlFor="ordem" className="text-sm">Ordem</Label>
                       <Input
                         id="ordem"
                         type="number"
@@ -598,31 +598,31 @@ export function CategoriasPage() {
                     
                     {selectedCategoria.descricao && (
                       <div>
-                        <Label>Descrição</Label>
+<Label className="text-sm">Descrição</Label>
                         <p className="text-sm text-gray-600 mt-1">{selectedCategoria.descricao}</p>
                       </div>
                     )}
                     
                     <div className="grid grid-cols-2 gap-4 text-sm">
                       <div>
-                        <Label>Status</Label>
+<Label className="text-sm">Status</Label>
                         <p className={`mt-1 ${selectedCategoria.status === 'ativo' ? 'text-green-600' : 'text-red-600'}`}>
                           {selectedCategoria.status === 'ativo' ? 'Ativo' : 'Inativo'}
                         </p>
                       </div>
                       <div>
-                        <Label>Produtos</Label>
+<Label className="text-sm">Produtos</Label>
                         <p className="mt-1">{getProductCount(selectedCategoria.id)} produtos</p>
                       </div>
                     </div>
                     
                     <div className="grid grid-cols-2 gap-4 text-sm">
                       <div>
-                        <Label>Ordem</Label>
+<Label className="text-sm">Ordem</Label>
                         <p className="mt-1">{selectedCategoria.ordem}</p>
                       </div>
                       <div>
-                        <Label>Criado em</Label>
+<Label className="text-sm">Criado em</Label>
                         <p className="mt-1">{new Date(selectedCategoria.created_at).toLocaleDateString('pt-BR')}</p>
                       </div>
                     </div>
@@ -647,7 +647,7 @@ export function CategoriasPage() {
                 </DialogHeader>
                 <div className="space-y-4">
                   <div>
-                    <Label htmlFor="edit-nome">Nome *</Label>
+                    <Label htmlFor="edit-nome" className="text-sm">Nome *</Label>
                     <Input
                       id="edit-nome"
                       value={editCategoria.nome}
@@ -656,7 +656,7 @@ export function CategoriasPage() {
                     />
                   </div>
                   <div>
-                    <Label htmlFor="edit-codigo">Código *</Label>
+                    <Label htmlFor="edit-codigo" className="text-sm">Código *</Label>
                     <Input
                       id="edit-codigo"
                       value={editCategoria.codigo}
@@ -665,7 +665,7 @@ export function CategoriasPage() {
                     />
                   </div>
                   <div>
-                    <Label htmlFor="edit-descricao">Descrição</Label>
+                    <Label htmlFor="edit-descricao" className="text-sm">Descrição</Label>
                     <Textarea
                       id="edit-descricao"
                       value={editCategoria.descricao}
@@ -676,47 +676,47 @@ export function CategoriasPage() {
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <Label htmlFor="edit-icone">Ícone</Label>
+                      <Label htmlFor="edit-icone" className="text-sm">Ícone</Label>
                       <Select value={editCategoria.icone} onValueChange={(value) => setEditCategoria({...editCategoria, icone: value})}>
                         <SelectTrigger>
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="Package">📦 Package</SelectItem>
-                          <SelectItem value="Box">📦 Box</SelectItem>
-                          <SelectItem value="ShoppingBag">🛍️ Shopping Bag</SelectItem>
-                          <SelectItem value="Gift">🎁 Gift</SelectItem>
-                          <SelectItem value="FileText">📄 File Text</SelectItem>
-                          <SelectItem value="Sticker">🏷️ Sticker</SelectItem>
-                          <SelectItem value="Monitor">🖥️ Monitor</SelectItem>
-                          <SelectItem value="Smartphone">📱 Smartphone</SelectItem>
-                          <SelectItem value="Laptop">💻 Laptop</SelectItem>
-                          <SelectItem value="Camera">📷 Camera</SelectItem>
-                          <SelectItem value="Headphones">🎧 Headphones</SelectItem>
-                          <SelectItem value="Shirt">👕 Shirt</SelectItem>
-                          <SelectItem value="Home">🏠 Home</SelectItem>
-                          <SelectItem value="Car">🚗 Car</SelectItem>
-                          <SelectItem value="Utensils">🍴 Utensils</SelectItem>
-                          <SelectItem value="Coffee">☕ Coffee</SelectItem>
-                          <SelectItem value="Gamepad2">🎮 Gamepad</SelectItem>
-                          <SelectItem value="Music">🎵 Music</SelectItem>
-                          <SelectItem value="Book">📚 Book</SelectItem>
-                          <SelectItem value="Heart">❤️ Heart</SelectItem>
-                          <SelectItem value="Star">⭐ Star</SelectItem>
-                          <SelectItem value="Crown">👑 Crown</SelectItem>
-                          <SelectItem value="Diamond">💎 Diamond</SelectItem>
-                          <SelectItem value="Sparkles">✨ Sparkles</SelectItem>
-                          <SelectItem value="Zap">⚡ Zap</SelectItem>
-                          <SelectItem value="Flame">🔥 Flame</SelectItem>
-                          <SelectItem value="Layers">📚 Layers</SelectItem>
+                          <SelectItem value="Package">?? Package</SelectItem>
+                          <SelectItem value="Box">?? Box</SelectItem>
+                          <SelectItem value="ShoppingBag">??? Shopping Bag</SelectItem>
+                          <SelectItem value="Gift">?? Gift</SelectItem>
+                          <SelectItem value="FileText">?? File Text</SelectItem>
+                          <SelectItem value="Sticker">??? Sticker</SelectItem>
+                          <SelectItem value="Monitor">??? Monitor</SelectItem>
+                          <SelectItem value="Smartphone">?? Smartphone</SelectItem>
+                          <SelectItem value="Laptop">?? Laptop</SelectItem>
+                          <SelectItem value="Camera">?? Camera</SelectItem>
+                          <SelectItem value="Headphones">?? Headphones</SelectItem>
+                          <SelectItem value="Shirt">?? Shirt</SelectItem>
+                          <SelectItem value="Home">?? Home</SelectItem>
+                          <SelectItem value="Car">?? Car</SelectItem>
+                          <SelectItem value="Utensils">?? Utensils</SelectItem>
+                          <SelectItem value="Coffee">? Coffee</SelectItem>
+                          <SelectItem value="Gamepad2">?? Gamepad</SelectItem>
+                          <SelectItem value="Music">?? Music</SelectItem>
+                          <SelectItem value="Book">?? Book</SelectItem>
+                          <SelectItem value="Heart">?? Heart</SelectItem>
+                          <SelectItem value="Star">? Star</SelectItem>
+                          <SelectItem value="Crown">?? Crown</SelectItem>
+                          <SelectItem value="Diamond">?? Diamond</SelectItem>
+                          <SelectItem value="Sparkles">? Sparkles</SelectItem>
+                          <SelectItem value="Zap">? Zap</SelectItem>
+                          <SelectItem value="Flame">?? Flame</SelectItem>
+                          <SelectItem value="Layers">?? Layers</SelectItem>
                           <SelectItem value="Hash"># Hash</SelectItem>
-                          <SelectItem value="Palette">🎨 Palette</SelectItem>
-                          <SelectItem value="Settings">⚙️ Settings</SelectItem>
+                          <SelectItem value="Palette">?? Palette</SelectItem>
+                          <SelectItem value="Settings">?? Settings</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
                     <div>
-                      <Label htmlFor="edit-cor">Cor</Label>
+                      <Label htmlFor="edit-cor" className="text-sm">Cor</Label>
                       <Input
                         id="edit-cor"
                         type="color"
@@ -727,7 +727,7 @@ export function CategoriasPage() {
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <Label htmlFor="edit-status">Status</Label>
+                      <Label htmlFor="edit-status" className="text-sm">Status</Label>
                       <Select value={editCategoria.status} onValueChange={(value: 'ativo' | 'inativo') => setEditCategoria({...editCategoria, status: value})}>
                         <SelectTrigger>
                           <SelectValue />
@@ -739,7 +739,7 @@ export function CategoriasPage() {
                       </Select>
                     </div>
                     <div>
-                      <Label htmlFor="edit-ordem">Ordem</Label>
+                      <Label htmlFor="edit-ordem" className="text-sm">Ordem</Label>
                       <Input
                         id="edit-ordem"
                         type="number"

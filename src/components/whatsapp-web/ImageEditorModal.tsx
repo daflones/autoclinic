@@ -336,7 +336,7 @@ export function ImageEditorModal({ isOpen, onClose, onSend, imageFile }: ImageEd
           {/* Ferramentas */}
           <div className="lg:col-span-1 space-y-4 overflow-y-auto">
             <div>
-              <Label className="text-sm font-medium">Ferramentas</Label>
+<Label className="text-sm">Ferramentas</Label>
               <div className="grid grid-cols-2 gap-2 mt-2">
                 <Button
                   variant={currentTool === 'move' ? 'default' : 'outline'}
@@ -375,9 +375,9 @@ export function ImageEditorModal({ isOpen, onClose, onSend, imageFile }: ImageEd
             {/* Controles de Desenho */}
             {currentTool === 'draw' && (
               <div className="space-y-3">
-                <Label className="text-sm font-medium">Desenho</Label>
+<Label className="text-sm">Desenho</Label>
                 <div>
-                  <Label className="text-xs">Cor</Label>
+<Label className="text-sm">Cor</Label>
                   <Input
                     type="color"
                     value={drawColor}
@@ -386,7 +386,7 @@ export function ImageEditorModal({ isOpen, onClose, onSend, imageFile }: ImageEd
                   />
                 </div>
                 <div>
-                  <Label className="text-xs">Espessura: {drawWidth}px</Label>
+<Label className="text-sm">Espessura: {drawWidth}px</Label>
                   <Input
                     type="range"
                     min="1"
@@ -402,9 +402,9 @@ export function ImageEditorModal({ isOpen, onClose, onSend, imageFile }: ImageEd
             {/* Controles de Texto */}
             {currentTool === 'text' && (
               <div className="space-y-3">
-                <Label className="text-sm font-medium">Texto</Label>
+<Label className="text-sm">Texto</Label>
                 <div>
-                  <Label className="text-xs">Cor</Label>
+<Label className="text-sm">Cor</Label>
                   <Input
                     type="color"
                     value={textColor}
@@ -413,7 +413,7 @@ export function ImageEditorModal({ isOpen, onClose, onSend, imageFile }: ImageEd
                   />
                 </div>
                 <div>
-                  <Label className="text-xs">Tamanho: {fontSize}px</Label>
+<Label className="text-sm">Tamanho: {fontSize}px</Label>
                   <Input
                     type="range"
                     min="12"
@@ -430,7 +430,7 @@ export function ImageEditorModal({ isOpen, onClose, onSend, imageFile }: ImageEd
 
             {/* Ações */}
             <div className="space-y-2">
-              <Label className="text-sm font-medium">Ações</Label>
+<Label className="text-sm">Ações</Label>
               <div className="grid grid-cols-2 gap-2">
                 <Button
                   variant="outline"
@@ -489,7 +489,7 @@ export function ImageEditorModal({ isOpen, onClose, onSend, imageFile }: ImageEd
 
             {/* Campo de Legenda */}
             <div className="mt-4 space-y-2">
-              <Label htmlFor="caption">Legenda (opcional)</Label>
+              <Label htmlFor="caption" className="text-sm">Legenda (opcional)</Label>
               <Textarea
                 id="caption"
                 placeholder="Digite uma legenda para a imagem..."

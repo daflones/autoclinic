@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+﻿import { useState, useMemo } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -155,7 +155,7 @@ export function PacientesProcedimentosAtivosPage() {
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="periodo">Período</Label>
+              <Label htmlFor="periodo" className="text-sm">Período</Label>
               <Select value={periodoFiltro} onValueChange={(value: PeriodoFiltro) => setPeriodoFiltro(value)}>
                 <SelectTrigger>
                   <SelectValue />
@@ -171,7 +171,7 @@ export function PacientesProcedimentosAtivosPage() {
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="search">Buscar paciente</Label>
+              <Label htmlFor="search" className="text-sm">Buscar paciente</Label>
               <Input
                 id="search"
                 placeholder="Nome do paciente..."

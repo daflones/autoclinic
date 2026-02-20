@@ -647,7 +647,7 @@ export function ProdutosPage() {
           <div className="space-y-4">
             {/* Basic Info */}
             <div className="space-y-2">
-              <Label htmlFor="nome">Nome do Produto <span className="text-red-500">*</span></Label>
+              <Label htmlFor="nome" className="text-sm">Nome do Produto <span className="text-red-500">*</span></Label>
               <Input
                 id="nome"
                 value={newProduct.nome}
@@ -658,7 +658,7 @@ export function ProdutosPage() {
             
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="codigo">Código <span className="text-red-500">*</span></Label>
+                <Label htmlFor="codigo" className="text-sm">Código <span className="text-red-500">*</span></Label>
                 <Input
                   id="codigo"
                   value={newProduct.codigo}
@@ -667,7 +667,7 @@ export function ProdutosPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="valor">Valor Unitário</Label>
+                <Label htmlFor="valor" className="text-sm">Valor Unitário</Label>
                 <Input
                   id="valor"
                   type="number"
@@ -680,7 +680,7 @@ export function ProdutosPage() {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="categoria">Categoria</Label>
+                <Label htmlFor="categoria" className="text-sm">Categoria</Label>
                 <Select value={newProduct.categoria_id} onValueChange={(v) => setNewProduct({...newProduct, categoria_id: v})}>
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione" />
@@ -693,7 +693,7 @@ export function ProdutosPage() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="segmento">Segmento</Label>
+                <Label htmlFor="segmento" className="text-sm">Segmento</Label>
                 <Select value={newProduct.segmento_id} onValueChange={(v) => setNewProduct({...newProduct, segmento_id: v})}>
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione" />
@@ -708,7 +708,7 @@ export function ProdutosPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="resumo">Resumo</Label>
+              <Label htmlFor="resumo" className="text-sm">Resumo</Label>
               <Input
                 id="resumo"
                 value={newProduct.resumo}
@@ -717,7 +717,7 @@ export function ProdutosPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="descricao">Descrição</Label>
+              <Label htmlFor="descricao" className="text-sm">Descrição</Label>
               <Textarea
                 id="descricao"
                 value={newProduct.descricao}
@@ -727,7 +727,7 @@ export function ProdutosPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="especificacoes">Especificações</Label>
+              <Label htmlFor="especificacoes" className="text-sm">Especificações</Label>
               <Textarea
                 id="especificacoes"
                 value={newProduct.especificacoes}
@@ -740,7 +740,7 @@ export function ProdutosPage() {
             {/* Product Details */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="material">Material</Label>
+                <Label htmlFor="material" className="text-sm">Material</Label>
                 <Input
                   id="material"
                   value={newProduct.material}
@@ -748,7 +748,7 @@ export function ProdutosPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="prazo">Prazo de Entrega</Label>
+                <Label htmlFor="prazo" className="text-sm">Prazo de Entrega</Label>
                 <Input
                   id="prazo"
                   value={newProduct.prazo_entrega}
@@ -759,7 +759,7 @@ export function ProdutosPage() {
 
             <div className="grid grid-cols-3 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="dimensoes">Dimensões</Label>
+                <Label htmlFor="dimensoes" className="text-sm">Dimensões</Label>
                 <Input
                   id="dimensoes"
                   value={newProduct.dimensoes}
@@ -767,7 +767,7 @@ export function ProdutosPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="peso">Peso</Label>
+                <Label htmlFor="peso" className="text-sm">Peso</Label>
                 <Input
                   id="peso"
                   value={newProduct.peso}
@@ -775,7 +775,7 @@ export function ProdutosPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="unidade">Unidade</Label>
+                <Label htmlFor="unidade" className="text-sm">Unidade</Label>
                 <Input
                   id="unidade"
                   value={newProduct.unidade}
@@ -794,12 +794,12 @@ export function ProdutosPage() {
                   onChange={(e) => setNewProduct({...newProduct, controla_estoque: e.target.checked})}
                   className="rounded"
                 />
-                <Label htmlFor="controla_estoque">Controla Estoque</Label>
+                <Label htmlFor="controla_estoque" className="text-sm">Controla Estoque</Label>
               </div>
               {newProduct.controla_estoque && (
                 <div className="grid grid-cols-2 gap-4 mt-2">
                   <div className="space-y-2">
-                    <Label htmlFor="estoque_atual">Estoque Atual</Label>
+                    <Label htmlFor="estoque_atual" className="text-sm">Estoque Atual</Label>
                     <Input
                       id="estoque_atual"
                       type="number"
@@ -808,7 +808,7 @@ export function ProdutosPage() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="estoque_minimo">Estoque Mínimo</Label>
+                    <Label htmlFor="estoque_minimo" className="text-sm">Estoque Mínimo</Label>
                     <Input
                       id="estoque_minimo"
                       type="number"
@@ -822,7 +822,7 @@ export function ProdutosPage() {
 
             {/* Image Upload */}
             <div className="space-y-3">
-              <Label>Imagem Principal do Produto</Label>
+<Label className="text-sm">Imagem Principal do Produto</Label>
               <div className="space-y-2">
                 <FileUploadButton
                   label="Selecionar imagem"
@@ -854,7 +854,7 @@ export function ProdutosPage() {
                   onChange={(e) => setNewProduct({...newProduct, destaque: e.target.checked})}
                   className="rounded"
                 />
-                <Label htmlFor="destaque">Destaque</Label>
+                <Label htmlFor="destaque" className="text-sm">Destaque</Label>
               </div>
               <div className="flex items-center space-x-2">
                 <input
@@ -864,7 +864,7 @@ export function ProdutosPage() {
                   onChange={(e) => setNewProduct({...newProduct, mais_vendido: e.target.checked})}
                   className="rounded"
                 />
-                <Label htmlFor="mais_vendido">Mais Vendido</Label>
+                <Label htmlFor="mais_vendido" className="text-sm">Mais Vendido</Label>
               </div>
               <div className="flex items-center space-x-2">
                 <input
@@ -874,7 +874,7 @@ export function ProdutosPage() {
                   onChange={(e) => setNewProduct({...newProduct, novidade: e.target.checked})}
                   className="rounded"
                 />
-                <Label htmlFor="novidade">Novidade</Label>
+                <Label htmlFor="novidade" className="text-sm">Novidade</Label>
               </div>
             </div>
           </div>
@@ -926,19 +926,19 @@ export function ProdutosPage() {
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <Label className="font-semibold">Código:</Label>
+<Label className="text-sm">Código:</Label>
                       <p>{selectedProduto.codigo || '-'}</p>
                     </div>
                     <div>
-                      <Label className="font-semibold">Preço:</Label>
+<Label className="text-sm">Preço:</Label>
                       <p>R$ {selectedProduto.valor_unitario?.toFixed(2) || '0.00'} / {selectedProduto.unidade}</p>
                     </div>
                     <div>
-                      <Label className="font-semibold">Categoria:</Label>
+<Label className="text-sm">Categoria:</Label>
                       <p>{categorias.find(c => c.id === selectedProduto.categoria_id)?.nome || '-'}</p>
                     </div>
                     <div>
-                      <Label className="font-semibold">Status:</Label>
+<Label className="text-sm">Status:</Label>
                       <Badge variant={selectedProduto.status === 'ativo' ? 'default' : 'secondary'}>
                         {selectedProduto.status}
                       </Badge>
@@ -949,7 +949,7 @@ export function ProdutosPage() {
               
               {selectedProduto.descricao && (
                 <div>
-                  <Label className="font-semibold">Descrição:</Label>
+<Label className="text-sm">Descrição:</Label>
                   <p className="mt-1">{selectedProduto.descricao}</p>
                 </div>
               )}
@@ -970,7 +970,7 @@ export function ProdutosPage() {
                         <h4 className="font-semibold">Especificações</h4>
                         {hasSpecs && (
                           <div>
-                            <Label className="text-sm font-medium">Especificações Técnicas:</Label>
+<Label className="text-sm">Especificações Técnicas:</Label>
                             <p className="text-sm whitespace-pre-wrap">
                               {typeof specs === 'string' 
                                 ? specs 
@@ -981,19 +981,19 @@ export function ProdutosPage() {
                         )}
                         {hasMaterial && (
                           <div>
-                            <Label className="text-sm font-medium">Material:</Label>
+<Label className="text-sm">Material:</Label>
                             <p className="text-sm">{selectedProduto.material}</p>
                           </div>
                         )}
                         {hasDimensoes && (
                           <div>
-                            <Label className="text-sm font-medium">Dimensões:</Label>
+<Label className="text-sm">Dimensões:</Label>
                             <p className="text-sm">{selectedProduto.dimensoes}</p>
                           </div>
                         )}
                         {hasPeso && (
                           <div>
-                            <Label className="text-sm font-medium">Peso:</Label>
+<Label className="text-sm">Peso:</Label>
                             <p className="text-sm">{selectedProduto.peso}</p>
                           </div>
                         )}
@@ -1003,16 +1003,16 @@ export function ProdutosPage() {
                     <div className="space-y-3">
                       <h4 className="font-semibold">Informações Comerciais</h4>
                       <div>
-                        <Label className="text-sm font-medium">Prazo de Entrega:</Label>
+<Label className="text-sm">Prazo de Entrega:</Label>
                         <p className="text-sm">{selectedProduto.prazo_entrega || '-'}</p>
                       </div>
                       <div>
-                        <Label className="text-sm font-medium">Pedido Mínimo:</Label>
+<Label className="text-sm">Pedido Mínimo:</Label>
                         <p className="text-sm">{selectedProduto.minimo_pedido || 1} {selectedProduto.unidade}</p>
                       </div>
                       {selectedProduto.controla_estoque && (
                         <div>
-                          <Label className="text-sm font-medium">Estoque:</Label>
+<Label className="text-sm">Estoque:</Label>
                           <p className="text-sm">{selectedProduto.estoque_atual} unidades</p>
                         </div>
                       )}
@@ -1042,7 +1042,7 @@ export function ProdutosPage() {
           <div className="space-y-4">
             {/* Basic Info */}
             <div className="space-y-2">
-              <Label htmlFor="edit-nome">Nome do Produto <span className="text-red-500">*</span></Label>
+              <Label htmlFor="edit-nome" className="text-sm">Nome do Produto <span className="text-red-500">*</span></Label>
               <Input
                 id="edit-nome"
                 value={editProduct.nome}
@@ -1053,7 +1053,7 @@ export function ProdutosPage() {
             
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="edit-codigo">Código <span className="text-red-500">*</span></Label>
+                <Label htmlFor="edit-codigo" className="text-sm">Código <span className="text-red-500">*</span></Label>
                 <Input
                   id="edit-codigo"
                   value={editProduct.codigo}
@@ -1062,7 +1062,7 @@ export function ProdutosPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="edit-valor">Valor Unitário</Label>
+                <Label htmlFor="edit-valor" className="text-sm">Valor Unitário</Label>
                 <Input
                   id="edit-valor"
                   type="number"
@@ -1075,7 +1075,7 @@ export function ProdutosPage() {
 
             <div className="grid grid-cols-3 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="edit-categoria">Categoria</Label>
+                <Label htmlFor="edit-categoria" className="text-sm">Categoria</Label>
                 <Select value={editProduct.categoria_id} onValueChange={(v) => setEditProduct({...editProduct, categoria_id: v})}>
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione" />
@@ -1088,7 +1088,7 @@ export function ProdutosPage() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="edit-segmento">Segmento</Label>
+                <Label htmlFor="edit-segmento" className="text-sm">Segmento</Label>
                 <Select value={editProduct.segmento_id} onValueChange={(v) => setEditProduct({...editProduct, segmento_id: v})}>
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione" />
@@ -1101,7 +1101,7 @@ export function ProdutosPage() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="edit-status">Status</Label>
+                <Label htmlFor="edit-status" className="text-sm">Status</Label>
                 <Select value={editProduct.status} onValueChange={(v) => setEditProduct({...editProduct, status: v as any})}>
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione" />
@@ -1117,7 +1117,7 @@ export function ProdutosPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="edit-resumo">Resumo</Label>
+              <Label htmlFor="edit-resumo" className="text-sm">Resumo</Label>
               <Input
                 id="edit-resumo"
                 value={editProduct.resumo}
@@ -1126,7 +1126,7 @@ export function ProdutosPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="edit-descricao">Descrição</Label>
+              <Label htmlFor="edit-descricao" className="text-sm">Descrição</Label>
               <Textarea
                 id="edit-descricao"
                 value={editProduct.descricao}
@@ -1136,7 +1136,7 @@ export function ProdutosPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="edit-especificacoes">Especificações</Label>
+              <Label htmlFor="edit-especificacoes" className="text-sm">Especificações</Label>
               <Textarea
                 id="edit-especificacoes"
                 value={editProduct.especificacoes}
@@ -1149,7 +1149,7 @@ export function ProdutosPage() {
             {/* Product Details */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="edit-material">Material</Label>
+                <Label htmlFor="edit-material" className="text-sm">Material</Label>
                 <Input
                   id="edit-material"
                   value={editProduct.material}
@@ -1157,7 +1157,7 @@ export function ProdutosPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="edit-prazo">Prazo de Entrega</Label>
+                <Label htmlFor="edit-prazo" className="text-sm">Prazo de Entrega</Label>
                 <Input
                   id="edit-prazo"
                   value={editProduct.prazo_entrega}
@@ -1176,12 +1176,12 @@ export function ProdutosPage() {
                   onChange={(e) => setEditProduct({...editProduct, controla_estoque: e.target.checked})}
                   className="rounded"
                 />
-                <Label htmlFor="edit-controla_estoque">Controla Estoque</Label>
+                <Label htmlFor="edit-controla_estoque" className="text-sm">Controla Estoque</Label>
               </div>
               {editProduct.controla_estoque && (
                 <div className="grid grid-cols-2 gap-4 mt-2">
                   <div className="space-y-2">
-                    <Label htmlFor="edit-estoque_atual">Estoque Atual</Label>
+                    <Label htmlFor="edit-estoque_atual" className="text-sm">Estoque Atual</Label>
                     <Input
                       id="edit-estoque_atual"
                       type="number"
@@ -1190,7 +1190,7 @@ export function ProdutosPage() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="edit-estoque_minimo">Estoque Mínimo</Label>
+                    <Label htmlFor="edit-estoque_minimo" className="text-sm">Estoque Mínimo</Label>
                     <Input
                       id="edit-estoque_minimo"
                       type="number"
@@ -1204,7 +1204,7 @@ export function ProdutosPage() {
 
             {/* Image Upload */}
             <div className="space-y-3">
-              <Label>Atualizar Imagem do Produto</Label>
+<Label className="text-sm">Atualizar Imagem do Produto</Label>
               
               {/* Current Image Preview */}
               {selectedProduto?.imagem_principal && (
@@ -1262,7 +1262,7 @@ export function ProdutosPage() {
                   onChange={(e) => setEditProduct({...editProduct, destaque: e.target.checked})}
                   className="rounded"
                 />
-                <Label htmlFor="edit-destaque">Destaque</Label>
+                <Label htmlFor="edit-destaque" className="text-sm">Destaque</Label>
               </div>
               <div className="flex items-center space-x-2">
                 <input
@@ -1272,7 +1272,7 @@ export function ProdutosPage() {
                   onChange={(e) => setEditProduct({...editProduct, mais_vendido: e.target.checked})}
                   className="rounded"
                 />
-                <Label htmlFor="edit-mais_vendido">Mais Vendido</Label>
+                <Label htmlFor="edit-mais_vendido" className="text-sm">Mais Vendido</Label>
               </div>
               <div className="flex items-center space-x-2">
                 <input
@@ -1282,7 +1282,7 @@ export function ProdutosPage() {
                   onChange={(e) => setEditProduct({...editProduct, novidade: e.target.checked})}
                   className="rounded"
                 />
-                <Label htmlFor="edit-novidade">Novidade</Label>
+                <Label htmlFor="edit-novidade" className="text-sm">Novidade</Label>
               </div>
             </div>
           </div>

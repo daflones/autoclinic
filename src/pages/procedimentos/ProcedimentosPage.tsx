@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
@@ -30,7 +29,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Plus, Search, Filter, Stethoscope, Edit, Trash2, DollarSign, Clock, Upload } from 'lucide-react'
+import { Plus, Search, Stethoscope, Edit, Trash2, DollarSign, Clock, Upload } from 'lucide-react'
 import { toast } from 'sonner'
 import {
   useProcedimentos,
@@ -673,14 +672,14 @@ export function ProcedimentosPage() {
                   <div className="space-y-4">
                     {detailsProcedimento.descricao ? (
                       <div className="space-y-2">
-                        <Label>Descrição</Label>
+<Label className="text-sm">Descrição</Label>
                         <div className="text-sm text-muted-foreground whitespace-pre-wrap">{detailsProcedimento.descricao}</div>
                       </div>
                     ) : null}
 
                     {(detailsProcedimento as any).detalhes ? (
                       <div className="space-y-2">
-                        <Label>Detalhes</Label>
+<Label className="text-sm">Detalhes</Label>
                         <div className="text-sm text-muted-foreground whitespace-pre-wrap">{(detailsProcedimento as any).detalhes}</div>
                       </div>
                     ) : null}
@@ -689,14 +688,14 @@ export function ProcedimentosPage() {
                       <div className="grid gap-4 md:grid-cols-2">
                         {(detailsProcedimento as any).cuidados_durante ? (
                           <div className="space-y-2">
-                            <Label>Cuidados durante</Label>
+<Label className="text-sm">Cuidados durante</Label>
                             <div className="text-sm text-muted-foreground whitespace-pre-wrap">{(detailsProcedimento as any).cuidados_durante}</div>
                           </div>
                         ) : null}
 
                         {(detailsProcedimento as any).cuidados_apos ? (
                           <div className="space-y-2">
-                            <Label>Cuidados após</Label>
+<Label className="text-sm">Cuidados após</Label>
                             <div className="text-sm text-muted-foreground whitespace-pre-wrap">{(detailsProcedimento as any).cuidados_apos}</div>
                           </div>
                         ) : null}
@@ -705,7 +704,7 @@ export function ProcedimentosPage() {
 
                     <div className="grid gap-4 md:grid-cols-2">
                       <div className="space-y-1">
-                        <Label>IA pode mostrar valores?</Label>
+<Label className="text-sm">IA pode mostrar valores?</Label>
                         <div className="text-sm text-muted-foreground">
                           {(() => {
                             const ia = ((detailsProcedimento as any).ia_config || {}) as any
@@ -717,14 +716,14 @@ export function ProcedimentosPage() {
                         </div>
                       </div>
                       <div className="space-y-1">
-                        <Label>IA envia imagens?</Label>
+<Label className="text-sm">IA envia imagens?</Label>
                         <div className="text-sm text-muted-foreground">{(detailsProcedimento as any).ia_envia_imagens ? 'Sim' : 'Não'}</div>
                       </div>
                     </div>
 
                     {detailsProcedimento.observacoes ? (
                       <div className="space-y-2">
-                        <Label>Observações</Label>
+<Label className="text-sm">Observações</Label>
                         <div className="text-sm text-muted-foreground whitespace-pre-wrap">{detailsProcedimento.observacoes}</div>
                       </div>
                     ) : null}
@@ -742,15 +741,15 @@ export function ProcedimentosPage() {
                       <div className="space-y-3">
                         <div className="grid gap-4 md:grid-cols-3">
                           <div className="space-y-1">
-                            <Label>Intervalo recomendado</Label>
+<Label className="text-sm">Intervalo recomendado</Label>
                             <div className="text-sm text-muted-foreground whitespace-pre-wrap">{intervalo || '—'}</div>
                           </div>
                           <div className="space-y-1">
-                            <Label>Quantidade recomendada</Label>
+<Label className="text-sm">Quantidade recomendada</Label>
                             <div className="text-sm text-muted-foreground">{qtd ?? '—'}</div>
                           </div>
                           <div className="space-y-1">
-                            <Label>Duração por sessão (min)</Label>
+<Label className="text-sm">Duração por sessão (min)</Label>
                             <div className="text-sm text-muted-foreground">{duracaoSessao ?? '—'}</div>
                           </div>
                         </div>
@@ -770,7 +769,7 @@ export function ProcedimentosPage() {
                     return (
                       <div className="space-y-3">
                         <div className="space-y-1">
-                          <Label>Profissionais habilitados</Label>
+<Label className="text-sm">Profissionais habilitados</Label>
                           <div className="text-sm text-muted-foreground whitespace-pre-wrap">
                             {nomes.length > 0 ? nomes.join(', ') : '—'}
                           </div>
@@ -791,16 +790,16 @@ export function ProcedimentosPage() {
                       <div className="space-y-4">
                         <div className="grid gap-4 md:grid-cols-2">
                           <div className="space-y-2">
-                            <Label>Descrição técnica</Label>
+<Label className="text-sm">Descrição técnica</Label>
                             <div className="text-sm text-muted-foreground whitespace-pre-wrap">{descProf || '—'}</div>
                           </div>
                           <div className="space-y-2">
-                            <Label>Como funciona</Label>
+<Label className="text-sm">Como funciona</Label>
                             <div className="text-sm text-muted-foreground whitespace-pre-wrap">{comoFunciona || '—'}</div>
                           </div>
                         </div>
                         <div className="space-y-2">
-                          <Label>Equipamentos usados</Label>
+<Label className="text-sm">Equipamentos usados</Label>
                           <div className="text-sm text-muted-foreground whitespace-pre-wrap">
                             {equipamentosArr.length > 0 ? equipamentosArr.join(', ') : '—'}
                           </div>
@@ -818,24 +817,24 @@ export function ProcedimentosPage() {
                       <div className="space-y-4">
                         <div className="grid gap-4 md:grid-cols-2">
                           <div className="space-y-1">
-                            <Label>Requer avaliação prévia?</Label>
+<Label className="text-sm">Requer avaliação prévia?</Label>
                             <div className="text-sm text-muted-foreground">{a?.requer_avaliacao_previa ? 'Sim' : 'Não'}</div>
                           </div>
                           <div className="space-y-1">
-                            <Label>IA pode agendar direto?</Label>
+<Label className="text-sm">IA pode agendar direto?</Label>
                             <div className="text-sm text-muted-foreground">{a?.ia_pode_agendar_direto ? 'Sim' : 'Não'}</div>
                           </div>
                           <div className="space-y-1">
-                            <Label>Pré-pagamento obrigatório?</Label>
+<Label className="text-sm">Pré-pagamento obrigatório?</Label>
                             <div className="text-sm text-muted-foreground">{a?.pre_pagamento_obrigatorio ? 'Sim' : 'Não'}</div>
                           </div>
                           <div className="space-y-1">
-                            <Label>Tempo de espera recomendado (dias)</Label>
+<Label className="text-sm">Tempo de espera recomendado (dias)</Label>
                             <div className="text-sm text-muted-foreground">{a?.tempo_espera_recomendado_dias ?? '—'}</div>
                           </div>
                         </div>
                         <div className="space-y-2">
-                          <Label>Política específica (texto)</Label>
+<Label className="text-sm">Política específica (texto)</Label>
                           <div className="text-sm text-muted-foreground whitespace-pre-wrap">{a?.politica_especifica || '—'}</div>
                         </div>
                       </div>
@@ -865,7 +864,7 @@ export function ProcedimentosPage() {
                           if (!arr || arr.length === 0) return null
                           return (
                             <div key={s.key} className="space-y-2">
-                              <Label>{s.label}</Label>
+<Label className="text-sm">{s.label}</Label>
                               <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                                 {arr.map((m: any) => {
                                   const urlKey = `${m.bucket}:${m.path}`
@@ -1086,10 +1085,10 @@ export function ProcedimentosPage() {
             </div>
 
             <div className="space-y-3 pt-4 border-t">
-              <Label className="text-sm font-semibold">Profissional</Label>
+<Label className="text-sm">Profissional</Label>
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
-                  <Label className="text-sm font-medium">Profissionais que executam o procedimento</Label>
+<Label className="text-sm">Profissionais que executam o procedimento</Label>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button type="button" variant="outline" className="justify-between">
@@ -1142,7 +1141,7 @@ export function ProcedimentosPage() {
                   })()}
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-xs">Equipamentos usados</Label>
+<Label className="text-sm">Equipamentos usados</Label>
                   <ListEditor
                     placeholder="Adicione equipamentos"
                     items={normalizeStringList(getIA('tecnica.equipamentos', []))}
@@ -1153,11 +1152,11 @@ export function ProcedimentosPage() {
             </div>
 
             <div className="space-y-3 pt-4 border-t">
-              <Label className="text-sm font-semibold">Valores</Label>
+<Label className="text-sm">Valores</Label>
 
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
-                  <Label>IA pode mostrar valores desse procedimento?</Label>
+<Label className="text-sm">IA pode mostrar valores desse procedimento?</Label>
                   <Select
                     value={getIA('valores.ia_pode_mostrar', 'nao')}
                     onValueChange={(v) => {
@@ -1182,7 +1181,7 @@ export function ProcedimentosPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="edit-observacoes">Observações</Label>
+                  <Label htmlFor="edit-observacoes" className="text-sm">Observações</Label>
                   <Textarea
                     id="edit-observacoes"
                     value={formState.observacoes || ''}
@@ -1194,7 +1193,7 @@ export function ProcedimentosPage() {
 
               <div className="grid gap-4 md:grid-cols-3">
                 <div className="space-y-2">
-                  <Label htmlFor="edit-valor-base">Valor (R$)</Label>
+                  <Label htmlFor="edit-valor-base" className="text-sm">Valor (R$)</Label>
                   <Input
                     id="edit-valor-base"
                     type="number"
@@ -1210,7 +1209,7 @@ export function ProcedimentosPage() {
               {getIA('valores.ia_pode_mostrar', 'nao') === 'faixa' ? (
                 <div className="grid gap-4 md:grid-cols-3">
                   <div className="space-y-2">
-                    <Label htmlFor="edit-valor-minimo">Valor Mínimo (R$)</Label>
+                    <Label htmlFor="edit-valor-minimo" className="text-sm">Valor Mínimo (R$)</Label>
                     <Input
                       id="edit-valor-minimo"
                       type="number"
@@ -1223,7 +1222,7 @@ export function ProcedimentosPage() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="edit-valor-maximo">Valor Máximo (R$)</Label>
+                    <Label htmlFor="edit-valor-maximo" className="text-sm">Valor Máximo (R$)</Label>
                     <Input
                       id="edit-valor-maximo"
                       type="number"
@@ -1242,44 +1241,44 @@ export function ProcedimentosPage() {
               <div className="text-sm font-semibold">Configurações avançadas (IA) — Procedimento</div>
 
               <div className="space-y-3">
-                <Label className="text-sm font-semibold">Agendamento</Label>
+<Label className="text-sm">Agendamento</Label>
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="flex items-center justify-between p-3 border rounded-lg">
-                    <Label>Requer avaliação prévia?</Label>
+<Label className="text-sm">Requer avaliação prévia?</Label>
                     <Switch checked={!!getIA('agendamento.requer_avaliacao_previa', false)} onCheckedChange={(v) => setIA('agendamento.requer_avaliacao_previa', v)} />
                   </div>
                   <div className="flex items-center justify-between p-3 border rounded-lg">
-                    <Label>IA pode agendar direto?</Label>
+<Label className="text-sm">IA pode agendar direto?</Label>
                     <Switch checked={!!getIA('agendamento.ia_pode_agendar_direto', false)} onCheckedChange={(v) => setIA('agendamento.ia_pode_agendar_direto', v)} />
                   </div>
                   <div className="grid gap-2">
-                    <Label>Política específica (texto)</Label>
+<Label className="text-sm">Política específica (texto)</Label>
                     <Textarea value={getIA('agendamento.politica_especifica', '')} onChange={(e) => setIA('agendamento.politica_especifica', e.target.value)} rows={3} />
                   </div>
                   <div className="grid gap-2">
-                    <Label>Tempo de espera recomendado (dias)</Label>
+<Label className="text-sm">Tempo de espera recomendado (dias)</Label>
                     <Input type="number" value={getIA('agendamento.tempo_espera_recomendado_dias', '')} onChange={(e) => setIA('agendamento.tempo_espera_recomendado_dias', e.target.value === '' ? null : Number(e.target.value))} />
                   </div>
                   <div className="flex items-center justify-between p-3 border rounded-lg">
-                    <Label>Pré-pagamento obrigatório?</Label>
+<Label className="text-sm">Pré-pagamento obrigatório?</Label>
                     <Switch checked={!!getIA('agendamento.pre_pagamento_obrigatorio', false)} onCheckedChange={(v) => setIA('agendamento.pre_pagamento_obrigatorio', v)} />
                   </div>
                 </div>
               </div>
 
               <div className="space-y-3 pt-4 border-t">
-                <Label className="text-sm font-semibold">Descrição técnica</Label>
+<Label className="text-sm">Descrição técnica</Label>
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="grid gap-2">
-                    <Label className="text-xs">Descrição técnica</Label>
+<Label className="text-sm">Descrição técnica</Label>
                     <Textarea value={getIA('tecnica.descricao_profissional', '')} onChange={(e) => setIA('tecnica.descricao_profissional', e.target.value)} rows={4} />
                   </div>
                   <div className="grid gap-2">
-                    <Label className="text-xs">Como funciona</Label>
+<Label className="text-sm">Como funciona</Label>
                     <Textarea value={getIA('tecnica.como_funciona_leigo', '')} onChange={(e) => setIA('tecnica.como_funciona_leigo', e.target.value)} rows={4} />
                   </div>
                   <div className="grid gap-2 md:col-span-2">
-                    <Label className="text-xs">Tecnologia</Label>
+<Label className="text-sm">Tecnologia</Label>
                     <Textarea value={getIA('tecnica.tecnologia', '')} onChange={(e) => setIA('tecnica.tecnologia', e.target.value)} rows={4} />
                   </div>
                   <div className="grid gap-2">
@@ -1307,22 +1306,22 @@ export function ProcedimentosPage() {
                     />
                   </div>
                   <div className="grid gap-2">
-                    <Label className="text-xs">Tempo de recuperação</Label>
+<Label className="text-sm">Tempo de recuperação</Label>
                     <Input value={getIA('tecnica.tempo_recuperacao', '')} onChange={(e) => setIA('tecnica.tempo_recuperacao', e.target.value)} />
                   </div>
                   <div className="grid gap-2">
-                    <Label className="text-xs">Quando começam os resultados</Label>
+<Label className="text-sm">Quando começam os resultados</Label>
                     <Input value={getIA('tecnica.quando_comecam_resultados', '')} onChange={(e) => setIA('tecnica.quando_comecam_resultados', e.target.value)} />
                   </div>
                   <div className="grid gap-2">
-                    <Label className="text-xs">Quanto tempo duram os resultados</Label>
+<Label className="text-sm">Quanto tempo duram os resultados</Label>
                     <Input value={getIA('tecnica.quanto_tempo_duram_resultados', '')} onChange={(e) => setIA('tecnica.quanto_tempo_duram_resultados', e.target.value)} />
                   </div>
                 </div>
               </div>
 
               <div className="space-y-3 pt-4 border-t">
-                <Label className="text-sm font-semibold">Benefícios</Label>
+<Label className="text-sm">Benefícios</Label>
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="grid gap-2">
                     <ListEditor
@@ -1352,30 +1351,30 @@ export function ProcedimentosPage() {
               </div>
 
               <div className="space-y-3 pt-4 border-t">
-                <Label className="text-sm font-semibold">Persona ideal</Label>
+<Label className="text-sm">Persona ideal</Label>
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="grid gap-2">
-                    <Label>Indicado para pessoas com...</Label>
+<Label className="text-sm">Indicado para pessoas com...</Label>
                     <Textarea value={getIA('persona.indicado_para', '')} onChange={(e) => setIA('persona.indicado_para', e.target.value)} rows={3} />
                   </div>
                   <div className="grid gap-2">
-                    <Label>Faixa etária/sexo (opcional)</Label>
+<Label className="text-sm">Faixa etária/sexo (opcional)</Label>
                     <Input value={getIA('persona.faixa_etaria_sexo', '')} onChange={(e) => setIA('persona.faixa_etaria_sexo', e.target.value)} />
                   </div>
                   <div className="grid gap-2">
-                    <Label>Situações onde o resultado é mais eficiente</Label>
+<Label className="text-sm">Situações onde o resultado é mais eficiente</Label>
                     <Textarea value={getIA('persona.situacoes_melhor_resultado', '')} onChange={(e) => setIA('persona.situacoes_melhor_resultado', e.target.value)} rows={3} />
                   </div>
                 </div>
               </div>
 
               <div className="space-y-3 pt-4 border-t">
-                <Label className="text-sm font-semibold">Objeções e respostas</Label>
+<Label className="text-sm">Objeções e respostas</Label>
                 <div className="space-y-3">
                   {(((getIA('objecoes.itens', []) as any[]) || []) as any[]).map((it, idx) => (
                     <div key={idx} className="grid gap-3 md:grid-cols-2 border rounded-lg p-3">
                       <div className="grid gap-2">
-                        <Label>Objeção</Label>
+<Label className="text-sm">Objeção</Label>
                         <Input
                           value={it?.objecao || ''}
                           onChange={(e) => {
@@ -1386,7 +1385,7 @@ export function ProcedimentosPage() {
                         />
                       </div>
                       <div className="grid gap-2">
-                        <Label>Resposta</Label>
+<Label className="text-sm">Resposta</Label>
                         <Input
                           value={it?.resposta || ''}
                           onChange={(e) => {
@@ -1426,7 +1425,7 @@ export function ProcedimentosPage() {
               </div>
 
               <div className="space-y-3 pt-4 border-t">
-                <Label className="text-sm font-semibold">Perguntas frequentes</Label>
+<Label className="text-sm">Perguntas frequentes</Label>
                 <PairsEditor
                   title="FAQ"
                   leftLabel="Pergunta"
@@ -1438,7 +1437,7 @@ export function ProcedimentosPage() {
               </div>
 
               <div className="space-y-3 pt-4 border-t">
-                <Label className="text-sm font-semibold">Cuidados pré e pós</Label>
+<Label className="text-sm">Cuidados pré e pós</Label>
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="grid gap-2">
                     <ListEditor
@@ -1462,32 +1461,32 @@ export function ProcedimentosPage() {
               </div>
 
               <div className="space-y-3 pt-4 border-t">
-                <Label className="text-sm font-semibold">Gatilhos de venda específicos</Label>
+<Label className="text-sm">Gatilhos de venda específicos</Label>
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="grid gap-2">
-                    <Label className="text-xs">O que torna esse procedimento superior a outros</Label>
+<Label className="text-sm">O que torna esse procedimento superior a outros</Label>
                     <Textarea value={getIA('vendas.superioridade', '')} onChange={(e) => setIA('vendas.superioridade', e.target.value)} rows={4} />
                   </div>
                   <div className="grid gap-2">
-                    <Label className="text-xs">Por que vale a pena fazer na clínica</Label>
+<Label className="text-sm">Por que vale a pena fazer na clínica</Label>
                     <Textarea value={getIA('vendas.porque_na_clinica', '')} onChange={(e) => setIA('vendas.porque_na_clinica', e.target.value)} rows={4} />
                   </div>
                   <div className="grid gap-2">
-                    <Label className="text-xs">Diferenciais do equipamento ou técnica</Label>
+<Label className="text-sm">Diferenciais do equipamento ou técnica</Label>
                     <Textarea value={getIA('vendas.diferenciais_tecnica', '')} onChange={(e) => setIA('vendas.diferenciais_tecnica', e.target.value)} rows={4} />
                   </div>
                   <div className="grid gap-2">
-                    <Label className="text-xs">Selo de segurança</Label>
+<Label className="text-sm">Selo de segurança</Label>
                     <Textarea value={getIA('vendas.selo_seguranca', '')} onChange={(e) => setIA('vendas.selo_seguranca', e.target.value)} rows={4} />
                   </div>
                   <div className="grid gap-2">
-                    <Label className="text-xs">Garantias</Label>
+<Label className="text-sm">Garantias</Label>
                     <Textarea value={getIA('vendas.garantias', '')} onChange={(e) => setIA('vendas.garantias', e.target.value)} rows={4} />
                   </div>
                 </div>
 
                 <div className="space-y-3 pt-4 border-t">
-                  <Label className="text-sm font-semibold">Depoimentos</Label>
+<Label className="text-sm">Depoimentos</Label>
                   <Button
                     type="button"
                     variant="outline"
@@ -1502,7 +1501,7 @@ export function ProcedimentosPage() {
                   {(((getIA('midias.depoimentos', []) as any[]) || []) as any[]).map((d: any, idx) => (
                     <div key={idx} className="grid gap-3 md:grid-cols-3 border rounded-lg p-3">
                       <div className="grid gap-2">
-                        <Label>Nome</Label>
+<Label className="text-sm">Nome</Label>
                         <Input
                           value={d?.nome || ''}
                           onChange={(e) => {
@@ -1513,7 +1512,7 @@ export function ProcedimentosPage() {
                         />
                       </div>
                       <div className="grid gap-2">
-                        <Label>Idade</Label>
+<Label className="text-sm">Idade</Label>
                         <Input
                           type="number"
                           value={d?.idade ?? ''}
@@ -1525,7 +1524,7 @@ export function ProcedimentosPage() {
                         />
                       </div>
                       <div className="grid gap-2 md:col-span-3">
-                        <Label>Depoimento</Label>
+<Label className="text-sm">Depoimento</Label>
                         <Textarea
                           value={d?.texto || ''}
                           onChange={(e) => {
@@ -1555,11 +1554,11 @@ export function ProcedimentosPage() {
 
                 <div className="grid gap-4 md:grid-cols-2 pt-4 border-t">
                   <div className="grid gap-2">
-                    <Label>Prova social específica (texto)</Label>
+<Label className="text-sm">Prova social específica (texto)</Label>
                     <Textarea value={getIA('midias.prova_social_texto', '')} onChange={(e) => setIA('midias.prova_social_texto', e.target.value)} rows={3} />
                   </div>
                   <div className="grid gap-2">
-                    <Label>Prova social específica (upload)</Label>
+<Label className="text-sm">Prova social específica (upload)</Label>
                     <FileUploadButton
                       label="Enviar imagens"
                       accept="image/*"
@@ -1572,32 +1571,32 @@ export function ProcedimentosPage() {
               </div>
 
               <div className="space-y-3 pt-4 border-t">
-                <Label className="text-sm font-semibold">Fluxo emocional</Label>
+<Label className="text-sm">Fluxo emocional</Label>
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="grid gap-2">
-                    <Label>Resultado final esperado</Label>
+<Label className="text-sm">Resultado final esperado</Label>
                     <Textarea value={getIA('emocional.resultado_final', '')} onChange={(e) => setIA('emocional.resultado_final', e.target.value)} rows={3} />
                   </div>
                   <div className="grid gap-2">
-                    <Label>Sensação que o cliente deseja ter</Label>
+<Label className="text-sm">Sensação que o cliente deseja ter</Label>
                     <Textarea value={getIA('emocional.sensacao_desejada', '')} onChange={(e) => setIA('emocional.sensacao_desejada', e.target.value)} rows={3} />
                   </div>
                   <div className="grid gap-2">
-                    <Label>O que resolve emocionalmente</Label>
+<Label className="text-sm">O que resolve emocionalmente</Label>
                     <Textarea value={getIA('emocional.o_que_resolve', '')} onChange={(e) => setIA('emocional.o_que_resolve', e.target.value)} rows={3} />
                   </div>
                 </div>
               </div>
 
               <div className="space-y-3 pt-4 border-t">
-                <Label className="text-sm font-semibold">Retorno / manutenção</Label>
+<Label className="text-sm">Retorno / manutenção</Label>
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="grid gap-2">
-                    <Label>Tempo ideal para retorno</Label>
+<Label className="text-sm">Tempo ideal para retorno</Label>
                     <Input value={getIA('retorno.tempo_ideal', '')} onChange={(e) => setIA('retorno.tempo_ideal', e.target.value)} placeholder="Ex: 30 dias" />
                   </div>
                   <div className="grid gap-2">
-                    <Label>Manutenção necessária?</Label>
+<Label className="text-sm">Manutenção necessária?</Label>
                     <Select value={getIA('retorno.manutencao', 'opcional')} onValueChange={(v) => setIA('retorno.manutencao', v)}>
                       <SelectTrigger>
                         <SelectValue />
@@ -1610,18 +1609,18 @@ export function ProcedimentosPage() {
                     </Select>
                   </div>
                   <div className="grid gap-2">
-                    <Label>Frequência de manutenção</Label>
+<Label className="text-sm">Frequência de manutenção</Label>
                     <Input value={getIA('retorno.frequencia_manutencao', '')} onChange={(e) => setIA('retorno.frequencia_manutencao', e.target.value)} placeholder="Ex: 1x a cada 45 dias" />
                   </div>
                 </div>
               </div>
 
               <div className="space-y-3 pt-4 border-t">
-                <Label className="text-sm font-semibold">Upsell inteligente</Label>
+<Label className="text-sm">Upsell inteligente</Label>
                 <div className="space-y-4">
                   <div className="grid gap-4 md:grid-cols-2">
                     <div className="grid gap-2">
-                      <Label>Procedimentos de Upsell (Upgrade Premium)</Label>
+<Label className="text-sm">Procedimentos de Upsell (Upgrade Premium)</Label>
                       <DropdownMenu modal={false}>
                         <DropdownMenuTrigger asChild>
                           <Button type="button" variant="outline" className="justify-between">
@@ -1678,7 +1677,7 @@ export function ProcedimentosPage() {
                       })()}
                     </div>
                     <div className="grid gap-2">
-                      <Label>Quando oferecer</Label>
+<Label className="text-sm">Quando oferecer</Label>
                       <Select value={getIA('upsell.quando_oferecer', 'imediato')} onValueChange={(v) => setIA('upsell.quando_oferecer', v)}>
                         <SelectTrigger>
                           <SelectValue />
@@ -1695,7 +1694,7 @@ export function ProcedimentosPage() {
 
                   <div className="grid gap-4 md:grid-cols-2">
                     <div className="grid gap-2">
-                      <Label>Opções de pacote</Label>
+<Label className="text-sm">Opções de pacote</Label>
                       <DropdownMenu modal={false}>
                         <DropdownMenuTrigger asChild>
                           <Button type="button" variant="outline" className="justify-between">
@@ -1752,7 +1751,7 @@ export function ProcedimentosPage() {
                       })()}
                     </div>
                     <div className="grid gap-2">
-                      <Label>Material de apoio (upload imagem e vídeo)</Label>
+<Label className="text-sm">Material de apoio (upload imagem e vídeo)</Label>
                       <FileUploadButton
                         label="Enviar arquivos"
                         accept="image/*,video/*"
@@ -1794,18 +1793,18 @@ export function ProcedimentosPage() {
                   </div>
 
                   <div className="grid gap-2">
-                    <Label>Motivo do upsell</Label>
+<Label className="text-sm">Motivo do upsell</Label>
                     <Textarea value={getIA('upsell.motivo', '')} onChange={(e) => setIA('upsell.motivo', e.target.value)} rows={3} />
                   </div>
                 </div>
               </div>
 
               <div className="space-y-3 pt-4 border-t">
-                <Label className="text-sm font-semibold">Mídias</Label>
+<Label className="text-sm">Mídias</Label>
 
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="grid gap-2">
-                    <Label>Antes e depois</Label>
+<Label className="text-sm">Antes e depois</Label>
                     <FileUploadButton
                       label="Enviar imagens"
                       accept="image/*"
@@ -1839,7 +1838,7 @@ export function ProcedimentosPage() {
                   </div>
 
                   <div className="grid gap-2">
-                    <Label>Imagens ilustrativas</Label>
+<Label className="text-sm">Imagens ilustrativas</Label>
                     <FileUploadButton
                       label="Enviar imagens"
                       accept="image/*"
@@ -1873,7 +1872,7 @@ export function ProcedimentosPage() {
                   </div>
 
                   <div className="grid gap-2">
-                    <Label>Carrossel comercial</Label>
+<Label className="text-sm">Carrossel comercial</Label>
                     <FileUploadButton
                       label="Enviar imagens"
                       accept="image/*"
@@ -1907,7 +1906,7 @@ export function ProcedimentosPage() {
                   </div>
 
                   <div className="grid gap-2">
-                    <Label>Vídeos curtos para WhatsApp</Label>
+<Label className="text-sm">Vídeos curtos para WhatsApp</Label>
                     <FileUploadButton
                       label="Enviar vídeos"
                       accept="video/*"
@@ -1941,7 +1940,7 @@ export function ProcedimentosPage() {
                   </div>
 
                   <div className="grid gap-2">
-                    <Label>Vídeos explicativos</Label>
+<Label className="text-sm">Vídeos explicativos</Label>
                     <FileUploadButton
                       label="Enviar vídeos"
                       accept="video/*"
@@ -1975,7 +1974,7 @@ export function ProcedimentosPage() {
                   </div>
 
                   <div className="grid gap-2">
-                    <Label>Vídeos de depoimentos</Label>
+<Label className="text-sm">Vídeos de depoimentos</Label>
                     <FileUploadButton
                       label="Enviar vídeos"
                       accept="video/*"
@@ -2011,7 +2010,7 @@ export function ProcedimentosPage() {
 
                 <div className="flex items-center justify-between rounded-lg border p-3">
                   <div className="space-y-0.5">
-                    <Label>IA envia imagens do procedimento?</Label>
+<Label className="text-sm">IA envia imagens do procedimento?</Label>
                     <p className="text-sm text-muted-foreground">Permite a IA enviar imagens cadastradas</p>
                   </div>
                   <Switch

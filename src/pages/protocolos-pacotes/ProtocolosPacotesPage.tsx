@@ -682,69 +682,69 @@ export function ProtocolosPacotesPage() {
 
   return (
     <div className="space-y-6">
-      <header className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+      <header className="flex flex-col gap-3 sm:gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-semibold tracking-tight text-foreground">Protocolos/Pacotes</h1>
-          <p className="text-sm text-muted-foreground">Gerencie protocolos e pacotes disponíveis para sua clínica</p>
+          <h1 className="text-xl sm:text-2xl lg:text-3xl font-semibold tracking-tight text-foreground">Protocolos/Pacotes</h1>
+          <p className="text-xs sm:text-sm text-muted-foreground">Gerencie protocolos e pacotes disponíveis para sua clínica</p>
         </div>
-        <Button onClick={openCreate}>
-          <Plus className="mr-2 h-4 w-4" />
+        <Button size="sm" onClick={openCreate} className="self-start sm:self-auto text-xs sm:text-sm">
+          <Plus className="mr-1.5 h-3.5 w-3.5 sm:mr-2 sm:h-4 sm:w-4" />
           Novo
         </Button>
       </header>
 
-      <section className="grid gap-4 md:grid-cols-3">
-        <div className="rounded-2xl border border-border/60 bg-gradient-to-br from-primary/10 via-background to-background p-5 shadow-sm">
+      <section className="grid grid-cols-3 gap-2 sm:gap-4">
+        <div className="rounded-2xl border border-border/60 bg-gradient-to-br from-primary/10 via-background to-background p-3 sm:p-5 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Total</p>
-              <h3 className="mt-2 text-2xl font-semibold text-foreground">{stats.total}</h3>
+              <p className="text-[10px] sm:text-xs font-medium uppercase tracking-wide text-muted-foreground">Total</p>
+              <h3 className="mt-1 text-lg sm:mt-2 sm:text-2xl font-semibold text-foreground">{stats.total}</h3>
             </div>
-            <div className="rounded-full bg-primary/10 p-2 text-primary">
+            <div className="hidden sm:flex rounded-full bg-primary/10 p-2 text-primary">
               <Package className="h-5 w-5" />
             </div>
           </div>
-          <p className="mt-2 text-xs text-muted-foreground">Itens cadastrados</p>
+          <p className="hidden sm:block mt-2 text-xs text-muted-foreground">Itens cadastrados</p>
         </div>
 
-        <div className="rounded-2xl border border-border/60 bg-gradient-to-br from-emerald-500/10 via-background to-background p-5 shadow-sm">
+        <div className="rounded-2xl border border-border/60 bg-gradient-to-br from-emerald-500/10 via-background to-background p-3 sm:p-5 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Ativos</p>
-              <h3 className="mt-2 text-2xl font-semibold text-foreground">{stats.ativos}</h3>
+              <p className="text-[10px] sm:text-xs font-medium uppercase tracking-wide text-muted-foreground">Ativos</p>
+              <h3 className="mt-1 text-lg sm:mt-2 sm:text-2xl font-semibold text-foreground">{stats.ativos}</h3>
             </div>
-            <div className="rounded-full bg-emerald-500/10 p-2 text-emerald-500">
+            <div className="hidden sm:flex rounded-full bg-emerald-500/10 p-2 text-emerald-500">
               <Check className="h-5 w-5" />
             </div>
           </div>
-          <p className="mt-2 text-xs text-muted-foreground">Visíveis/selecionáveis</p>
+          <p className="hidden sm:block mt-2 text-xs text-muted-foreground">Visíveis/selecionáveis</p>
         </div>
 
-        <div className="rounded-2xl border border-border/60 bg-gradient-to-br from-rose-500/10 via-background to-background p-5 shadow-sm">
+        <div className="rounded-2xl border border-border/60 bg-gradient-to-br from-rose-500/10 via-background to-background p-3 sm:p-5 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Inativos</p>
-              <h3 className="mt-2 text-2xl font-semibold text-foreground">{stats.inativos}</h3>
+              <p className="text-[10px] sm:text-xs font-medium uppercase tracking-wide text-muted-foreground">Inativos</p>
+              <h3 className="mt-1 text-lg sm:mt-2 sm:text-2xl font-semibold text-foreground">{stats.inativos}</h3>
             </div>
-            <div className="rounded-full bg-rose-500/10 p-2 text-rose-500">
+            <div className="hidden sm:flex rounded-full bg-rose-500/10 p-2 text-rose-500">
               <Ban className="h-5 w-5" />
             </div>
           </div>
-          <p className="mt-2 text-xs text-muted-foreground">Ocultos</p>
+          <p className="hidden sm:block mt-2 text-xs text-muted-foreground">Ocultos</p>
         </div>
       </section>
 
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)}>
-        <TabsList className="w-full justify-start flex-wrap h-auto">
+        <TabsList className="w-full justify-start flex-wrap h-auto text-xs sm:text-sm">
           <TabsTrigger value="lista">Lista</TabsTrigger>
           <TabsTrigger value="pacientes">Pacientes com pacotes ativos</TabsTrigger>
         </TabsList>
 
         <TabsContent value="lista">
-          <div className="rounded-3xl border border-border/60 bg-background/80 p-6 shadow-lg backdrop-blur">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-foreground">Lista</h2>
-              <span className="text-sm text-muted-foreground">Exibindo {itens.length} registros</span>
+          <div className="rounded-2xl sm:rounded-3xl border border-border/60 bg-background/80 p-3 sm:p-6 shadow-lg backdrop-blur">
+            <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between mb-4">
+              <h2 className="text-base sm:text-lg font-semibold text-foreground">Lista</h2>
+              <span className="text-xs sm:text-sm text-muted-foreground">Exibindo {itens.length} registros</span>
             </div>
             <div className="space-y-4">
               <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
@@ -859,9 +859,9 @@ export function ProtocolosPacotesPage() {
         </TabsContent>
 
         <TabsContent value="pacientes">
-          <div className="rounded-3xl border border-border/60 bg-background/80 p-6 shadow-lg backdrop-blur">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-foreground">Pacientes com pacotes ativos</h2>
+          <div className="rounded-2xl sm:rounded-3xl border border-border/60 bg-background/80 p-3 sm:p-6 shadow-lg backdrop-blur">
+            <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between mb-4">
+              <h2 className="text-base sm:text-lg font-semibold text-foreground">Pacientes com pacotes ativos</h2>
             </div>
             <div className="space-y-4">
               <div className="grid gap-4 md:grid-cols-2">

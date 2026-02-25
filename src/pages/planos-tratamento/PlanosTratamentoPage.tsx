@@ -341,10 +341,10 @@ export function PlanosTratamentoPage() {
 
   return (
     <div className="w-full h-full space-y-6">
-      <header className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+      <header className="flex flex-col gap-3 sm:gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-semibold tracking-tight text-foreground">Planos de Tratamento</h1>
-          <p className="text-sm text-muted-foreground">
+          <h1 className="text-xl sm:text-2xl lg:text-3xl font-semibold tracking-tight text-foreground">Planos de Tratamento</h1>
+          <p className="text-xs sm:text-sm text-muted-foreground">
             Centralize diagnósticos, protocolos e acompanhamentos clínicos em planos personalizados.
           </p>
         </div>
@@ -358,42 +358,42 @@ export function PlanosTratamentoPage() {
         </PlanoAtivoButton>
       </header>
 
-      <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="rounded-2xl border border-border/60 bg-gradient-to-br from-primary/10 via-background to-background p-5 shadow-sm">
+      <section className="grid grid-cols-2 gap-2 sm:gap-4 lg:grid-cols-4">
+        <div className="rounded-2xl border border-border/60 bg-gradient-to-br from-primary/10 via-background to-background p-3 sm:p-5 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Planos Ativos</p>
-              <h3 className="mt-2 text-2xl font-semibold text-foreground">
+              <p className="text-[10px] sm:text-xs font-medium uppercase tracking-wide text-muted-foreground">Planos Ativos</p>
+              <h3 className="mt-1 text-lg sm:mt-2 sm:text-2xl font-semibold text-foreground">
                 {planos.filter((plano) => ['aprovado', 'em_execucao'].includes(plano.status)).length}
               </h3>
             </div>
-            <div className="rounded-full bg-primary/10 p-2 text-primary">
+            <div className="hidden sm:flex rounded-full bg-primary/10 p-2 text-primary">
               <ClipboardList className="h-5 w-5" />
             </div>
           </div>
-          <p className="mt-2 text-xs text-muted-foreground">{count} planos no total</p>
+          <p className="hidden sm:block mt-2 text-xs text-muted-foreground">{count} planos no total</p>
         </div>
 
-        <div className="rounded-2xl border border-border/60 bg-gradient-to-br from-amber-500/10 via-background to-background p-5 shadow-sm">
+        <div className="rounded-2xl border border-border/60 bg-gradient-to-br from-amber-500/10 via-background to-background p-3 sm:p-5 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Em Aprovação</p>
-              <h3 className="mt-2 text-2xl font-semibold text-foreground">
+              <p className="text-[10px] sm:text-xs font-medium uppercase tracking-wide text-muted-foreground">Em Aprovação</p>
+              <h3 className="mt-1 text-lg sm:mt-2 sm:text-2xl font-semibold text-foreground">
                 {planos.filter((plano) => plano.status === 'em_aprovacao').length}
               </h3>
             </div>
-            <div className="rounded-full bg-amber-500/10 p-2 text-amber-500">
+            <div className="hidden sm:flex rounded-full bg-amber-500/10 p-2 text-amber-500">
               <Calendar className="h-5 w-5" />
             </div>
           </div>
-          <p className="mt-2 text-xs text-muted-foreground">Protocolos aguardando confirmação</p>
+          <p className="hidden sm:block mt-2 text-xs text-muted-foreground">Protocolos aguardando confirmação</p>
         </div>
 
-        <div className="rounded-2xl border border-border/60 bg-gradient-to-br from-emerald-500/10 via-background to-background p-5 shadow-sm">
+        <div className="rounded-2xl border border-border/60 bg-gradient-to-br from-emerald-500/10 via-background to-background p-3 sm:p-5 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Concluídos no Mês</p>
-              <h3 className="mt-2 text-2xl font-semibold text-foreground">
+              <p className="text-[10px] sm:text-xs font-medium uppercase tracking-wide text-muted-foreground">Concluídos</p>
+              <h3 className="mt-1 text-lg sm:mt-2 sm:text-2xl font-semibold text-foreground">
                 {planos.filter((plano) => {
                   if (plano.status !== 'concluido') return false
                   const createdAt = new Date(plano.updated_at || plano.created_at)
@@ -402,32 +402,32 @@ export function PlanosTratamentoPage() {
                 }).length}
               </h3>
             </div>
-            <div className="rounded-full bg-emerald-500/10 p-2 text-emerald-500">
+            <div className="hidden sm:flex rounded-full bg-emerald-500/10 p-2 text-emerald-500">
               <CheckCircle2 className="h-5 w-5" />
             </div>
           </div>
-          <p className="mt-2 text-xs text-muted-foreground">Protocolos finalizados neste mês</p>
+          <p className="hidden sm:block mt-2 text-xs text-muted-foreground">Protocolos finalizados neste mês</p>
         </div>
 
-        <div className="rounded-2xl border border-border/60 bg-gradient-to-br from-sky-500/10 via-background to-background p-5 shadow-sm">
+        <div className="rounded-2xl border border-border/60 bg-gradient-to-br from-sky-500/10 via-background to-background p-3 sm:p-5 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Receita Prevista</p>
-              <h3 className="mt-2 text-2xl font-semibold text-foreground">
+              <p className="text-[10px] sm:text-xs font-medium uppercase tracking-wide text-muted-foreground">Receita</p>
+              <h3 className="mt-1 text-lg sm:mt-2 sm:text-2xl font-semibold text-foreground">
                 {formatCurrency(
                   planos.reduce((total, plano) => total + Number(plano.total_previsto || 0), 0),
                 )}
               </h3>
             </div>
-            <div className="rounded-full bg-sky-500/10 p-2 text-sky-500">
+            <div className="hidden sm:flex rounded-full bg-sky-500/10 p-2 text-sky-500">
               <Coins className="h-5 w-5" />
             </div>
           </div>
-          <p className="mt-2 text-xs text-muted-foreground">Considera os planos listados nesta página</p>
+          <p className="hidden sm:block mt-2 text-xs text-muted-foreground">Considera os planos listados nesta página</p>
         </div>
       </section>
 
-      <section className="rounded-3xl border border-border/60 bg-background/80 p-6 shadow-lg backdrop-blur">
+      <section className="rounded-2xl sm:rounded-3xl border border-border/60 bg-background/80 p-3 sm:p-6 shadow-lg backdrop-blur">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between mb-6">
           <div className="flex flex-1 flex-col gap-4 md:flex-row md:items-center">
             <div className="relative flex-1 md:max-w-xs">

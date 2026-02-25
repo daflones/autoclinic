@@ -426,64 +426,66 @@ export function ProfissionaisClinicaPage() {
 
   return (
     <div className="space-y-6">
-      <header className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+      <header className="flex flex-col gap-3 sm:gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-semibold tracking-tight text-foreground">Profissionais da Clínica</h1>
-          <p className="text-sm text-muted-foreground">Gerencie a equipe clínica e suas especialidades</p>
+          <h1 className="text-xl sm:text-2xl lg:text-3xl font-semibold tracking-tight text-foreground">Profissionais</h1>
+          <p className="text-xs sm:text-sm text-muted-foreground">Gerencie a equipe clínica e suas especialidades</p>
         </div>
         <Button
+          size="sm"
+          className="self-start sm:self-auto text-xs sm:text-sm"
           onClick={() => {
             setIsCreateModalOpen(true)
             setPendingCreateFotos([])
           }}
         >
-          <Plus className="mr-2 h-4 w-4" />
+          <Plus className="mr-1.5 h-3.5 w-3.5 sm:mr-2 sm:h-4 sm:w-4" />
           Novo Profissional
         </Button>
       </header>
 
-      <section className="grid gap-4 md:grid-cols-3">
-        <div className="rounded-2xl border border-border/60 bg-gradient-to-br from-primary/10 via-background to-background p-5 shadow-sm">
+      <section className="grid grid-cols-3 gap-2 sm:gap-4">
+        <div className="rounded-2xl border border-border/60 bg-gradient-to-br from-primary/10 via-background to-background p-3 sm:p-5 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Total</p>
-              <h3 className="mt-2 text-2xl font-semibold text-foreground">{stats.total}</h3>
+              <p className="text-[10px] sm:text-xs font-medium uppercase tracking-wide text-muted-foreground">Total</p>
+              <h3 className="mt-1 text-lg sm:mt-2 sm:text-2xl font-semibold text-foreground">{stats.total}</h3>
             </div>
-            <div className="rounded-full bg-primary/10 p-2 text-primary">
+            <div className="hidden sm:flex rounded-full bg-primary/10 p-2 text-primary">
               <UserSquare className="h-5 w-5" />
             </div>
           </div>
-          <p className="mt-2 text-xs text-muted-foreground">Profissionais cadastrados</p>
+          <p className="mt-1 text-[10px] sm:mt-2 sm:text-xs text-muted-foreground hidden sm:block">Profissionais cadastrados</p>
         </div>
 
-        <div className="rounded-2xl border border-border/60 bg-gradient-to-br from-emerald-500/10 via-background to-background p-5 shadow-sm">
+        <div className="rounded-2xl border border-border/60 bg-gradient-to-br from-emerald-500/10 via-background to-background p-3 sm:p-5 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Ativos</p>
-              <h3 className="mt-2 text-2xl font-semibold text-foreground">{stats.ativos}</h3>
+              <p className="text-[10px] sm:text-xs font-medium uppercase tracking-wide text-muted-foreground">Ativos</p>
+              <h3 className="mt-1 text-lg sm:mt-2 sm:text-2xl font-semibold text-foreground">{stats.ativos}</h3>
             </div>
-            <div className="rounded-full bg-emerald-500/10 p-2 text-emerald-500">
+            <div className="hidden sm:flex rounded-full bg-emerald-500/10 p-2 text-emerald-500">
               <Award className="h-5 w-5" />
             </div>
           </div>
-          <p className="mt-2 text-xs text-muted-foreground">Em atividade</p>
+          <p className="mt-1 text-[10px] sm:mt-2 sm:text-xs text-muted-foreground hidden sm:block">Em atividade</p>
         </div>
 
-        <div className="rounded-2xl border border-border/60 bg-gradient-to-br from-rose-500/10 via-background to-background p-5 shadow-sm">
+        <div className="rounded-2xl border border-border/60 bg-gradient-to-br from-rose-500/10 via-background to-background p-3 sm:p-5 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Inativos</p>
-              <h3 className="mt-2 text-2xl font-semibold text-foreground">{stats.inativos}</h3>
+              <p className="text-[10px] sm:text-xs font-medium uppercase tracking-wide text-muted-foreground">Inativos</p>
+              <h3 className="mt-1 text-lg sm:mt-2 sm:text-2xl font-semibold text-foreground">{stats.inativos}</h3>
             </div>
-            <div className="rounded-full bg-rose-500/10 p-2 text-rose-500">
+            <div className="hidden sm:flex rounded-full bg-rose-500/10 p-2 text-rose-500">
               <UserSquare className="h-5 w-5" />
             </div>
           </div>
-          <p className="mt-2 text-xs text-muted-foreground">Temporariamente indisponíveis</p>
+          <p className="mt-1 text-[10px] sm:mt-2 sm:text-xs text-muted-foreground hidden sm:block">Temporariamente indisponíveis</p>
         </div>
       </section>
 
-      <section className="rounded-3xl border border-border/60 bg-background/80 p-6 shadow-lg backdrop-blur">
+      <section className="rounded-2xl sm:rounded-3xl border border-border/60 bg-background/80 p-3 sm:p-6 shadow-lg backdrop-blur">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold text-foreground">Profissionais ({profissionais.length})</h2>
           <span className="text-sm text-muted-foreground">Exibindo {profissionais.length} registros</span>
@@ -514,15 +516,54 @@ export function ProfissionaisClinicaPage() {
           </Select>
         </div>
 
-        <div className="overflow-hidden rounded-2xl border border-border/50">
+        {/* Mobile Card List */}
+        <div className="space-y-2 sm:hidden">
           {isLoading ? (
             <div className="flex items-center justify-center py-12 text-muted-foreground">
               <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
             </div>
           ) : profissionais.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground">
-              Nenhum profissional encontrado
+            <div className="text-center py-12 text-sm text-muted-foreground">Nenhum profissional encontrado</div>
+          ) : (
+            profissionais.map((profissional) => {
+              const statusConfig = STATUS_CONFIG[profissional.status]
+              return (
+                <div
+                  key={profissional.id}
+                  className="flex items-center gap-3 rounded-xl border border-border/50 bg-background/60 p-3 active:bg-muted/40 transition-colors"
+                  onClick={() => handleOpenDetails(profissional)}
+                >
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary-400 to-secondary-400 text-sm font-bold text-white">
+                    {profissional.nome?.charAt(0).toUpperCase()}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="truncate text-sm font-medium text-foreground">{profissional.nome}</p>
+                      <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium ${
+                        profissional.status === 'ativo' ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'
+                      }`}>{statusConfig.label}</span>
+                    </div>
+                    <p className="truncate text-xs text-muted-foreground">
+                      {profissional.especialidades?.join(', ') || profissional.conselho || 'Sem especialidade'}
+                    </p>
+                    {profissional.telefone && (
+                      <p className="text-[11px] text-muted-foreground flex items-center gap-1 mt-0.5"><Phone className="h-2.5 w-2.5" />{profissional.telefone}</p>
+                    )}
+                  </div>
+                </div>
+              )
+            })
+          )}
+        </div>
+
+        {/* Desktop Table */}
+        <div className="hidden sm:block overflow-hidden rounded-2xl border border-border/50">
+          {isLoading ? (
+            <div className="flex items-center justify-center py-12 text-muted-foreground">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
             </div>
+          ) : profissionais.length === 0 ? (
+            <div className="text-center py-12 text-muted-foreground">Nenhum profissional encontrado</div>
           ) : (
             <table className="min-w-full divide-y divide-border/60 text-sm">
               <thead className="bg-muted/40 text-muted-foreground">

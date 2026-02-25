@@ -569,90 +569,140 @@ export function AgendamentosClinicaPage() {
 
   return (
     <div className="space-y-6">
-      <header className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+      <header className="flex flex-col gap-3 sm:gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <h1 className="text-3xl font-semibold tracking-tight text-foreground">Agenda Clínica</h1>
-          <p className="text-sm text-muted-foreground">Gerencie os agendamentos de consultas e procedimentos</p>
+          <h1 className="text-xl sm:text-2xl lg:text-3xl font-semibold tracking-tight text-foreground">Agenda Clínica</h1>
+          <p className="text-xs sm:text-sm text-muted-foreground">Gerencie os agendamentos de consultas e procedimentos</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Button
             type="button"
+            size="sm"
             variant={agendaView === 'calendario' ? 'default' : 'outline'}
             onClick={() => setAgendaView('calendario')}
+            className="text-xs sm:text-sm"
           >
             Calendário
           </Button>
           <Button
             type="button"
+            size="sm"
             variant={agendaView === 'lista' ? 'default' : 'outline'}
             onClick={() => setAgendaView('lista')}
+            className="text-xs sm:text-sm"
           >
             Lista
           </Button>
 
-          <Button onClick={() => setIsCreateModalOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" />
-            Novo Agendamento
+          <Button size="sm" onClick={() => setIsCreateModalOpen(true)} className="text-xs sm:text-sm">
+            <Plus className="mr-1 h-3.5 w-3.5 sm:mr-2 sm:h-4 sm:w-4" />
+            <span className="hidden sm:inline">Novo Agendamento</span>
+            <span className="sm:hidden">Novo</span>
           </Button>
         </div>
       </header>
 
-      <section className="grid gap-4 md:grid-cols-4">
-        <div className="rounded-2xl border border-border/60 bg-gradient-to-br from-primary/10 via-background to-background p-5 shadow-sm">
+      <section className="grid grid-cols-2 gap-2 sm:gap-4 md:grid-cols-4">
+        <div className="rounded-2xl border border-border/60 bg-gradient-to-br from-primary/10 via-background to-background p-3 sm:p-5 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Total</p>
-              <h3 className="mt-2 text-2xl font-semibold text-foreground">{stats.total}</h3>
+              <p className="text-[10px] sm:text-xs font-medium uppercase tracking-wide text-muted-foreground">Total</p>
+              <h3 className="mt-1 text-lg sm:mt-2 sm:text-2xl font-semibold text-foreground">{stats.total}</h3>
             </div>
-            <div className="rounded-full bg-primary/10 p-2 text-primary">
+            <div className="hidden sm:flex rounded-full bg-primary/10 p-2 text-primary">
               <Calendar className="h-5 w-5" />
             </div>
           </div>
-          <p className="mt-2 text-xs text-muted-foreground">Agendamentos totais</p>
+          <p className="hidden sm:block mt-2 text-xs text-muted-foreground">Agendamentos totais</p>
         </div>
 
-        <div className="rounded-2xl border border-border/60 bg-gradient-to-br from-sky-500/10 via-background to-background p-5 shadow-sm">
+        <div className="rounded-2xl border border-border/60 bg-gradient-to-br from-sky-500/10 via-background to-background p-3 sm:p-5 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Hoje</p>
-              <h3 className="mt-2 text-2xl font-semibold text-foreground">{stats.hoje}</h3>
+              <p className="text-[10px] sm:text-xs font-medium uppercase tracking-wide text-muted-foreground">Hoje</p>
+              <h3 className="mt-1 text-lg sm:mt-2 sm:text-2xl font-semibold text-foreground">{stats.hoje}</h3>
             </div>
-            <div className="rounded-full bg-sky-500/10 p-2 text-sky-500">
+            <div className="hidden sm:flex rounded-full bg-sky-500/10 p-2 text-sky-500">
               <Clock className="h-5 w-5" />
             </div>
           </div>
-          <p className="mt-2 text-xs text-muted-foreground">Agendamentos para hoje</p>
+          <p className="hidden sm:block mt-2 text-xs text-muted-foreground">Agendamentos para hoje</p>
         </div>
 
-        <div className="rounded-2xl border border-border/60 bg-gradient-to-br from-emerald-500/10 via-background to-background p-5 shadow-sm">
+        <div className="rounded-2xl border border-border/60 bg-gradient-to-br from-emerald-500/10 via-background to-background p-3 sm:p-5 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Confirmados</p>
-              <h3 className="mt-2 text-2xl font-semibold text-foreground">{stats.confirmados}</h3>
+              <p className="text-[10px] sm:text-xs font-medium uppercase tracking-wide text-muted-foreground">Confirmados</p>
+              <h3 className="mt-1 text-lg sm:mt-2 sm:text-2xl font-semibold text-foreground">{stats.confirmados}</h3>
             </div>
-            <div className="rounded-full bg-emerald-500/10 p-2 text-emerald-500">
+            <div className="hidden sm:flex rounded-full bg-emerald-500/10 p-2 text-emerald-500">
               <CheckCircle2 className="h-5 w-5" />
             </div>
           </div>
-          <p className="mt-2 text-xs text-muted-foreground">Aguardando atendimento</p>
+          <p className="hidden sm:block mt-2 text-xs text-muted-foreground">Aguardando atendimento</p>
         </div>
 
-        <div className="rounded-2xl border border-border/60 bg-gradient-to-br from-purple-500/10 via-background to-background p-5 shadow-sm">
+        <div className="rounded-2xl border border-border/60 bg-gradient-to-br from-purple-500/10 via-background to-background p-3 sm:p-5 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Concluídos</p>
-              <h3 className="mt-2 text-2xl font-semibold text-foreground">{stats.concluidos}</h3>
+              <p className="text-[10px] sm:text-xs font-medium uppercase tracking-wide text-muted-foreground">Concluídos</p>
+              <h3 className="mt-1 text-lg sm:mt-2 sm:text-2xl font-semibold text-foreground">{stats.concluidos}</h3>
             </div>
-            <div className="rounded-full bg-purple-500/10 p-2 text-purple-500">
+            <div className="hidden sm:flex rounded-full bg-purple-500/10 p-2 text-purple-500">
               <CalendarCheck className="h-5 w-5" />
             </div>
           </div>
-          <p className="mt-2 text-xs text-muted-foreground">Atendimentos finalizados</p>
+          <p className="hidden sm:block mt-2 text-xs text-muted-foreground">Atendimentos finalizados</p>
         </div>
       </section>
 
-      <section className="relative z-20 overflow-visible rounded-2xl border border-border/40 bg-background/60 px-4 py-3 shadow-sm backdrop-blur">
-        <div className="flex items-end gap-2 overflow-visible">
+      <section className="relative z-20 overflow-visible rounded-2xl border border-border/40 bg-background/60 px-3 py-3 shadow-sm backdrop-blur sm:px-4">
+        {/* Mobile: compact search + filter toggle */}
+        <div className="flex items-center gap-2 sm:hidden">
+          <div className="relative flex-1">
+            <Search className="absolute left-2 top-2 h-3.5 w-3.5 text-muted-foreground" />
+            <Input
+              placeholder="Buscar..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="h-8 pl-7 text-xs"
+            />
+          </div>
+          <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as any)}>
+            <SelectTrigger className="h-8 w-auto min-w-[80px] text-xs">
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos</SelectItem>
+              {Object.entries(STATUS_CONFIG).map(([key, config]) => (
+                <SelectItem key={key} value={key}>{config.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {(searchTerm || statusFilter !== 'all' || pacienteFilter !== 'all' || procedimentoFilter !== 'all' || avaliacaoFilter !== 'all' || dataInicioFilter || dataFimFilter) && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 shrink-0 px-2 text-xs text-muted-foreground"
+              onClick={() => {
+                setSearchTerm('')
+                setStatusFilter('all')
+                setPacienteFilter('all')
+                setPacienteSearch('')
+                setProfissionalFilter('all')
+                setProcedimentoFilter('all')
+                setAvaliacaoFilter('all')
+                setDataInicioFilter('')
+                setDataFimFilter('')
+              }}
+            >
+              Limpar
+            </Button>
+          )}
+        </div>
+
+        {/* Desktop: full filter bar */}
+        <div className="hidden sm:flex sm:flex-wrap lg:flex-nowrap items-end gap-2 overflow-visible">
           <div className="relative min-w-[120px]">
             <span className="mb-1 block text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Buscar</span>
             <div className="relative">
@@ -802,51 +852,39 @@ export function AgendamentosClinicaPage() {
       </section>
 
       {agendaView === 'calendario' ? (
-        <section className="rounded-3xl border border-border/60 bg-background/80 p-6 shadow-lg backdrop-blur">
+        <section className="rounded-2xl sm:rounded-3xl border border-border/60 bg-background/80 p-2 sm:p-6 shadow-lg backdrop-blur">
           <div className="space-y-3">
-            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-              <div>
+            <div className="flex flex-col gap-2 sm:gap-3 md:flex-row md:items-center md:justify-between">
+              <div className="hidden sm:block">
                 <h2 className="text-lg font-semibold text-foreground">Calendário</h2>
                 <p className="text-sm text-muted-foreground">Visualização diária, semanal e mensal. Arraste para reagendar.</p>
               </div>
 
-              <div className="flex flex-wrap items-center gap-2">
-                <Button type="button" variant="outline" onClick={handleCalendarPrev}>
+              <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                <Button type="button" variant="outline" size="sm" onClick={handleCalendarPrev} className="h-7 w-7 p-0 sm:h-9 sm:w-auto sm:px-3">
                   ?
                 </Button>
-                <Button type="button" variant="outline" onClick={handleCalendarToday}>
+                <Button type="button" variant="outline" size="sm" onClick={handleCalendarToday} className="h-7 text-xs sm:h-9 sm:text-sm">
                   Hoje
                 </Button>
-                <Button type="button" variant="outline" onClick={handleCalendarNext}>
+                <Button type="button" variant="outline" size="sm" onClick={handleCalendarNext} className="h-7 w-7 p-0 sm:h-9 sm:w-auto sm:px-3">
                   ?
                 </Button>
 
-                <Button
-                  type="button"
-                  variant={calendarView === 'timeGridDay' ? 'default' : 'outline'}
-                  onClick={() => handleChangeView('timeGridDay')}
-                >
+                <Button type="button" size="sm" variant={calendarView === 'timeGridDay' ? 'default' : 'outline'} onClick={() => handleChangeView('timeGridDay')} className="h-7 text-xs sm:h-9 sm:text-sm">
                   Dia
                 </Button>
-                <Button
-                  type="button"
-                  variant={calendarView === 'timeGridWeek' ? 'default' : 'outline'}
-                  onClick={() => handleChangeView('timeGridWeek')}
-                >
+                <Button type="button" size="sm" variant={calendarView === 'timeGridWeek' ? 'default' : 'outline'} onClick={() => handleChangeView('timeGridWeek')} className="hidden sm:inline-flex h-7 text-xs sm:h-9 sm:text-sm">
                   Semana
                 </Button>
-                <Button
-                  type="button"
-                  variant={calendarView === 'dayGridMonth' ? 'default' : 'outline'}
-                  onClick={() => handleChangeView('dayGridMonth')}
-                >
+                <Button type="button" size="sm" variant={calendarView === 'dayGridMonth' ? 'default' : 'outline'} onClick={() => handleChangeView('dayGridMonth')} className="h-7 text-xs sm:h-9 sm:text-sm">
                   Mês
                 </Button>
               </div>
             </div>
           </div>
 
-          <div>
+          <div className="mt-2">
             <div className="rounded-xl border overflow-hidden bg-background">
               <FullCalendar
                 ref={calendarRef as any}
@@ -892,10 +930,10 @@ export function AgendamentosClinicaPage() {
       ) : null}
 
       {agendaView === 'lista' ? (
-        <section className="rounded-3xl border border-border/60 bg-background/80 p-6 shadow-lg backdrop-blur">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-foreground">Agendamentos ({count})</h2>
-            <span className="text-sm text-muted-foreground">Lista de todos os agendamentos clínicos</span>
+        <section className="rounded-2xl sm:rounded-3xl border border-border/60 bg-background/80 p-3 sm:p-6 shadow-lg backdrop-blur">
+          <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between mb-3 sm:mb-4">
+            <h2 className="text-base sm:text-lg font-semibold text-foreground">Agendamentos ({count})</h2>
+            <span className="text-xs sm:text-sm text-muted-foreground hidden sm:block">Lista de todos os agendamentos clínicos</span>
           </div>
           <div>
             {isLoading ? (
@@ -905,7 +943,7 @@ export function AgendamentosClinicaPage() {
             ) : filteredAgendamentos.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">Nenhum agendamento encontrado</div>
             ) : (
-              <div className="space-y-4">
+              <div className="space-y-2 sm:space-y-4">
                 {filteredAgendamentos.map((agendamento) => {
                   const statusConfig = STATUS_CONFIG[agendamento.status]
                   const StatusIcon = statusConfig.icon
@@ -913,39 +951,39 @@ export function AgendamentosClinicaPage() {
                   return (
                     <div
                       key={agendamento.id}
-                      className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent transition-colors"
+                      className="flex items-start sm:items-center justify-between gap-2 p-3 sm:p-4 border rounded-xl sm:rounded-lg hover:bg-accent transition-colors"
                     >
                       <div 
-                        className="flex-1 space-y-1 cursor-pointer"
+                        className="flex-1 min-w-0 space-y-1 cursor-pointer"
                         onClick={() => handleOpenDetails(agendamento)}
                       >
-                        <div className="flex items-center gap-2">
-                          <h3 className="font-semibold">{agendamento.titulo}</h3>
-                          <Badge variant={statusConfig.variant}>
-                            <StatusIcon className="mr-1 h-3 w-3" />
+                        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                          <h3 className="text-sm sm:text-base font-semibold truncate">{agendamento.titulo}</h3>
+                          <Badge variant={statusConfig.variant} className="text-[10px] sm:text-xs">
+                            <StatusIcon className="mr-0.5 h-2.5 w-2.5 sm:mr-1 sm:h-3 sm:w-3" />
                             {statusConfig.label}
                           </Badge>
-                          {agendamento.is_avaliacao ? <Badge variant="secondary">Avaliação</Badge> : null}
+                          {agendamento.is_avaliacao ? <Badge variant="secondary" className="text-[10px] sm:text-xs">Avaliação</Badge> : null}
                         </div>
-                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                        <div className="flex flex-col gap-0.5 sm:flex-row sm:items-center sm:gap-4 text-xs sm:text-sm text-muted-foreground">
                           <span className="flex items-center gap-1">
-                            <Clock className="h-3 w-3" />
+                            <Clock className="h-3 w-3 shrink-0" />
                             {formatDateTime(agendamento.data_inicio)}
                           </span>
                           {agendamento.paciente && (
-                            <span className="flex items-center gap-1">
-                              <User className="h-3 w-3" />
+                            <span className="flex items-center gap-1 truncate">
+                              <User className="h-3 w-3 shrink-0" />
                               {agendamento.paciente.nome_completo}
                             </span>
                           )}
                           {agendamento.profissional && (
-                            <span className="flex items-center gap-1">
+                            <span className="hidden sm:flex items-center gap-1">
                               <Stethoscope className="h-3 w-3" />
                               {agendamento.profissional.nome}
                             </span>
                           )}
                           {agendamento.sala && (
-                            <span className="flex items-center gap-1">
+                            <span className="hidden sm:flex items-center gap-1">
                               <MapPin className="h-3 w-3" />
                               {agendamento.sala}
                             </span>

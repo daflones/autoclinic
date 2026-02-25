@@ -679,7 +679,7 @@ export function AgendamentoModals({
     <>
       {/* Modal de Criação */}
       <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-4xl max-h-[100dvh] sm:max-h-[90vh] overflow-y-auto p-4 pt-12 sm:p-6 sm:pt-6">
           <DialogHeader>
             <DialogTitle>Novo Agendamento</DialogTitle>
             <DialogDescription>Crie um novo agendamento clínico</DialogDescription>
@@ -1159,7 +1159,7 @@ export function AgendamentoModals({
 
       {/* Modal de Detalhes */}
       <Dialog open={isDetailsModalOpen} onOpenChange={setIsDetailsModalOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-2xl max-h-[100dvh] sm:max-h-[90vh] overflow-y-auto p-4 pt-12 sm:p-6 sm:pt-6">
           {selectedAgendamento && (
             <>
               <DialogHeader>
@@ -1275,7 +1275,7 @@ export function AgendamentoModals({
 
       {/* Modal de Edição */}
       <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-visible">
+        <DialogContent className="sm:max-w-4xl max-h-[100dvh] sm:max-h-[90vh] overflow-y-auto sm:overflow-visible p-4 pt-12 sm:p-6 sm:pt-6">
           <DialogHeader>
             <DialogTitle>Editar Agendamento</DialogTitle>
             <DialogDescription>Atualize as informações do agendamento</DialogDescription>

@@ -33,6 +33,11 @@ export interface Procedimento {
   quebra_objecoes?: string | null
   ia_informa_preco?: boolean
   ia_envia_imagens?: boolean
+  ia_agenda_direto?: boolean
+  ia_beneficios?: string | null
+  ia_indicacoes?: string | null
+  ia_prova_social?: string | null
+  ia_upsell_ids?: string[] | null
   imagens?: ProcedimentoImagem[] | null
   duracao_estimada?: string | number | null
   valor_base?: number | null
@@ -79,6 +84,11 @@ export interface ProcedimentoCreateData {
   quebra_objecoes?: string | null
   ia_informa_preco?: boolean
   ia_envia_imagens?: boolean
+  ia_agenda_direto?: boolean
+  ia_beneficios?: string | null
+  ia_indicacoes?: string | null
+  ia_prova_social?: string | null
+  ia_upsell_ids?: string[] | null
   imagens?: ProcedimentoImagem[] | null
   duracao_estimada?: string | number | null
   valor_base?: number | null
@@ -156,6 +166,14 @@ function buildProcedimentoIaConfig(params: {
         typeof params.payload.ia_envia_imagens === 'boolean'
           ? params.payload.ia_envia_imagens
           : (params.current as any)?.ia_envia_imagens ?? null,
+      ia_agenda_direto:
+        typeof params.payload.ia_agenda_direto === 'boolean'
+          ? params.payload.ia_agenda_direto
+          : (params.current as any)?.ia_agenda_direto ?? null,
+      ia_beneficios: params.payload.ia_beneficios ?? (params.current as any)?.ia_beneficios ?? null,
+      ia_indicacoes: params.payload.ia_indicacoes ?? (params.current as any)?.ia_indicacoes ?? null,
+      ia_prova_social: params.payload.ia_prova_social ?? (params.current as any)?.ia_prova_social ?? null,
+      ia_upsell_ids: params.payload.ia_upsell_ids ?? (params.current as any)?.ia_upsell_ids ?? null,
       imagens_count: Array.isArray(params.payload.imagens)
         ? params.payload.imagens.length
         : Array.isArray((params.current as any)?.imagens)
@@ -215,6 +233,14 @@ function buildProcedimentoIaConfig(params: {
         typeof params.payload.ia_envia_imagens === 'boolean'
           ? params.payload.ia_envia_imagens
           : (params.current as any)?.ia_envia_imagens ?? null,
+      ia_agenda_direto:
+        typeof params.payload.ia_agenda_direto === 'boolean'
+          ? params.payload.ia_agenda_direto
+          : (params.current as any)?.ia_agenda_direto ?? null,
+      ia_beneficios: params.payload.ia_beneficios ?? (params.current as any)?.ia_beneficios ?? null,
+      ia_indicacoes: params.payload.ia_indicacoes ?? (params.current as any)?.ia_indicacoes ?? null,
+      ia_prova_social: params.payload.ia_prova_social ?? (params.current as any)?.ia_prova_social ?? null,
+      ia_upsell_ids: params.payload.ia_upsell_ids ?? (params.current as any)?.ia_upsell_ids ?? null,
       materiais_padrao:
         params.payload.materiais_padrao ?? (params.current as any)?.materiais_padrao ?? null,
       anexos_padrao:

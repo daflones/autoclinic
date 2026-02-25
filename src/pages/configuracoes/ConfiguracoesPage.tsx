@@ -13,7 +13,7 @@ import {
   useUpdateProfile,
   useUpdateDetalhesEmpresa
 } from '@/hooks/useConfiguracoes'
-import { useIAConfig } from '@/hooks/useIAConfig'
+import { useClinicaIAConfig } from '@/hooks/useClinicaIAConfig'
 
 // Função para formatar telefone
 const formatPhone = (value: string) => {
@@ -30,7 +30,7 @@ interface Profile {
   email: string
   full_name: string
   phone?: string
-  cargo?: string
+  role?: string
   role: 'admin' | 'vendedor'
   status: 'ativo' | 'inativo'
   admin_profile_id?: string
@@ -45,7 +45,7 @@ export function ConfiguracoesPage() {
   // Usar hooks para dados e ações
   const { isLoading: loadingConfiguracoes } = useConfiguracoes()
   const { data: profileData, isLoading: loadingProfile } = useProfile()
-  const { data: iaConfigData } = useIAConfig()
+  const { data: clinicaIAConfigData } = useClinicaIAConfig()
   const updateProfile = useUpdateProfile()
   const updateDetalhesEmpresaMutation = useUpdateDetalhesEmpresa()
   
@@ -53,7 +53,7 @@ export function ConfiguracoesPage() {
     full_name: '',
     email: '',
     phone: '',
-    cargo: ''
+    role: ''
   })
   
   const [detalhesEmpresa, setDetalhesEmpresa] = useState({
@@ -81,7 +81,7 @@ export function ConfiguracoesPage() {
         full_name: profileData.full_name || '',
         email: profileData.email || '',
         phone: profileData.telefone || '',
-        cargo: profileData.cargo || ''
+        role: profileData.role || ''
       })
       
       // Atualizar telefone em detalhes da empresa se existir no perfil
@@ -97,25 +97,26 @@ export function ConfiguracoesPage() {
     }
   }, [profileData])
 
-  // Carregar detalhes da empresa salvos no ia_config
+  // Carregar detalhes da empresa salvos em clinica_ia_config.extra.detalhes_empresa
   useEffect(() => {
-    if (iaConfigData?.detalhes_empresa) {
+    const detalhes = (clinicaIAConfigData?.extra as any)?.detalhes_empresa
+    if (detalhes) {
       setDetalhesEmpresa({
         contatos: {
-          telefone: iaConfigData.detalhes_empresa.contatos?.telefone || '',
-          email: iaConfigData.detalhes_empresa.contatos?.email || '',
-          whatsapp: iaConfigData.detalhes_empresa.contatos?.whatsapp || '',
-          endereco: iaConfigData.detalhes_empresa.contatos?.endereco || ''
+          telefone: detalhes.contatos?.telefone || '',
+          email: detalhes.contatos?.email || '',
+          whatsapp: detalhes.contatos?.whatsapp || '',
+          endereco: detalhes.contatos?.endereco || ''
         },
         redes_sociais: {
-          website: iaConfigData.detalhes_empresa.redes_sociais?.website || '',
-          facebook: iaConfigData.detalhes_empresa.redes_sociais?.facebook || '',
-          linkedin: iaConfigData.detalhes_empresa.redes_sociais?.linkedin || '',
-          instagram: iaConfigData.detalhes_empresa.redes_sociais?.instagram || ''
+          website: detalhes.redes_sociais?.website || '',
+          facebook: detalhes.redes_sociais?.facebook || '',
+          linkedin: detalhes.redes_sociais?.linkedin || '',
+          instagram: detalhes.redes_sociais?.instagram || ''
         }
       })
     }
-  }, [iaConfigData])
+  }, [clinicaIAConfigData])
 
 
   const handleSaveProfile = () => {
@@ -138,47 +139,47 @@ export function ConfiguracoesPage() {
   return (
     <div className="space-y-6">
       <header>
-        <h1 className="text-3xl font-semibold tracking-tight text-foreground flex items-center gap-3">
-          <Settings className="h-8 w-8 text-primary" />
-          Configurações da Clínica
+        <h1 className="text-xl sm:text-2xl lg:text-3xl font-semibold tracking-tight text-foreground flex items-center gap-2 sm:gap-3">
+          <Settings className="h-5 w-5 sm:h-8 sm:w-8 text-primary" />
+          Configurações
         </h1>
-        <p className="text-sm text-muted-foreground mt-1">
+        <p className="text-xs sm:text-sm text-muted-foreground mt-1">
           Gerencie as configurações do sistema e preferências da clínica
         </p>
       </header>
 
-      <div className="flex gap-6">
-        {/* Left sidebar - Navigation */}
-        <div className="w-72 flex-shrink-0">
-          <div className="rounded-3xl border border-border/60 bg-background/80 p-4 shadow-lg backdrop-blur">
-            <h2 className="text-base font-semibold text-foreground flex items-center gap-2 mb-3">
+      <div className="flex flex-col sm:flex-row gap-4 sm:gap-6">
+        {/* Left sidebar - Navigation (horizontal on mobile) */}
+        <div className="sm:w-72 sm:flex-shrink-0">
+          <div className="rounded-2xl sm:rounded-3xl border border-border/60 bg-background/80 p-3 sm:p-4 shadow-lg backdrop-blur">
+            <h2 className="hidden sm:flex text-base font-semibold text-foreground items-center gap-2 mb-3">
               <Settings className="w-4 h-4" />
               Categorias
             </h2>
-            <div className="space-y-1">
+            <div className="flex gap-1 sm:flex-col sm:space-y-1 sm:gap-0">
               <Button 
                 variant={activeSection === 'perfil' ? 'default' : 'ghost'} 
                 size="sm"
                 className={cn(
-                  "w-full justify-start text-sm",
+                  "sm:w-full justify-start text-xs sm:text-sm",
                   activeSection === 'perfil' && "bg-primary text-white"
                 )}
                 onClick={() => setActiveSection('perfil')}
               >
-                <User className="w-4 h-4 mr-2" />
+                <User className="w-4 h-4 mr-1.5 sm:mr-2" />
                 Perfil
               </Button>
               <Button 
                 variant={activeSection === 'empresa' ? 'default' : 'ghost'} 
                 size="sm"
                 className={cn(
-                  "w-full justify-start text-sm",
+                  "sm:w-full justify-start text-xs sm:text-sm",
                   activeSection === 'empresa' && "bg-primary text-white"
                 )}
                 onClick={() => setActiveSection('empresa')}
               >
-                <Building2 className="w-4 h-4 mr-2" />
-                Detalhes da Empresa
+                <Building2 className="w-4 h-4 mr-1.5 sm:mr-2" />
+                Empresa
               </Button>
             </div>
           </div>
@@ -189,13 +190,13 @@ export function ConfiguracoesPage() {
           
           {/* Profile Settings */}
           {activeSection === 'perfil' && (
-            <div className="rounded-3xl border border-border/60 bg-background/80 p-6 shadow-lg backdrop-blur">
+            <div className="rounded-2xl sm:rounded-3xl border border-border/60 bg-background/80 p-3 sm:p-6 shadow-lg backdrop-blur">
               <div className="mb-4">
-                <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
+                <h2 className="text-base sm:text-lg font-semibold text-foreground flex items-center gap-2">
                   <User className="w-5 h-5" />
                   Perfil
                 </h2>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-xs sm:text-sm text-muted-foreground">
                   Gerencie suas informações pessoais e dados do perfil.
                 </p>
               </div>
@@ -236,7 +237,7 @@ export function ConfiguracoesPage() {
                         />
                       </div>
                       <div className="grid gap-2">
-                        <Label htmlFor="role" className="text-sm">Cargo</Label>
+                        <Label htmlFor="role" className="text-sm">role</Label>
                         <Input 
                           id="role" 
                           value={profileData?.role === 'admin' ? 'Administrador' : 'Vendedor'}

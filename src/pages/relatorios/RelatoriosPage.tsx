@@ -502,19 +502,19 @@ export function RelatoriosPage() {
   )
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div className="flex items-center justify-between mb-6">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-            <BarChart3 className="h-8 w-8" />
-            Relatórios e Analytics
+          <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+            <BarChart3 className="h-5 w-5 sm:h-8 sm:w-8" />
+            Relatórios
           </h1>
-          <p className="text-gray-600 dark:text-gray-400 mt-1">Análises e insights da sua clínica</p>
+          <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-1">Análises e insights da sua clínica</p>
         </div>
       </div>
 
       {/* Period Selector */}
-      <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
+      <div className="flex gap-1.5 sm:gap-2 overflow-x-auto pb-2 -mx-1 px-1">
         {[
           { value: 'hoje', label: 'Hoje' },
           { value: 'semana', label: 'Esta Semana' },

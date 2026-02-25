@@ -127,18 +127,18 @@ export function CategoriasClinicaPage() {
 
   return (
     <div className="space-y-6">
-      <header className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+      <header className="flex flex-col gap-3 sm:gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-semibold tracking-tight text-foreground">Categorias de Procedimentos</h1>
-          <p className="text-sm text-muted-foreground">Organize os procedimentos por categorias</p>
+          <h1 className="text-xl sm:text-2xl lg:text-3xl font-semibold tracking-tight text-foreground">Categorias</h1>
+          <p className="text-xs sm:text-sm text-muted-foreground">Organize os procedimentos por categorias</p>
         </div>
-        <Button onClick={() => setIsCreateModalOpen(true)}>
-          <Plus className="mr-2 h-4 w-4" />
+        <Button size="sm" onClick={() => setIsCreateModalOpen(true)} className="self-start sm:self-auto text-xs sm:text-sm">
+          <Plus className="mr-1.5 h-3.5 w-3.5 sm:mr-2 sm:h-4 sm:w-4" />
           Nova Categoria
         </Button>
       </header>
 
-      <section className="rounded-3xl border border-border/60 bg-background/80 p-6 shadow-lg backdrop-blur">
+      <section className="rounded-2xl sm:rounded-3xl border border-border/60 bg-background/80 p-3 sm:p-6 shadow-lg backdrop-blur">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold text-foreground">Categorias ({categorias.length})</h2>
           <span className="text-sm text-muted-foreground">Exibindo {categorias.length} registros</span>
@@ -153,12 +153,12 @@ export function CategoriasClinicaPage() {
             Nenhuma categoria encontrada
           </div>
         ) : (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-2 sm:gap-4 md:grid-cols-2 lg:grid-cols-3">
             {categorias.map((categoria) => {
               const statusConfig = STATUS_CONFIG[categoria.status]
 
               return (
-                <div key={categoria.id} className="rounded-2xl border border-border/60 p-4 hover:shadow-md transition-shadow">
+                <div key={categoria.id} className="rounded-xl sm:rounded-2xl border border-border/60 p-3 sm:p-4 hover:shadow-md transition-shadow">
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex items-center gap-2">
                       <div

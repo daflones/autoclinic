@@ -474,13 +474,13 @@ export function ClinicaIAConfigPage() {
 
   return (
     <div className="space-y-6">
-      <header className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+      <header className="flex flex-col gap-3 sm:gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-semibold tracking-tight text-foreground flex items-center gap-3">
-            <Bot className="h-8 w-8 text-primary" />
-            Configurações de IA
+          <h1 className="text-xl sm:text-2xl lg:text-3xl font-semibold tracking-tight text-foreground flex items-center gap-2 sm:gap-3">
+            <Bot className="h-5 w-5 sm:h-8 sm:w-8 text-primary" />
+            Config. IA
           </h1>
-          <p className="text-sm text-muted-foreground mt-1">Configure o comportamento e personalidade do assistente de IA da sua clínica</p>
+          <p className="text-xs sm:text-sm text-muted-foreground mt-1">Configure o assistente de IA da sua clínica</p>
         </div>
         <Button onClick={handleSaveConfig} disabled={updateClinicaConfig.isPending}>
           {updateClinicaConfig.isPending ? (

@@ -52,20 +52,27 @@ export function Header({ onMenuClick, onNotificationCenterOpen }: HeaderProps) {
   }
 
   return (
-    <header className="relative z-10 flex h-20 w-full items-center justify-between gap-4 overflow-hidden rounded-t-[28px] border-b border-white/30 bg-white/60 px-4 py-4 shadow-[0_18px_50px_-30px_rgba(49,17,72,0.55)] backdrop-blur-2xl dark:border-white/10 dark:bg-neutral-900/70 sm:px-6 lg:px-10">
+    <header className="relative z-10 flex h-12 w-full items-center justify-between gap-2 overflow-hidden rounded-t-2xl border-b border-white/30 bg-white/60 px-3 py-2 shadow-[0_18px_50px_-30px_rgba(49,17,72,0.55)] backdrop-blur-2xl dark:border-white/10 dark:bg-neutral-900/70 sm:h-14 sm:rounded-t-[28px] sm:px-4 lg:h-20 lg:gap-4 lg:px-10 lg:py-4">
       <div className="absolute inset-0 -z-10 bg-gradient-to-r from-primary-200/40 via-secondary-200/35 to-tertiary-300/30" />
 
       {/* Mobile menu button */}
       <Button
         variant="ghost"
         size="icon"
-        className="lg:hidden"
+        className="h-9 w-9 lg:hidden"
         onClick={onMenuClick}
       >
         <Menu className="h-5 w-5" />
       </Button>
 
-      <div className="flex flex-1 items-center gap-4">
+      <div className="flex flex-1 items-center gap-2 lg:gap-4 min-w-0">
+        {/* Mobile greeting */}
+        <div className="block lg:hidden min-w-0">
+          <p className="truncate text-sm font-medium text-neutral-900 dark:text-neutral-100">
+            Olá, {user?.full_name?.split(' ')[0] || 'profissional'}
+          </p>
+        </div>
+        {/* Desktop greeting */}
         <div className="hidden lg:block">
           <div className="flex items-center gap-3">
             <div className="rounded-2xl bg-gradient-to-br from-primary-500/90 to-secondary-400/90 p-2 text-white shadow-md">

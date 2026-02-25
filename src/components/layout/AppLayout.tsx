@@ -64,14 +64,14 @@ export function AppLayout() {
 
         {/* Main Content */}
         <div className="flex flex-1 flex-col">
-          <div className="flex-1 overflow-hidden p-4 sm:p-6 lg:p-8">
-            <div className="flex h-full flex-col rounded-[28px] border border-white/30 bg-white/70 shadow-[0_28px_80px_-40px_rgba(50,20,75,0.55)] backdrop-blur-2xl dark:border-white/10 dark:bg-neutral-900/60">
+          <div className="flex-1 overflow-hidden p-1.5 sm:p-4 lg:p-8">
+            <div className="flex h-full flex-col rounded-2xl sm:rounded-[28px] border border-white/30 bg-white/70 shadow-[0_28px_80px_-40px_rgba(50,20,75,0.55)] backdrop-blur-2xl dark:border-white/10 dark:bg-neutral-900/60">
               <Header
                 onMenuClick={() => setSidebarOpen(true)}
                 onNotificationCenterOpen={() => setNotificationCenterOpen(true)}
               />
 
-              <main className="flex-1 overflow-y-auto px-4 pb-6 pt-2 sm:px-6 lg:px-8">
+              <main className="flex-1 overflow-y-auto px-2.5 pb-4 pt-2 sm:px-4 md:px-6 lg:px-8 sm:pb-6">
                 <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">
                   <PlanoExpiracaoAviso />
                   <Outlet />

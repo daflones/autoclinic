@@ -169,20 +169,20 @@ export function ProcedimentosRealizadosPage() {
 
   return (
     <div className="space-y-6">
-      <header className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+      <header className="flex flex-col gap-3 sm:gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-semibold tracking-tight text-foreground">Procedimentos Realizados</h1>
-          <p className="text-sm text-muted-foreground">
+          <h1 className="text-xl sm:text-2xl lg:text-3xl font-semibold tracking-tight text-foreground">Procedimentos Realizados</h1>
+          <p className="text-xs sm:text-sm text-muted-foreground">
             Lista detalhada de todos os procedimentos concluídos com filtros avançados
           </p>
         </div>
-        <Button onClick={exportToCsv} disabled={procedimentosRealizados.length === 0}>
-          <Download className="mr-2 h-4 w-4" />
+        <Button size="sm" onClick={exportToCsv} disabled={procedimentosRealizados.length === 0} className="self-start sm:self-auto text-xs sm:text-sm">
+          <Download className="mr-1.5 h-3.5 w-3.5 sm:mr-2 sm:h-4 sm:w-4" />
           Exportar CSV
         </Button>
       </header>
 
-      <div className="rounded-3xl border border-border/60 bg-background/80 p-6 shadow-lg backdrop-blur">
+      <div className="rounded-2xl sm:rounded-3xl border border-border/60 bg-background/80 p-3 sm:p-6 shadow-lg backdrop-blur">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
             <Stethoscope className="h-5 w-5" />

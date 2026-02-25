@@ -22,94 +22,94 @@ export function DashboardPage() {
   const dashboardClinica = dashboardClinicaQuery.data
 
   return (
-    <div className="relative w-full space-y-8 overflow-hidden">
+    <div className="relative w-full space-y-4 sm:space-y-8 overflow-hidden">
       <div className="absolute inset-0 -z-10 bg-gradient-to-br from-primary-100/40 via-secondary-100/30 to-transparent" />
 
-      <div className="flex flex-col gap-3">
-        <div className="inline-flex items-center gap-2 rounded-full bg-white/70 px-3 py-1 text-xs font-semibold text-primary-600 backdrop-blur dark:bg-neutral-900/70">
-          <Sparkles className="h-3.5 w-3.5" />
-          Experiência clínica Automaclinic
+      <div className="flex flex-col gap-2 sm:gap-3">
+        <div className="inline-flex items-center gap-2 rounded-full bg-white/70 px-2.5 py-0.5 sm:px-3 sm:py-1 text-[10px] sm:text-xs font-semibold text-primary-600 backdrop-blur dark:bg-neutral-900/70">
+          <Sparkles className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+          Automaclinic
         </div>
-        <h1 className="text-3xl font-extrabold text-neutral-900 dark:text-white">
+        <h1 className="text-xl sm:text-3xl font-extrabold text-neutral-900 dark:text-white">
           Olá, {user?.full_name?.split(' ')[0] || 'profissional'}
         </h1>
-        <p className="text-sm text-neutral-500 dark:text-neutral-300 max-w-xl">
+        <p className="text-xs sm:text-sm text-neutral-500 dark:text-neutral-300 max-w-xl hidden sm:block">
           Esta área será o centro de insights Automaclinic: métricas de pacientes, fluxo de agendas e performance da equipe clínica.
           Enquanto preparamos as integrações com Supabase, você pode navegar pelos módulos e iniciar o cadastro das informações principais.
         </p>
       </div>
 
-      <section className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
+      <section className="grid grid-cols-2 gap-2 sm:gap-6 xl:grid-cols-4">
         <Card className="border-white/40 bg-white/75 shadow-[0_18px_48px_-34px_rgba(53,20,76,0.35)] backdrop-blur-lg transition-all hover:-translate-y-0.5 hover:shadow-[0_22px_52px_-28px_rgba(53,20,76,0.45)] dark:border-white/10 dark:bg-neutral-900/70">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 sm:pb-4 p-3 sm:p-6">
             <div>
-              <p className="text-xs uppercase tracking-wide text-neutral-400 dark:text-neutral-500">Pacientes ativos</p>
-              <CardTitle className="mt-1 text-2xl font-semibold text-neutral-900 dark:text-white">
+              <p className="text-[10px] sm:text-xs uppercase tracking-wide text-neutral-400 dark:text-neutral-500">Pacientes ativos</p>
+              <CardTitle className="mt-1 text-lg sm:text-2xl font-semibold text-neutral-900 dark:text-white">
                 {(dashboardClinica?.pacientesAtivos ?? 0).toString()}
               </CardTitle>
             </div>
-            <div className="rounded-2xl bg-gradient-to-br from-primary-400/90 to-secondary-300/80 p-3 text-white shadow-lg">
+            <div className="hidden sm:flex rounded-2xl bg-gradient-to-br from-primary-400/90 to-secondary-300/80 p-3 text-white shadow-lg">
               <Heart className="h-5 w-5" />
             </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="hidden sm:block">
             <p className="text-sm text-neutral-500 dark:text-neutral-400">Pacientes acompanhados neste mês</p>
           </CardContent>
         </Card>
 
         <Card className="border-white/40 bg-white/75 shadow-[0_18px_48px_-34px_rgba(53,20,76,0.35)] backdrop-blur-lg transition-all hover:-translate-y-0.5 hover:shadow-[0_22px_52px_-28px_rgba(53,20,76,0.45)] dark:border-white/10 dark:bg-neutral-900/70">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 sm:pb-4 p-3 sm:p-6">
             <div>
-              <p className="text-xs uppercase tracking-wide text-neutral-400 dark:text-neutral-500">Sessões de hoje</p>
-              <CardTitle className="mt-1 text-2xl font-semibold text-neutral-900 dark:text-white">
+              <p className="text-[10px] sm:text-xs uppercase tracking-wide text-neutral-400 dark:text-neutral-500">Sessões de hoje</p>
+              <CardTitle className="mt-1 text-lg sm:text-2xl font-semibold text-neutral-900 dark:text-white">
                 {(dashboardClinica?.sessoesHoje ?? 0).toString()}
               </CardTitle>
             </div>
-            <div className="rounded-2xl bg-gradient-to-br from-primary-400/90 to-secondary-300/80 p-3 text-white shadow-lg">
+            <div className="hidden sm:flex rounded-2xl bg-gradient-to-br from-primary-400/90 to-secondary-300/80 p-3 text-white shadow-lg">
               <CalendarHeart className="h-5 w-5" />
             </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="hidden sm:block">
             <p className="text-sm text-neutral-500 dark:text-neutral-400">Tratamentos agendados para hoje</p>
           </CardContent>
         </Card>
 
         <Card className="border-white/40 bg-white/75 shadow-[0_18px_48px_-34px_rgba(53,20,76,0.35)] backdrop-blur-lg transition-all hover:-translate-y-0.5 hover:shadow-[0_22px_52px_-28px_rgba(53,20,76,0.45)] dark:border-white/10 dark:bg-neutral-900/70">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 sm:pb-4 p-3 sm:p-6">
             <div>
-              <p className="text-xs uppercase tracking-wide text-neutral-400 dark:text-neutral-500">Taxa de adesão</p>
-              <CardTitle className="mt-1 text-2xl font-semibold text-neutral-900 dark:text-white">
+              <p className="text-[10px] sm:text-xs uppercase tracking-wide text-neutral-400 dark:text-neutral-500">Taxa de adesão</p>
+              <CardTitle className="mt-1 text-lg sm:text-2xl font-semibold text-neutral-900 dark:text-white">
                 {`${dashboardClinica?.taxaAdesao ?? 0}%`}
               </CardTitle>
             </div>
-            <div className="rounded-2xl bg-gradient-to-br from-primary-400/90 to-secondary-300/80 p-3 text-white shadow-lg">
+            <div className="hidden sm:flex rounded-2xl bg-gradient-to-br from-primary-400/90 to-secondary-300/80 p-3 text-white shadow-lg">
               <Activity className="h-5 w-5" />
             </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="hidden sm:block">
             <p className="text-sm text-neutral-500 dark:text-neutral-400">Planos concluídos / total de planos</p>
           </CardContent>
         </Card>
 
         <Card className="border-white/40 bg-white/75 shadow-[0_18px_48px_-34px_rgba(53,20,76,0.35)] backdrop-blur-lg transition-all hover:-translate-y-0.5 hover:shadow-[0_22px_52px_-28px_rgba(53,20,76,0.45)] dark:border-white/10 dark:bg-neutral-900/70">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 sm:pb-4 p-3 sm:p-6">
             <div>
-              <p className="text-xs uppercase tracking-wide text-neutral-400 dark:text-neutral-500">Protocolos em andamento</p>
-              <CardTitle className="mt-1 text-2xl font-semibold text-neutral-900 dark:text-white">
+              <p className="text-[10px] sm:text-xs uppercase tracking-wide text-neutral-400 dark:text-neutral-500">Protocolos</p>
+              <CardTitle className="mt-1 text-lg sm:text-2xl font-semibold text-neutral-900 dark:text-white">
                 {(dashboardClinica?.protocolosAtivos ?? 0).toString()}
               </CardTitle>
             </div>
-            <div className="rounded-2xl bg-gradient-to-br from-primary-400/90 to-secondary-300/80 p-3 text-white shadow-lg">
+            <div className="hidden sm:flex rounded-2xl bg-gradient-to-br from-primary-400/90 to-secondary-300/80 p-3 text-white shadow-lg">
               <Layers className="h-5 w-5" />
             </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="hidden sm:block">
             <p className="text-sm text-neutral-500 dark:text-neutral-400">Planos em aprovado / em execução / em aprovação</p>
           </CardContent>
         </Card>
       </section>
 
-      <section className="grid gap-6 lg:grid-cols-2">
+      <section className="grid gap-3 sm:gap-6 lg:grid-cols-2">
         <Card className="border-white/40 bg-white/75 shadow-[0_20px_54px_-32px_rgba(53,20,76,0.4)] backdrop-blur-lg dark:border-white/10 dark:bg-neutral-900/70">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg text-neutral-900 dark:text-white">
@@ -121,7 +121,7 @@ export function DashboardPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="h-64 w-full">
+            <div className="h-48 sm:h-64 w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={dashboardClinica?.serieSemana ?? []}>
                   <CartesianGrid strokeDasharray="3 3" opacity={0.25} />
@@ -149,7 +149,7 @@ export function DashboardPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="h-64 w-full">
+            <div className="h-48 sm:h-64 w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={dashboardClinica?.serieMes ?? []}>
                   <CartesianGrid strokeDasharray="3 3" opacity={0.25} />
@@ -167,7 +167,7 @@ export function DashboardPage() {
         </Card>
       </section>
 
-      <section className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
+      <section className="grid grid-cols-2 gap-2 sm:gap-6 xl:grid-cols-4">
         <Card className="border-white/40 bg-white/75 shadow-[0_18px_48px_-34px_rgba(53,20,76,0.35)] backdrop-blur-lg dark:border-white/10 dark:bg-neutral-900/70">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
             <div>
@@ -245,7 +245,7 @@ export function DashboardPage() {
         </Card>
       </section>
 
-      <section className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
+      <section className="grid grid-cols-2 gap-2 sm:gap-6 xl:grid-cols-4">
         <Card className="border-white/40 bg-white/75 shadow-[0_18px_48px_-34px_rgba(53,20,76,0.35)] backdrop-blur-lg dark:border-white/10 dark:bg-neutral-900/70">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
             <div>
@@ -323,7 +323,7 @@ export function DashboardPage() {
         </Card>
       </section>
 
-      <section className="grid gap-6 lg:grid-cols-2">
+      <section className="grid gap-3 sm:gap-6 lg:grid-cols-2">
         <Card className="border-white/40 bg-white/75 shadow-[0_20px_54px_-32px_rgba(53,20,76,0.4)] backdrop-blur-lg dark:border-white/10 dark:bg-neutral-900/70">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg text-neutral-900 dark:text-white">

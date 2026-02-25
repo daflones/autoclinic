@@ -248,6 +248,13 @@ export function PacientesPage() {
         endereco: (paciente as any).endereco ?? {},
         analise_cliente: (paciente as any).analise_cliente ?? '',
         produto_interesse: (paciente as any).produto_interesse ?? '',
+        fase_conversao: (paciente as any).fase_conversao ?? 'fase_1_engajamento',
+        procedimento_interesse: (paciente as any).procedimento_interesse ?? '',
+        regiao_interesse: (paciente as any).regiao_interesse ?? '',
+        ja_realizou_antes: (paciente as any).ja_realizou_antes ?? false,
+        dor_principal: (paciente as any).dor_principal ?? '',
+        nivel_interesse: (paciente as any).nivel_interesse ?? 'desconhecido',
+        status_conversao: (paciente as any).status_conversao ?? 'em_atendimento',
       })
     }
   }
@@ -546,37 +553,36 @@ export function PacientesPage() {
 
   return (
     <div className="space-y-6">
-      <header className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        <div>
-          <h1 className="text-3xl font-semibold tracking-tight text-foreground">Pacientes</h1>
-          <p className="text-sm text-muted-foreground">
-            Gerencie fichas clínicas, histórico e consentimentos dos pacientes da clínica.
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          <div className="flex items-center rounded-md border border-border bg-background p-1">
-            <Button
-              type="button"
-              size="sm"
-              variant={viewMode === 'lista' ? 'default' : 'ghost'}
-              onClick={() => setViewMode('lista')}
-            >
-              Lista
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant={viewMode === 'kanban' ? 'default' : 'ghost'}
-              onClick={() => setViewMode('kanban')}
-            >
-              Kanban
+      <header className="flex flex-col gap-3 sm:gap-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="text-xl sm:text-2xl lg:text-3xl font-semibold tracking-tight text-foreground">Pacientes</h1>
+            <p className="text-xs sm:text-sm text-muted-foreground">
+              Gerencie fichas clínicas, histórico e consentimentos dos pacientes da clínica.
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="flex items-center rounded-md border border-border bg-background p-1">
+              <Button type="button" size="sm" variant={viewMode === 'lista' ? 'default' : 'ghost'} onClick={() => setViewMode('lista')} className="text-xs">
+                Lista
+              </Button>
+              <Button type="button" size="sm" variant={viewMode === 'kanban' ? 'default' : 'ghost'} onClick={() => setViewMode('kanban')} className="text-xs">
+                Kanban
+              </Button>
+            </div>
+            <Button size="sm" onClick={() => setIsCreateModalOpen(true)} className="gap-1.5 text-xs sm:text-sm">
+              <UserPlus className="h-4 w-4" />
+              <span className="hidden sm:inline">Novo paciente</span>
+              <span className="sm:hidden">Novo</span>
             </Button>
           </div>
-          <div className="relative">
+        </div>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <div className="relative flex-1 sm:max-w-xs">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               placeholder="Buscar por nome, CPF, RG ou telefone"
-              className="pl-9 w-64"
+              className="pl-9 text-sm"
               value={searchTerm}
               onChange={(event) => setSearchTerm(event.target.value)}
             />
@@ -591,236 +597,313 @@ export function PacientesPage() {
             <option value="inativo">Inativos</option>
             <option value="arquivado">Arquivados</option>
           </select>
-          <Button onClick={() => setIsCreateModalOpen(true)} className="gap-2">
-            <UserPlus className="h-4 w-4" />
-            Novo paciente
-          </Button>
         </div>
       </header>
 
-      <section className="grid gap-4 md:grid-cols-3">
-        <div className="rounded-2xl border border-border/60 bg-gradient-to-br from-primary/10 via-background to-background p-5 shadow-sm">
+      <section className="grid grid-cols-3 gap-2 sm:gap-4">
+        <div className="rounded-2xl border border-border/60 bg-gradient-to-br from-primary/10 via-background to-background p-3 sm:p-5 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Total</p>
-              <h3 className="mt-2 text-2xl font-semibold text-foreground">
+              <p className="text-[10px] sm:text-xs font-medium uppercase tracking-wide text-muted-foreground">Total</p>
+              <h3 className="mt-1 text-lg sm:mt-2 sm:text-2xl font-semibold text-foreground">
                 {totalPacientes}
               </h3>
             </div>
-            <div className="rounded-full bg-primary/10 p-2 text-primary">
+            <div className="hidden sm:flex rounded-full bg-primary/10 p-2 text-primary">
               <Users className="h-5 w-5" />
             </div>
           </div>
-          <p className="mt-2 text-xs text-muted-foreground">Pacientes cadastrados na clínica</p>
+          <p className="hidden sm:block mt-2 text-xs text-muted-foreground">Pacientes cadastrados na clínica</p>
         </div>
 
-        <div className="rounded-2xl border border-border/60 bg-gradient-to-br from-emerald-500/10 via-background to-background p-5 shadow-sm">
+        <div className="rounded-2xl border border-border/60 bg-gradient-to-br from-emerald-500/10 via-background to-background p-3 sm:p-5 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Ativos</p>
-              <h3 className="mt-2 text-2xl font-semibold text-foreground">
+              <p className="text-[10px] sm:text-xs font-medium uppercase tracking-wide text-muted-foreground">Ativos</p>
+              <h3 className="mt-1 text-lg sm:mt-2 sm:text-2xl font-semibold text-foreground">
                 {statusTotals.ativo}
               </h3>
             </div>
-            <div className="rounded-full bg-emerald-500/10 p-2 text-emerald-500">
+            <div className="hidden sm:flex rounded-full bg-emerald-500/10 p-2 text-emerald-500">
               <Activity className="h-5 w-5" />
             </div>
           </div>
-          <p className="mt-2 text-xs text-muted-foreground">Pacientes em acompanhamento</p>
+          <p className="hidden sm:block mt-2 text-xs text-muted-foreground">Pacientes em acompanhamento</p>
         </div>
 
-        <div className="rounded-2xl border border-border/60 bg-gradient-to-br from-rose-500/10 via-background to-background p-5 shadow-sm">
+        <div className="rounded-2xl border border-border/60 bg-gradient-to-br from-rose-500/10 via-background to-background p-3 sm:p-5 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Arquivados</p>
-              <h3 className="mt-2 text-2xl font-semibold text-foreground">
+              <p className="text-[10px] sm:text-xs font-medium uppercase tracking-wide text-muted-foreground">Arquivados</p>
+              <h3 className="mt-1 text-lg sm:mt-2 sm:text-2xl font-semibold text-foreground">
                 {statusTotals.arquivado}
               </h3>
             </div>
-            <div className="rounded-full bg-rose-500/10 p-2 text-rose-500">
+            <div className="hidden sm:flex rounded-full bg-rose-500/10 p-2 text-rose-500">
               <Ban className="h-5 w-5" />
             </div>
           </div>
-          <p className="mt-2 text-xs text-muted-foreground">Pacientes sem acompanhamento ativo</p>
+          <p className="hidden sm:block mt-2 text-xs text-muted-foreground">Pacientes sem acompanhamento ativo</p>
         </div>
       </section>
 
-      <section className="rounded-3xl border border-border/60 bg-background/80 p-6 shadow-lg backdrop-blur">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-foreground">
+      <section className="rounded-2xl sm:rounded-3xl border border-border/60 bg-background/80 p-3 sm:p-6 shadow-lg backdrop-blur">
+        <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+          <h2 className="text-base sm:text-lg font-semibold text-foreground">
             {viewMode === 'lista' ? 'Lista de pacientes' : 'Kanban de pacientes'}
           </h2>
-          <span className="text-sm text-muted-foreground">Exibindo {pacientes.length} registros</span>
+          <span className="text-xs sm:text-sm text-muted-foreground">Exibindo {pacientes.length} registros</span>
         </div>
 
         {viewMode === 'lista' ? (
-          <div className="mt-4 overflow-hidden rounded-2xl border border-border/50">
-            <div className="max-h-[520px] overflow-auto">
-              <table className="min-w-full divide-y divide-border/60 text-sm">
-                <thead className="bg-muted/40 text-muted-foreground">
-                  <tr>
-                    <th scope="col" className="px-5 py-3 text-left font-medium">Paciente</th>
-                    <th scope="col" className="px-5 py-3 text-left font-medium">Contato</th>
-                    <th scope="col" className="px-5 py-3 text-left font-medium">Último atendimento</th>
-                    <th scope="col" className="px-5 py-3 text-left font-medium">Status</th>
-                    <th scope="col" className="px-5 py-3 text-left font-medium">Tags</th>
-                    <th scope="col" className="px-5 py-3 text-right font-medium">Ações</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border/60 bg-background/40">
-                  {isLoading ? (
-                    <tr>
-                      <td colSpan={6} className="px-5 py-12 text-center text-muted-foreground">
-                        <div className="flex items-center justify-center gap-2 text-sm">
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                          Carregando pacientes...
-                        </div>
-                      </td>
-                    </tr>
-                  ) : pacientes.length === 0 ? (
-                    <tr>
-                      <td colSpan={6} className="px-5 py-12 text-center text-muted-foreground">
-                        Nenhum paciente encontrado com os filtros atuais.
-                      </td>
-                    </tr>
-                  ) : (
-                    pacientes.map((paciente) => (
-                      <tr
-                        key={paciente.id}
-                        className="hover:bg-muted/30 cursor-pointer"
-                        onClick={() => openPacienteDetails(paciente.id)}
-                      >
-                        <td className="px-5 py-4 align-top">
-                          <div className="font-medium text-foreground">{paciente.nome_completo}</div>
-                          {paciente.fonte_captacao && (
-                            <p className="text-xs text-muted-foreground">Fonte: {paciente.fonte_captacao}</p>
-                          )}
-                        </td>
-                        <td className="px-5 py-4 align-top text-muted-foreground">
-                          <div className="flex flex-col gap-1 text-xs">
-                            {paciente.whatsapp && <span>Whatsapp: {paciente.whatsapp}</span>}
-                            {paciente.telefone && <span>Telefone: {paciente.telefone}</span>}
-                            {paciente.email && <span>E-mail: {paciente.email}</span>}
-                          </div>
-                        </td>
-                        <td className="px-5 py-4 align-top text-muted-foreground">
-                          <div className="flex flex-col text-xs">
-                            {paciente.data_ultimo_atendimento ? (
-                              <span>
-                                {new Date(paciente.data_ultimo_atendimento).toLocaleDateString('pt-BR')}
-                              </span>
-                            ) : (
-                              <span className="italic text-muted-foreground/80">Sem atendimento</span>
-                            )}
-                            <span className="mt-1 text-[11px] text-muted-foreground">
-                              Criado em {new Date(paciente.created_at).toLocaleDateString('pt-BR')}
-                            </span>
-                          </div>
-                        </td>
-                        <td className="px-5 py-4 align-top">
-                          <span
-                            className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ${getStatusColor(
-                              paciente.status,
-                            )}`}
-                          >
-                            {formatStatus(paciente.status)}
+          <>
+            {/* Mobile Card List */}
+            <div className="mt-3 space-y-2 sm:hidden">
+              {isLoading ? (
+                <div className="flex items-center justify-center py-12 text-muted-foreground">
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                </div>
+              ) : pacientes.length === 0 ? (
+                <p className="py-8 text-center text-sm text-muted-foreground">Nenhum paciente encontrado.</p>
+              ) : (
+                pacientes.map((paciente) => (
+                  <div
+                    key={paciente.id}
+                    className="flex items-center gap-3 rounded-xl border border-border/50 bg-background/60 p-3 active:bg-muted/40 transition-colors"
+                    onClick={() => openPacienteDetails(paciente.id)}
+                  >
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary-400 to-secondary-400 text-sm font-bold text-white">
+                      {paciente.nome_completo?.charAt(0).toUpperCase()}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="truncate text-sm font-medium text-foreground">{paciente.nome_completo}</p>
+                        <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium ${getStatusColor(paciente.status)}`}>
+                          {formatStatus(paciente.status)}
+                        </span>
+                      </div>
+                      <p className="truncate text-xs text-muted-foreground">
+                        {paciente.whatsapp || paciente.telefone || paciente.email || 'Sem contato'}
+                      </p>
+                      <div className="mt-1 flex gap-1">
+                        {(paciente as any).nivel_interesse && (
+                          <span className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium ${
+                            (paciente as any).nivel_interesse === 'quente' ? 'bg-rose-100 text-rose-700' :
+                            (paciente as any).nivel_interesse === 'morno' ? 'bg-amber-100 text-amber-700' :
+                            (paciente as any).nivel_interesse === 'frio' ? 'bg-blue-100 text-blue-700' :
+                            'bg-gray-100 text-gray-600'
+                          }`}>
+                            {(paciente as any).nivel_interesse === 'quente' && '🔥'}
+                            {(paciente as any).nivel_interesse === 'morno' && '🌤️'}
+                            {(paciente as any).nivel_interesse === 'frio' && '🧊'}
+                            {(paciente as any).nivel_interesse === 'desconhecido' && '❓'}
+                            {(paciente as any).nivel_interesse === 'quente' ? 'Quente' :
+                             (paciente as any).nivel_interesse === 'morno' ? 'Morno' :
+                             (paciente as any).nivel_interesse === 'frio' ? 'Frio' : 'Desconhecido'}
                           </span>
-                        </td>
-                        <td className="px-5 py-4 align-top">
-                          {paciente.tags && paciente.tags.length > 0 ? (
-                            <div className="flex flex-wrap gap-2 text-xs">
-                              {paciente.tags.map((tag) => (
-                                <span
-                                  key={tag}
-                                  className="rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-medium text-primary"
-                                >
-                                  {tag}
-                                </span>
-                              ))}
-                            </div>
-                          ) : (
-                            <span className="text-xs text-muted-foreground/60">Sem tags</span>
-                          )}
-                        </td>
-                        <td className="px-5 py-4 align-top text-right">
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            className="text-primary hover:text-primary hover:bg-primary/10"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              openPacienteDetails(paciente.id, { edit: true, paciente })
-                            }}
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
 
-                          <AlertDialog
-                            open={deletePacienteId === paciente.id}
-                            onOpenChange={(open) => setDeletePacienteId(open ? paciente.id : null)}
-                          >
-                            <AlertDialogTrigger asChild>
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="icon"
-                                className="text-rose-600 hover:text-rose-700 hover:bg-rose-500/10"
-                                disabled={deletePaciente.isPending}
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  setDeletePacienteId(paciente.id)
-                                }}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>Remover paciente?</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  Tem certeza que deseja remover este paciente? Esta ação não pode ser desfeita.
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel
+            {/* Desktop Table */}
+            <div className="mt-4 hidden sm:block overflow-hidden rounded-2xl border border-border/50">
+              <div className="max-h-[520px] overflow-auto">
+                <table className="min-w-full divide-y divide-border/60 text-sm">
+                  <thead className="bg-muted/40 text-muted-foreground">
+                    <tr>
+                      <th scope="col" className="px-5 py-3 text-left font-medium">Paciente</th>
+                      <th scope="col" className="px-5 py-3 text-left font-medium">Contato</th>
+                      <th scope="col" className="px-5 py-3 text-left font-medium">Conversão</th>
+                      <th scope="col" className="px-5 py-3 text-left font-medium">Último atendimento</th>
+                      <th scope="col" className="px-5 py-3 text-left font-medium">Status</th>
+                      <th scope="col" className="px-5 py-3 text-left font-medium">Tags</th>
+                      <th scope="col" className="px-5 py-3 text-right font-medium">Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border/60 bg-background/40">
+                    {isLoading ? (
+                      <tr>
+                        <td colSpan={7} className="px-5 py-12 text-center text-muted-foreground">
+                          <div className="flex items-center justify-center gap-2 text-sm">
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            Carregando pacientes...
+                          </div>
+                        </td>
+                      </tr>
+                    ) : pacientes.length === 0 ? (
+                      <tr>
+                        <td colSpan={7} className="px-5 py-12 text-center text-muted-foreground">
+                          Nenhum paciente encontrado com os filtros atuais.
+                        </td>
+                      </tr>
+                    ) : (
+                      pacientes.map((paciente) => (
+                        <tr
+                          key={paciente.id}
+                          className="hover:bg-muted/30 cursor-pointer"
+                          onClick={() => openPacienteDetails(paciente.id)}
+                        >
+                          <td className="px-5 py-4 align-top">
+                            <div className="font-medium text-foreground">{paciente.nome_completo}</div>
+                            {paciente.fonte_captacao && (
+                              <p className="text-xs text-muted-foreground">Fonte: {paciente.fonte_captacao}</p>
+                            )}
+                          </td>
+                          <td className="px-5 py-4 align-top text-muted-foreground">
+                            <div className="flex flex-col gap-1 text-xs">
+                              {paciente.whatsapp && <span>Whatsapp: {paciente.whatsapp}</span>}
+                              {paciente.telefone && <span>Telefone: {paciente.telefone}</span>}
+                              {paciente.email && <span>E-mail: {paciente.email}</span>}
+                            </div>
+                          </td>
+                          <td className="px-5 py-4 align-top">
+                            <div className="flex flex-col gap-1.5">
+                              {(paciente as any).nivel_interesse && (
+                                <span className={`inline-flex items-center gap-1 rounded px-2 py-1 text-[11px] font-medium w-fit ${
+                                  (paciente as any).nivel_interesse === 'quente' ? 'bg-rose-100 text-rose-700' :
+                                  (paciente as any).nivel_interesse === 'morno' ? 'bg-amber-100 text-amber-700' :
+                                  (paciente as any).nivel_interesse === 'frio' ? 'bg-blue-100 text-blue-700' :
+                                  'bg-gray-100 text-gray-600'
+                                }`}>
+                                  {(paciente as any).nivel_interesse === 'quente' && '🔥'}
+                                  {(paciente as any).nivel_interesse === 'morno' && '🌤️'}
+                                  {(paciente as any).nivel_interesse === 'frio' && '🧊'}
+                                  {(paciente as any).nivel_interesse === 'desconhecido' && '❓'}
+                                  {(paciente as any).nivel_interesse === 'quente' ? 'Quente' :
+                                   (paciente as any).nivel_interesse === 'morno' ? 'Morno' :
+                                   (paciente as any).nivel_interesse === 'frio' ? 'Frio' : 'Desconhecido'}
+                                </span>
+                              )}
+                              {(paciente as any).fase_conversao && (
+                                <span className="inline-flex items-center rounded px-2 py-1 text-[11px] font-medium bg-purple-100 text-purple-700 w-fit">
+                                  Fase {(paciente as any).fase_conversao?.replace('fase_', '').charAt(0)}
+                                </span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="px-5 py-4 align-top text-muted-foreground">
+                            <div className="flex flex-col text-xs">
+                              {paciente.data_ultimo_atendimento ? (
+                                <span>
+                                  {new Date(paciente.data_ultimo_atendimento).toLocaleDateString('pt-BR')}
+                                </span>
+                              ) : (
+                                <span className="italic text-muted-foreground/80">Sem atendimento</span>
+                              )}
+                              <span className="mt-1 text-[11px] text-muted-foreground">
+                                Criado em {new Date(paciente.created_at).toLocaleDateString('pt-BR')}
+                              </span>
+                            </div>
+                          </td>
+                          <td className="px-5 py-4 align-top">
+                            <span
+                              className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ${getStatusColor(
+                                paciente.status,
+                              )}`}
+                            >
+                              {formatStatus(paciente.status)}
+                            </span>
+                          </td>
+                          <td className="px-5 py-4 align-top">
+                            {paciente.tags && paciente.tags.length > 0 ? (
+                              <div className="flex flex-wrap gap-2 text-xs">
+                                {paciente.tags.map((tag) => (
+                                  <span
+                                    key={tag}
+                                    className="rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-medium text-primary"
+                                  >
+                                    {tag}
+                                  </span>
+                                ))}
+                              </div>
+                            ) : (
+                              <span className="text-xs text-muted-foreground/60">Sem tags</span>
+                            )}
+                          </td>
+                          <td className="px-5 py-4 align-top text-right">
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="text-primary hover:text-primary hover:bg-primary/10"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                openPacienteDetails(paciente.id, { edit: true, paciente })
+                              }}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+
+                            <AlertDialog
+                              open={deletePacienteId === paciente.id}
+                              onOpenChange={(open) => setDeletePacienteId(open ? paciente.id : null)}
+                            >
+                              <AlertDialogTrigger asChild>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  className="text-rose-600 hover:text-rose-700 hover:bg-rose-500/10"
                                   disabled={deletePaciente.isPending}
                                   onClick={(e) => {
                                     e.stopPropagation()
-                                    setDeletePacienteId(null)
+                                    setDeletePacienteId(paciente.id)
                                   }}
                                 >
-                                  Cancelar
-                                </AlertDialogCancel>
-                                <AlertDialogAction
-                                  disabled={deletePaciente.isPending}
-                                  onClick={async () => {
-                                    try {
-                                      await deletePaciente.mutateAsync(paciente.id)
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Remover paciente?</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    Tem certeza que deseja remover este paciente? Esta ação não pode ser desfeita.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel
+                                    disabled={deletePaciente.isPending}
+                                    onClick={(e) => {
+                                      e.stopPropagation()
                                       setDeletePacienteId(null)
-                                      if (selectedPacienteId === paciente.id) {
-                                        setIsDetailsOpen(false)
-                                        setSelectedPacienteId(null)
-                                        setTabPacientePerfil('geral')
+                                    }}
+                                  >
+                                    Cancelar
+                                  </AlertDialogCancel>
+                                  <AlertDialogAction
+                                    disabled={deletePaciente.isPending}
+                                    onClick={async () => {
+                                      try {
+                                        await deletePaciente.mutateAsync(paciente.id)
+                                        setDeletePacienteId(null)
+                                        if (selectedPacienteId === paciente.id) {
+                                          setIsDetailsOpen(false)
+                                          setSelectedPacienteId(null)
+                                          setTabPacientePerfil('geral')
+                                        }
+                                      } catch {
+                                        // erro tratado no hook
                                       }
-                                    } catch {
-                                      // erro tratado no hook
-                                    }
-                                  }}
-                                >
-                                  Remover
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
+                                    }}
+                                  >
+                                    Remover
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
-          </div>
+          </>
         ) : (
           <div className="mt-4 overflow-x-hidden">
             <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-4">
@@ -1221,6 +1304,13 @@ export function PacientesPage() {
                                   endereco,
                                   analise_cliente: editingPacienteDraft.analise_cliente || null,
                                   produto_interesse: editingPacienteDraft.produto_interesse || null,
+                                  fase_conversao: editingPacienteDraft.fase_conversao || null,
+                                  procedimento_interesse: editingPacienteDraft.procedimento_interesse || null,
+                                  regiao_interesse: editingPacienteDraft.regiao_interesse || null,
+                                  ja_realizou_antes: editingPacienteDraft.ja_realizou_antes ?? null,
+                                  dor_principal: editingPacienteDraft.dor_principal || null,
+                                  nivel_interesse: editingPacienteDraft.nivel_interesse || null,
+                                  status_conversao: editingPacienteDraft.status_conversao || null,
                                 },
                               })
                               setIsEditingPaciente(false)
@@ -1374,6 +1464,159 @@ export function PacientesPage() {
                         ) : (
                           <div className="whitespace-pre-wrap text-foreground">{(paciente as any).produto_interesse || '—'}</div>
                         )}
+                      </div>
+                    </div>
+
+                    <div className="mt-4 rounded-xl border border-border/60 bg-background p-4">
+                      <div className="text-sm font-medium text-foreground mb-4">Qualificação e Conversão</div>
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        <div className="space-y-2">
+                          <Label className="text-xs">Fase de Conversão</Label>
+                          {isEditingPaciente ? (
+                            <select
+                              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                              value={String(editingPacienteDraft?.fase_conversao ?? 'fase_1_engajamento')}
+                              onChange={(e) =>
+                                setEditingPacienteDraft((prev) => ({ ...(prev || {}), fase_conversao: e.target.value }))
+                              }
+                            >
+                              <option value="fase_1_engajamento">Fase 1 - Engajamento</option>
+                              <option value="fase_2_qualificacao">Fase 2 - Qualificação</option>
+                              <option value="fase_3_direcionamento">Fase 3 - Direcionamento</option>
+                              <option value="fase_4_prova_confianca">Fase 4 - Prova de Confiança</option>
+                              <option value="fase_5_convite_agendamento">Fase 5 - Convite Agendamento</option>
+                              <option value="fase_6_pre_agendamento">Fase 6 - Pré-Agendamento</option>
+                            </select>
+                          ) : (
+                            <div className="text-sm text-foreground">
+                              {(paciente as any).fase_conversao === 'fase_1_engajamento' && 'Fase 1 - Engajamento'}
+                              {(paciente as any).fase_conversao === 'fase_2_qualificacao' && 'Fase 2 - Qualificação'}
+                              {(paciente as any).fase_conversao === 'fase_3_direcionamento' && 'Fase 3 - Direcionamento'}
+                              {(paciente as any).fase_conversao === 'fase_4_prova_confianca' && 'Fase 4 - Prova de Confiança'}
+                              {(paciente as any).fase_conversao === 'fase_5_convite_agendamento' && 'Fase 5 - Convite Agendamento'}
+                              {(paciente as any).fase_conversao === 'fase_6_pre_agendamento' && 'Fase 6 - Pré-Agendamento'}
+                              {!(paciente as any).fase_conversao && '—'}
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label className="text-xs">Nível de Interesse</Label>
+                          {isEditingPaciente ? (
+                            <select
+                              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                              value={String(editingPacienteDraft?.nivel_interesse ?? 'desconhecido')}
+                              onChange={(e) =>
+                                setEditingPacienteDraft((prev) => ({ ...(prev || {}), nivel_interesse: e.target.value }))
+                              }
+                            >
+                              <option value="desconhecido">Desconhecido</option>
+                              <option value="frio">Frio</option>
+                              <option value="morno">Morno</option>
+                              <option value="quente">Quente</option>
+                            </select>
+                          ) : (
+                            <div className="text-sm text-foreground">
+                              {(paciente as any).nivel_interesse === 'frio' && '🧊 Frio'}
+                              {(paciente as any).nivel_interesse === 'morno' && '🌤️ Morno'}
+                              {(paciente as any).nivel_interesse === 'quente' && '🔥 Quente'}
+                              {(paciente as any).nivel_interesse === 'desconhecido' && '❓ Desconhecido'}
+                              {!(paciente as any).nivel_interesse && '—'}
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label className="text-xs">Status de Conversão</Label>
+                          {isEditingPaciente ? (
+                            <select
+                              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                              value={String(editingPacienteDraft?.status_conversao ?? 'em_atendimento')}
+                              onChange={(e) =>
+                                setEditingPacienteDraft((prev) => ({ ...(prev || {}), status_conversao: e.target.value }))
+                              }
+                            >
+                              <option value="em_atendimento">Em Atendimento</option>
+                              <option value="encaminhado_agendamento">Encaminhado p/ Agendamento</option>
+                              <option value="perdido">Perdido</option>
+                              <option value="concluido">Concluído</option>
+                            </select>
+                          ) : (
+                            <div className="text-sm text-foreground">
+                              {(paciente as any).status_conversao === 'em_atendimento' && 'Em Atendimento'}
+                              {(paciente as any).status_conversao === 'encaminhado_agendamento' && 'Encaminhado p/ Agendamento'}
+                              {(paciente as any).status_conversao === 'perdido' && 'Perdido'}
+                              {(paciente as any).status_conversao === 'concluido' && 'Concluído'}
+                              {!(paciente as any).status_conversao && '—'}
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label className="text-xs">Região de Interesse</Label>
+                          {isEditingPaciente ? (
+                            <Input
+                              placeholder="Ex: Abdômen, Face, Glúteos..."
+                              value={String(editingPacienteDraft?.regiao_interesse ?? '')}
+                              onChange={(e) =>
+                                setEditingPacienteDraft((prev) => ({ ...(prev || {}), regiao_interesse: e.target.value }))
+                              }
+                            />
+                          ) : (
+                            <div className="text-sm text-foreground">{(paciente as any).regiao_interesse || '—'}</div>
+                          )}
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label className="text-xs">Procedimento Específico</Label>
+                          {isEditingPaciente ? (
+                            <Input
+                              placeholder="Procedimento identificado..."
+                              value={String(editingPacienteDraft?.procedimento_interesse ?? '')}
+                              onChange={(e) =>
+                                setEditingPacienteDraft((prev) => ({ ...(prev || {}), procedimento_interesse: e.target.value }))
+                              }
+                            />
+                          ) : (
+                            <div className="text-sm text-foreground">{(paciente as any).procedimento_interesse || '—'}</div>
+                          )}
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label className="text-xs">Já realizou antes?</Label>
+                          {isEditingPaciente ? (
+                            <select
+                              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                              value={String(editingPacienteDraft?.ja_realizou_antes ?? false)}
+                              onChange={(e) =>
+                                setEditingPacienteDraft((prev) => ({ ...(prev || {}), ja_realizou_antes: e.target.value === 'true' }))
+                              }
+                            >
+                              <option value="false">Não</option>
+                              <option value="true">Sim</option>
+                            </select>
+                          ) : (
+                            <div className="text-sm text-foreground">
+                              {(paciente as any).ja_realizou_antes ? 'Sim' : 'Não'}
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="space-y-2 sm:col-span-2">
+                          <Label className="text-xs">Dor/Queixa Principal</Label>
+                          {isEditingPaciente ? (
+                            <Textarea
+                              rows={3}
+                              placeholder="Qual a principal dor ou objetivo do paciente?"
+                              value={String(editingPacienteDraft?.dor_principal ?? '')}
+                              onChange={(e) =>
+                                setEditingPacienteDraft((prev) => ({ ...(prev || {}), dor_principal: e.target.value }))
+                              }
+                            />
+                          ) : (
+                            <div className="whitespace-pre-wrap text-sm text-foreground">{(paciente as any).dor_principal || '—'}</div>
+                          )}
+                        </div>
                       </div>
                     </div>
 

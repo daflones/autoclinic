@@ -5,6 +5,22 @@ import { getAdminContext } from './_tenant'
 export type SexoPaciente = 'feminino' | 'masculino' | 'outro' | 'nao_informado'
 export type StatusPaciente = 'ativo' | 'inativo' | 'arquivado'
 
+export type FaseConversao = 
+  | 'fase_1_engajamento'
+  | 'fase_2_qualificacao'
+  | 'fase_3_direcionamento'
+  | 'fase_4_prova_confianca'
+  | 'fase_5_convite_agendamento'
+  | 'fase_6_pre_agendamento'
+
+export type NivelInteresse = 'frio' | 'morno' | 'quente' | 'desconhecido'
+
+export type StatusConversao = 
+  | 'em_atendimento'
+  | 'encaminhado_agendamento'
+  | 'perdido'
+  | 'concluido'
+
 export type StatusPacienteDetalhado =
   | 'novos'
   | 'agendado'
@@ -57,6 +73,14 @@ export interface Paciente {
   data_ultimo_atendimento?: string | null
   consentimento_assinado: boolean
   consentimento_data?: string | null
+  fase_conversao?: string | null
+  procedimento_interesse?: string | null
+  regiao_interesse?: string | null
+  ja_realizou_antes?: boolean | null
+  dor_principal?: string | null
+  nivel_interesse?: string | null
+  status_conversao?: string | null
+  ultima_interacao_em?: string | null
   created_at: string
   updated_at: string
   created_by?: string | null
@@ -97,6 +121,14 @@ export interface PacienteCreateData {
   data_ultimo_atendimento?: string | null
   consentimento_assinado?: boolean
   consentimento_data?: string | null
+  fase_conversao?: string | null
+  procedimento_interesse?: string | null
+  regiao_interesse?: string | null
+  ja_realizou_antes?: boolean | null
+  dor_principal?: string | null
+  nivel_interesse?: string | null
+  status_conversao?: string | null
+  ultima_interacao_em?: string | null
 }
 
 export type PacienteUpdateData = Partial<PacienteCreateData>

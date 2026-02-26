@@ -1275,19 +1275,13 @@ export function AgendamentoModals({
 
       {/* Modal de Edição */}
       <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
-        <DialogContent className="sm:max-w-4xl max-h-[100dvh] sm:max-h-[90vh] overflow-y-auto sm:overflow-visible p-4 pt-12 sm:p-6 sm:pt-6">
+        <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-hidden flex flex-col p-4 pt-12 sm:p-6 sm:pt-6">
           <DialogHeader>
             <DialogTitle>Editar Agendamento</DialogTitle>
             <DialogDescription>Atualize as informações do agendamento</DialogDescription>
           </DialogHeader>
 
-          <div className="flex justify-end">
-            <Button onClick={onSaveEdit} disabled={updatePending}>
-              {updatePending ? 'Salvando...' : 'Salvar Alterações'}
-            </Button>
-          </div>
-
-          <div className="space-y-4">
+          <div className="flex-1 overflow-y-auto space-y-4 pr-2">
             <div className="space-y-2">
               <Label htmlFor="edit-titulo" className="text-sm">Título *</Label>
               <Input
@@ -1604,7 +1598,7 @@ export function AgendamentoModals({
             </div>
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="mt-4 pt-4 border-t">
             <Button variant="outline" onClick={() => setIsEditModalOpen(false)}>
               Cancelar
             </Button>

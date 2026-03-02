@@ -1,12 +1,19 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuthStore } from '@/stores/authStore'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
-import { Eye, EyeOff, Loader2 } from 'lucide-react'
+import { Eye, EyeOff, Loader2, Check } from 'lucide-react'
 import { toast } from 'sonner'
+
+declare global {
+  interface Window {
+    turnstile?: {
+      render: (container: HTMLElement, options: Record<string, unknown>) => string
+      reset: (widgetId: string) => void
+    }
+  }
+}
+
+const TURNSTILE_SITE_KEY = '0x4AAAAAAClGLg91CsyHG0lg'
 
 export function LoginPage() {
   const navigate = useNavigate()
@@ -14,149 +21,198 @@ export function LoginPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
+  const [captchaToken, setCaptchaToken] = useState('')
+  const turnstileRef = useRef<HTMLDivElement>(null)
+  const widgetIdRef = useRef<string | null>(null)
+
+  useEffect(() => {
+    const render = () => {
+      if (!turnstileRef.current || !window.turnstile) return
+      if (widgetIdRef.current) return
+      widgetIdRef.current = window.turnstile.render(turnstileRef.current, {
+        sitekey: TURNSTILE_SITE_KEY,
+        theme: 'light',
+        callback: (token: string) => setCaptchaToken(token),
+        'expired-callback': () => setCaptchaToken(''),
+        'error-callback': () => setCaptchaToken(''),
+      })
+    }
+    if (window.turnstile) {
+      render()
+    } else {
+      const interval = setInterval(() => {
+        if (window.turnstile) { clearInterval(interval); render() }
+      }, 200)
+      return () => clearInterval(interval)
+    }
+  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
     if (!email || !password) {
       toast.error('Por favor, preencha todos os campos')
       return
     }
-
+    if (!captchaToken) {
+      toast.error('Por favor, complete a verificação de segurança')
+      return
+    }
     try {
       await signIn(email, password)
       toast.success('Login realizado com sucesso!')
       navigate('/app/dashboard')
     } catch (error: any) {
+      if (widgetIdRef.current && window.turnstile) {
+        window.turnstile.reset(widgetIdRef.current)
+        setCaptchaToken('')
+      }
       toast.error(error.message || 'Erro ao fazer login')
     }
   }
 
   return (
-    <div className="min-h-screen w-full relative overflow-hidden">
-      {/* Animated Background - Using CRM gradient */}
-      <div className="absolute inset-0 bg-gradient-to-br from-indigo-600 to-purple-600 w-full h-full">
-        <div className="absolute inset-0 opacity-20 w-full h-full" style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%239C92AC' fill-opacity='0.1'%3E%3Ccircle cx='30' cy='30' r='4'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
-        }}></div>
-        <div className="absolute top-0 left-0 w-96 h-96 bg-blue-500/20 rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute bottom-0 right-0 w-96 h-96 bg-purple-500/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
-        <div className="absolute top-1/2 left-1/2 w-64 h-64 bg-pink-500/20 rounded-full blur-3xl animate-pulse delay-500"></div>
-      </div>
+    <div className="min-h-screen w-full flex">
 
-      <div className="relative z-10 min-h-screen w-full flex flex-col items-center justify-center p-8">
-        {/* Logo and Title */}
-        <div className="text-center mb-4">
-          <div className="flex flex-col items-center">
-            <img 
-              src="/Logo.jpg" 
-              alt="AutomaClinic Logo" 
-              className="w-80 sm:w-96 md:w-[450px] lg:w-[500px] h-auto object-contain mb-8"
-            />
-            <p className="text-base sm:text-lg md:text-xl text-white/90 font-light max-w-3xl mx-auto leading-relaxed px-4">
-              CRM com IA para Estética — Automatize captação, agendamentos e atendimento com inteligência artificial.
-            </p>
-          </div>
+      {/* ── LADO ESQUERDO — Branding ── */}
+      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden flex-col justify-between p-12 xl:p-16">
+        {/* Background gradient no estilo do projeto */}
+        <div className="absolute inset-0 bg-gradient-to-br from-primary-600 via-primary-500 to-secondary-600" />
+        <div className="absolute inset-0 overflow-hidden">
+          <div className="absolute -top-24 -left-24 h-96 w-96 rounded-full bg-white/10 blur-3xl" />
+          <div className="absolute bottom-0 right-0 h-80 w-80 rounded-full bg-secondary-400/20 blur-3xl" />
+          <div className="absolute top-1/2 left-1/3 h-64 w-64 rounded-full bg-primary-300/15 blur-2xl" />
         </div>
 
-        {/* Login Form */}
-        <div className="relative w-full max-w-md">
-          <div className="absolute inset-0 bg-gradient-to-r from-indigo-800 to-purple-700 rounded-3xl blur opacity-20"></div>
-          <Card className="relative bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border-white/20 shadow-2xl rounded-3xl overflow-hidden w-full">
-            <CardHeader>
-              <CardTitle className="text-2xl">Entrar</CardTitle>
-              <CardDescription>
-                Faça login para acessar o sistema
-              </CardDescription>
-            </CardHeader>
-            
-            <form onSubmit={handleSubmit}>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="email">E-mail</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="seu@email.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+        {/* Logo */}
+        <div className="relative">
+          <img
+            src="/Logo.jpg"
+            alt="AutoClinic"
+            className="h-14 w-auto max-w-[160px] object-contain"
+            onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none' }}
+          />
+        </div>
+
+        {/* Conteúdo central */}
+        <div className="relative flex-1 flex flex-col justify-center py-12">
+          <div className="mb-3 inline-flex w-fit items-center gap-2 rounded-full bg-white/15 px-3 py-1 text-xs font-semibold text-white/90">
+            ✦ CRM com IA para clínicas de estética
+          </div>
+          <h1 className="font-display mb-5 text-4xl xl:text-5xl font-bold leading-tight text-white">
+            Transforme cada conversa em
+            <span className="block text-primary-100"> faturamento</span>
+          </h1>
+          <p className="mb-10 text-base leading-relaxed text-white/80">
+            Um sistema inteligente que responde, converte, agenda e acompanha
+            o paciente — tudo automaticamente no WhatsApp.
+          </p>
+
+          <ul className="space-y-3">
+            {[
+              'Mais agendamentos sem esforço da equipe',
+              'Menos faltas e no-shows',
+              'Pacientes retornando automaticamente',
+              'Faturamento previsível e crescente',
+            ].map((item) => (
+              <li key={item} className="flex items-center gap-3 text-sm text-white/90">
+                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-white/20">
+                  <Check className="h-3 w-3 text-white" />
+                </span>
+                {item}
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        {/* Footer branding */}
+        <div className="relative">
+          <p className="text-xs text-white/50">© {new Date().getFullYear()} AutoClinic — Todos os direitos reservados</p>
+        </div>
+      </div>
+
+      {/* ── LADO DIREITO — Formulário ── */}
+      <div className="flex w-full lg:w-1/2 flex-col items-center justify-center bg-[#f7f4fb] px-6 py-12 sm:px-12">
+        {/* Logo mobile */}
+        <div className="mb-8 flex flex-col items-center lg:hidden">
+          <img
+            src="/Logo.jpg"
+            alt="AutoClinic"
+            className="h-12 w-auto max-w-[140px] object-contain"
+            onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none' }}
+          />
+          <p className="mt-3 text-sm text-neutral-500">CRM com IA para clínicas de estética</p>
+        </div>
+
+        <div className="w-full max-w-md">
+          {/* Cabeçalho do form */}
+          <div className="mb-8">
+            <h2 className="font-display text-3xl font-bold text-neutral-900">Bem-vinda de volta</h2>
+            <p className="mt-1 text-sm text-neutral-500">Acesse sua conta para continuar</p>
+          </div>
+
+          {/* Card do formulário */}
+          <div className="rounded-3xl border border-neutral-100 bg-white p-8 shadow-md">
+            <form onSubmit={handleSubmit} className="space-y-5">
+              <div className="space-y-1.5">
+                <label htmlFor="email" className="block text-sm font-medium text-neutral-700">E-mail</label>
+                <input
+                  id="email"
+                  type="email"
+                  placeholder="seu@email.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  disabled={loading}
+                  required
+                  className="h-11 w-full rounded-xl border border-neutral-200 bg-neutral-50 px-4 text-sm text-neutral-900 placeholder:text-neutral-400 focus:border-primary-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary-200 transition-all disabled:opacity-50"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label htmlFor="password" className="block text-sm font-medium text-neutral-700">Senha</label>
+                <div className="relative">
+                  <input
+                    id="password"
+                    type={showPassword ? 'text' : 'password'}
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
                     disabled={loading}
                     required
+                    className="h-11 w-full rounded-xl border border-neutral-200 bg-neutral-50 px-4 pr-11 text-sm text-neutral-900 placeholder:text-neutral-400 focus:border-primary-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary-200 transition-all disabled:opacity-50"
                   />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="password">Senha</Label>
-                  <div className="relative">
-                    <Input
-                      id="password"
-                      type={showPassword ? 'text' : 'password'}
-                      placeholder="••••••••"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      disabled={loading}
-                      required
-                    />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                      onClick={() => setShowPassword(!showPassword)}
-                      disabled={loading}
-                    >
-                      {showPassword ? (
-                        <EyeOff className="h-4 w-4 text-gray-500" />
-                      ) : (
-                        <Eye className="h-4 w-4 text-gray-500" />
-                      )}
-                    </Button>
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <Link
-                    to="/forgot-password"
-                    className="text-sm text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300"
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600 transition-colors"
                   >
-                    Esqueceu a senha?
-                  </Link>
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
                 </div>
-              </CardContent>
+              </div>
 
-              <CardFooter className="flex flex-col space-y-4">
-                <Button
-                  type="submit"
-                  className="w-full"
-                  disabled={loading}
-                >
-                  {loading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Entrando...
-                    </>
-                  ) : (
-                    'Entrar'
-                  )}
-                </Button>
-                
-                <div className="text-center">
-                  <span className="text-sm text-gray-600 dark:text-gray-400">
-                    Não tem uma conta?{' '}
-                  </span>
-                  <Link
-                    to="/register"
-                    className="text-sm text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 font-medium"
-                  >
-                    Cadastre-se
-                  </Link>
-                </div>
-              </CardFooter>
+              <div className="flex justify-end">
+                <Link to="/forgot-password" className="text-xs font-medium text-primary-600 hover:text-primary-700 transition-colors">
+                  Esqueceu a senha?
+                </Link>
+              </div>
+
+              <div ref={turnstileRef} className="flex justify-center" />
+
+              <button
+                type="submit"
+                disabled={loading || !captchaToken}
+                className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-primary-500 to-primary-700 text-sm font-bold text-white shadow-md shadow-primary-200 transition-all hover:opacity-90 hover:shadow-lg disabled:opacity-60"
+              >
+                {loading ? <><Loader2 className="h-4 w-4 animate-spin" /> Entrando...</> : 'Entrar na conta'}
+              </button>
             </form>
-          </Card>
+          </div>
 
-          <p className="text-center mt-6 text-sm text-white/60">
-            © 2024 AutomaClinic. Todos os direitos reservados.
+          <p className="mt-6 text-center text-sm text-neutral-500">
+            Não tem uma conta?{' '}
+            <Link to="/register" className="font-semibold text-primary-600 hover:text-primary-700 transition-colors">
+              Cadastre-se
+            </Link>
           </p>
         </div>
       </div>

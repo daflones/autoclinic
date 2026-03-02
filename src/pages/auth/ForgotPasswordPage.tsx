@@ -1,102 +1,160 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuthStore } from '@/stores/authStore'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
-import { ArrowLeft, Loader2, Mail } from 'lucide-react'
+import { ArrowLeft, Loader2, Mail, ShieldCheck, CheckCircle2 } from 'lucide-react'
 import { toast } from 'sonner'
+
+const TURNSTILE_SITE_KEY = '0x4AAAAAAClGLg91CsyHG0lg'
 
 export function ForgotPasswordPage() {
   const { resetPassword, loading } = useAuthStore()
   const [email, setEmail] = useState('')
   const [emailSent, setEmailSent] = useState(false)
+  const [captchaToken, setCaptchaToken] = useState('')
+  const turnstileRef = useRef<HTMLDivElement>(null)
+  const widgetIdRef = useRef<string | null>(null)
+
+  useEffect(() => {
+    const render = () => {
+      if (!turnstileRef.current || !window.turnstile) return
+      if (widgetIdRef.current) return
+      widgetIdRef.current = window.turnstile.render(turnstileRef.current, {
+        sitekey: TURNSTILE_SITE_KEY,
+        theme: 'light',
+        callback: (token: string) => setCaptchaToken(token),
+        'expired-callback': () => setCaptchaToken(''),
+        'error-callback': () => setCaptchaToken(''),
+      })
+    }
+    if (window.turnstile) {
+      render()
+    } else {
+      const interval = setInterval(() => {
+        if (window.turnstile) { clearInterval(interval); render() }
+      }, 200)
+      return () => clearInterval(interval)
+    }
+  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
     if (!email) {
       toast.error('Por favor, informe seu e-mail')
       return
     }
-
+    if (!captchaToken) {
+      toast.error('Por favor, complete a verificação de segurança')
+      return
+    }
     try {
       await resetPassword(email)
       setEmailSent(true)
       toast.success('E-mail de recuperação enviado!')
     } catch (error: any) {
+      if (widgetIdRef.current && window.turnstile) {
+        window.turnstile.reset(widgetIdRef.current)
+        setCaptchaToken('')
+      }
       toast.error(error.message || 'Erro ao enviar e-mail de recuperação')
     }
   }
 
   return (
-    <div className="min-h-screen w-full relative overflow-hidden">
-      {/* Animated Background - Using CRM gradient */}
-      <div className="absolute inset-0 bg-gradient-to-br from-indigo-600 to-purple-600 w-full h-full">
-        <div className="absolute inset-0 opacity-20 w-full h-full" style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%239C92AC' fill-opacity='0.1'%3E%3Ccircle cx='30' cy='30' r='4'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
-        }}></div>
-        <div className="absolute top-0 left-0 w-96 h-96 bg-blue-500/20 rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute bottom-0 right-0 w-96 h-96 bg-purple-500/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
-        <div className="absolute top-1/2 left-1/2 w-64 h-64 bg-pink-500/20 rounded-full blur-3xl animate-pulse delay-500"></div>
-      </div>
-      
-      <div className="relative z-10 min-h-screen w-full grid lg:grid-cols-2 items-center p-8 lg:p-12 xl:p-16 2xl:p-20">
-        <div className="hidden lg:flex relative w-full h-full items-center justify-center">
-          <div className="relative bg-white/10 backdrop-blur-xl rounded-3xl p-12 xl:p-16 2xl:p-20 border border-white/20 shadow-2xl w-full max-w-none">
-            <div className="text-center space-y-8">
-              <div>
-                <h1 className="text-6xl font-black bg-gradient-to-r from-white via-blue-100 to-purple-100 bg-clip-text text-transparent mb-6 leading-tight">
-                  Recupere sua Conta
-                </h1>
-                <p className="text-xl text-white/90 mb-8 font-light">
-                  Não se preocupe, vamos ajudá-lo a recuperar o acesso à sua conta
-                </p>
-                <div className="w-24 h-1 bg-gradient-to-r from-blue-400 to-purple-400 rounded-full mx-auto"></div>
-              </div>
-              
-              <div className="bg-white/5 backdrop-blur-sm rounded-2xl p-8 border border-white/10">
-                <div className="w-16 h-16 bg-indigo-500/20 rounded-2xl flex items-center justify-center mb-6 mx-auto">
-                  <svg className="w-8 h-8 text-indigo-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                  </svg>
+    <div className="min-h-screen w-full flex">
+
+      {/* ── LADO ESQUERDO — Branding ── */}
+      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden flex-col justify-between p-12 xl:p-16">
+        <div className="absolute inset-0 bg-gradient-to-br from-primary-700 via-primary-600 to-secondary-500" />
+        <div className="absolute inset-0 overflow-hidden">
+          <div className="absolute -bottom-24 -left-24 h-96 w-96 rounded-full bg-white/10 blur-3xl" />
+          <div className="absolute top-0 right-0 h-80 w-80 rounded-full bg-secondary-300/20 blur-3xl" />
+          <div className="absolute top-1/3 left-1/2 h-64 w-64 rounded-full bg-primary-300/15 blur-2xl" />
+        </div>
+
+        {/* Logo */}
+        <div className="relative">
+          <img
+            src="/Logo.jpg"
+            alt="AutoClinic"
+            className="h-14 w-auto max-w-[160px] object-contain"
+            onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none' }}
+          />
+        </div>
+
+        {/* Conteúdo central */}
+        <div className="relative flex-1 flex flex-col justify-center py-12">
+          <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-white/15 shadow-lg">
+            <ShieldCheck className="h-8 w-8 text-white" />
+          </div>
+          <h1 className="font-display mb-5 text-4xl xl:text-5xl font-bold leading-tight text-white">
+            Recupere seu
+            <span className="block text-primary-100"> acesso com segurança</span>
+          </h1>
+          <p className="mb-10 text-base leading-relaxed text-white/80">
+            Seus dados estão protegidos. O link de recuperação será enviado
+            apenas para o e-mail cadastrado em sua conta.
+          </p>
+
+          <div className="rounded-2xl bg-white/10 p-6 space-y-4">
+            {[
+              'Link válido e seguro enviado ao seu e-mail',
+              'Nenhuma informação sensível é exposta',
+              'Redefina sua senha em poucos cliques',
+            ].map((item) => (
+              <div key={item} className="flex items-center gap-3">
+                <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-white/20">
+                  <CheckCircle2 className="h-3 w-3 text-white" />
                 </div>
-                <h3 className="font-bold text-white mb-3 text-lg">Segurança Garantida</h3>
-                <p className="text-white/80 text-sm leading-relaxed">Seus dados estão protegidos. O link de recuperação será enviado apenas para o e-mail cadastrado em sua conta.</p>
+                <span className="text-sm text-white/90">{item}</span>
               </div>
-            </div>
+            ))}
           </div>
         </div>
-        
-        <div className="w-full flex items-center justify-center">
-          <div className="w-full max-w-md xl:max-w-lg 2xl:max-w-xl">
-            <div className="lg:hidden text-center mb-8">
-              <h1 className="text-4xl font-bold bg-gradient-to-r from-white to-blue-100 bg-clip-text text-transparent mb-2">
-                AutomaClinic
-              </h1>
-              <p className="text-white/80">
-                Sistema de Gestão de Relacionamento
+
+        <div className="relative">
+          <p className="text-xs text-white/50">© {new Date().getFullYear()} AutoClinic — Todos os direitos reservados</p>
+        </div>
+      </div>
+
+      {/* ── LADO DIREITO — Formulário ── */}
+      <div className="flex w-full lg:w-1/2 flex-col items-center justify-center bg-[#f7f4fb] px-6 py-12 sm:px-12">
+        {/* Logo mobile */}
+        <div className="mb-8 flex flex-col items-center lg:hidden">
+          <img
+            src="/Logo.jpg"
+            alt="AutoClinic"
+            className="h-12 w-auto max-w-[140px] object-contain"
+            onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none' }}
+          />
+          <p className="mt-3 text-sm text-neutral-500">CRM com IA para clínicas de estética</p>
+        </div>
+
+        <div className="w-full max-w-md">
+          {/* Cabeçalho */}
+          <div className="mb-8 flex items-center gap-3">
+            <Link
+              to="/login"
+              className="flex h-8 w-8 items-center justify-center rounded-full bg-white border border-neutral-200 text-neutral-500 hover:bg-neutral-50 shadow-sm transition-colors"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </Link>
+            <div>
+              <h2 className="font-display text-3xl font-bold text-neutral-900">Recuperar senha</h2>
+              <p className="text-sm text-neutral-500">
+                {emailSent ? 'E-mail enviado com sucesso' : 'Informe seu e-mail para continuar'}
               </p>
             </div>
+          </div>
 
-          <Card className="bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border-white/20 shadow-2xl rounded-3xl w-full">
-          <CardHeader>
-            <CardTitle className="text-2xl">Recuperar Senha</CardTitle>
-            <CardDescription>
-              {emailSent 
-                ? 'Verifique seu e-mail para redefinir sua senha'
-                : 'Informe seu e-mail para receber o link de recuperação'
-              }
-            </CardDescription>
-          </CardHeader>
-          
-          {!emailSent ? (
-            <form onSubmit={handleSubmit}>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="email">E-mail</Label>
-                  <Input
+          {/* Card */}
+          <div className="rounded-3xl border border-neutral-100 bg-white p-8 shadow-md">
+            {!emailSent ? (
+              <form onSubmit={handleSubmit} className="space-y-5">
+                <div className="space-y-1.5">
+                  <label htmlFor="email" className="block text-sm font-medium text-neutral-700">
+                    E-mail cadastrado
+                  </label>
+                  <input
                     id="email"
                     type="email"
                     placeholder="seu@email.com"
@@ -104,68 +162,58 @@ export function ForgotPasswordPage() {
                     onChange={(e) => setEmail(e.target.value)}
                     disabled={loading}
                     required
+                    className="h-11 w-full rounded-xl border border-neutral-200 bg-neutral-50 px-4 text-sm text-neutral-900 placeholder:text-neutral-400 focus:border-primary-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary-200 transition-all disabled:opacity-50"
                   />
+                  <p className="text-xs text-neutral-400">
+                    Enviaremos um link para redefinir sua senha neste e-mail.
+                  </p>
                 </div>
-              </CardContent>
 
-              <CardFooter className="flex flex-col space-y-2">
-                <Button
+                <div ref={turnstileRef} className="flex justify-center" />
+
+                <button
                   type="submit"
-                  className="w-full"
-                  disabled={loading}
+                  disabled={loading || !captchaToken}
+                  className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-primary-500 to-primary-700 text-sm font-bold text-white shadow-md shadow-primary-200 transition-all hover:opacity-90 hover:shadow-lg disabled:opacity-60"
                 >
-                  {loading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Enviando...
-                    </>
-                  ) : (
-                    <>
-                      <Mail className="mr-2 h-4 w-4" />
-                      Enviar Link de Recuperação
-                    </>
-                  )}
-                </Button>
-
+                  {loading
+                    ? <><Loader2 className="h-4 w-4 animate-spin" /> Enviando...</>
+                    : <><Mail className="h-4 w-4" /> Enviar link de recuperação</>}
+                </button>
+              </form>
+            ) : (
+              /* Estado de sucesso */
+              <div className="py-4 text-center space-y-5">
+                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-success/10">
+                  <CheckCircle2 className="h-8 w-8 text-success" />
+                </div>
+                <div>
+                  <h3 className="font-display text-lg font-bold text-neutral-900">E-mail enviado!</h3>
+                  <p className="mt-2 text-sm leading-relaxed text-neutral-500">
+                    Enviamos um link de recuperação para{' '}
+                    <strong className="text-neutral-700">{email}</strong>.
+                    Verifique sua caixa de entrada e spam.
+                  </p>
+                </div>
                 <Link
                   to="/login"
-                  className="w-full"
+                  className="inline-flex items-center gap-2 text-sm font-semibold text-primary-600 hover:text-primary-700 transition-colors"
                 >
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="w-full"
-                  >
-                    <ArrowLeft className="mr-2 h-4 w-4" />
-                    Voltar ao Login
-                  </Button>
-                </Link>
-              </CardFooter>
-            </form>
-          ) : (
-            <CardContent>
-              <div className="text-center space-y-4">
-                <div className="w-16 h-16 bg-green-100 dark:bg-green-900/20 rounded-full flex items-center justify-center mx-auto">
-                  <Mail className="h-8 w-8 text-green-600 dark:text-green-400" />
-                </div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Um e-mail foi enviado para <strong>{email}</strong> com instruções para redefinir sua senha.
-                </p>
-                <Link to="/login">
-                  <Button variant="outline" className="mt-4">
-                    <ArrowLeft className="mr-2 h-4 w-4" />
-                    Voltar ao Login
-                  </Button>
+                  <ArrowLeft className="h-4 w-4" />
+                  Voltar ao login
                 </Link>
               </div>
-            </CardContent>
-          )}
-        </Card>
-
-            <p className="text-center mt-6 text-sm text-white/60">
-              © 2024 AutomaClinic. Todos os direitos reservados.
-            </p>
+            )}
           </div>
+
+          {!emailSent && (
+            <p className="mt-6 text-center text-sm text-neutral-500">
+              Lembrou a senha?{' '}
+              <Link to="/login" className="font-semibold text-primary-600 hover:text-primary-700 transition-colors">
+                Faça login
+              </Link>
+            </p>
+          )}
         </div>
       </div>
     </div>

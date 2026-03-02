@@ -31,7 +31,7 @@ const ClinicaIAConfigPage = lazy(() => import('./pages/configuracoes/ClinicaIACo
 const WhatsAppPage = lazy(() => import('./pages/WhatsAppPage'))
 const WhatsAppWebPage = lazy(() => import('./pages/whatsapp-web/WhatsAppWebPage'))
 const ChatPage = lazy(() => import('./pages/chat/ChatPage').then(m => ({ default: m.ChatPage })))
-const LandingPage = lazy(() => import('./pages/landing/LandingPage').then(m => ({ default: m.LandingPage })))
+const LandingPage = lazy(() => import('./pages/LandingPage'))
 const PlanosPage = lazy(() => import('./pages/Planos'))
 
 // Loading component for Suspense fallback

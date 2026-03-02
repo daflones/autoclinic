@@ -1,291 +1,352 @@
-import { useState } from 'react'
+﻿import { useState, useEffect, useRef } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuthStore } from '@/stores/authStore'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
-import { Loader2, Eye, EyeOff, UserPlus, ArrowLeft } from 'lucide-react'
+import { Loader2, Eye, EyeOff, ArrowLeft, Sparkles, CheckCircle2, RefreshCw } from 'lucide-react'
 import { toast } from 'sonner'
+
+const TURNSTILE_SITE_KEY = '0x4AAAAAAClGLg91CsyHG0lg'
+
+type Step = 'form' | 'otp' | 'done'
 
 export function RegisterPage() {
   const navigate = useNavigate()
   const { signUp, loading } = useAuthStore()
-  const [formData, setFormData] = useState({
-    fullName: '',
-    email: '',
-    password: '',
-    confirmPassword: ''
-  })
+
+  const [step, setStep] = useState<Step>('form')
+  const [formData, setFormData] = useState({ fullName: '', email: '', password: '', confirmPassword: '' })
+  const [phone, setPhone] = useState('')
+  const [otpCode, setOtpCode] = useState('')
+  const [otpLoading, setOtpLoading] = useState(false)
+  const [otpSent, setOtpSent] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  const [captchaToken, setCaptchaToken] = useState('')
+  const turnstileRef = useRef<HTMLDivElement>(null)
+  const widgetIdRef = useRef<string | null>(null)
+
+  useEffect(() => {
+    const render = () => {
+      if (!turnstileRef.current || !window.turnstile) return
+      if (widgetIdRef.current) return
+      widgetIdRef.current = window.turnstile.render(turnstileRef.current, {
+        sitekey: TURNSTILE_SITE_KEY,
+        theme: 'light',
+        callback: (token: string) => setCaptchaToken(token),
+        'expired-callback': () => setCaptchaToken(''),
+        'error-callback': () => setCaptchaToken(''),
+      })
+    }
+    if (window.turnstile) {
+      render()
+    } else {
+      const interval = setInterval(() => {
+        if (window.turnstile) { clearInterval(interval); render() }
+      }, 200)
+      return () => clearInterval(interval)
+    }
+  }, [])
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }))
   }
 
   const validateForm = () => {
-    if (!formData.fullName.trim()) {
-      toast.error('Nome completo é obrigatório')
-      return false
-    }
-    if (!formData.email) {
-      toast.error('E-mail é obrigatório')
-      return false
-    }
-    if (formData.password.length < 6) {
-      toast.error('Senha deve ter pelo menos 6 caracteres')
-      return false
-    }
-    if (formData.password !== formData.confirmPassword) {
-      toast.error('Senhas não coincidem')
-      return false
-    }
+    if (!formData.fullName.trim()) { toast.error('Nome completo e obrigatorio'); return false }
+    if (!formData.email) { toast.error('E-mail e obrigatorio'); return false }
+    if (formData.password.length < 6) { toast.error('Senha deve ter pelo menos 6 caracteres'); return false }
+    if (formData.password !== formData.confirmPassword) { toast.error('Senhas nao coincidem'); return false }
     return true
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    
     if (!validateForm()) return
+    if (!captchaToken) {
+      toast.error('Por favor, complete a verificação de segurança')
+      return
+    }
+    setStep('otp')
+  }
 
+  const handleSendOtp = async () => {
+    const digits = phone.replace(/\D/g, '')
+    if (digits.length < 10 || digits.length > 11) {
+      toast.error('Informe um numero de telefone valido com DDD (ex: 11999999999)')
+      return
+    }
+    setOtpLoading(true)
     try {
+      const res = await fetch('/api/otp/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone: digits }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Erro ao enviar codigo')
+      setOtpSent(true)
+      toast.success('Codigo enviado! Verifique seu WhatsApp.')
+    } catch (err: any) {
+      toast.error(err.message || 'Erro ao enviar codigo OTP')
+    } finally {
+      setOtpLoading(false)
+    }
+  }
+
+  const handleVerifyAndCreate = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (otpCode.length !== 6) { toast.error('Digite o codigo de 6 digitos'); return }
+    setOtpLoading(true)
+    try {
+      const verifyRes = await fetch('/api/otp/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone: phone.replace(/\D/g, ''), code: otpCode }),
+      })
+      const verifyData = await verifyRes.json()
+      if (!verifyRes.ok) throw new Error(verifyData.error || 'Codigo invalido')
       await signUp(formData.email, formData.password, formData.fullName)
-      toast.success('Conta criada com sucesso! Verifique seu e-mail para confirmar sua conta antes de fazer login.')
-      navigate('/login')
-    } catch (error: any) {
-      console.error('Erro no handleSubmit:', error)
-      toast.error(error.message || 'Erro ao criar conta')
+      setStep('done')
+      toast.success('Conta criada! Verifique seu e-mail para confirmar o acesso.')
+    } catch (err: any) {
+      toast.error(err.message || 'Erro ao verificar codigo')
+    } finally {
+      setOtpLoading(false)
     }
   }
 
   return (
-    <div className="min-h-screen w-full relative overflow-hidden">
-      {/* Animated Background - Using CRM gradient */}
-      <div className="absolute inset-0 bg-gradient-to-br from-indigo-600 to-purple-600 w-full h-full">
-        <div className="absolute inset-0 opacity-20 w-full h-full" style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%239C92AC' fill-opacity='0.1'%3E%3Ccircle cx='30' cy='30' r='4'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
-        }}></div>
-        <div className="absolute top-0 left-0 w-96 h-96 bg-blue-500/20 rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute bottom-0 right-0 w-96 h-96 bg-purple-500/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
-        <div className="absolute top-1/2 left-1/2 w-64 h-64 bg-pink-500/20 rounded-full blur-3xl animate-pulse delay-500"></div>
-      </div>
+    <div className="min-h-screen w-full flex">
 
-      <div className="relative z-10 min-h-screen w-full grid lg:grid-cols-2 items-center">
-          
-          {/* Left side - Branding with depth */}
-          <div className="hidden lg:flex relative p-8 lg:p-16 xl:p-20 2xl:p-24 w-full h-full items-center">
-          <div className="relative bg-white/10 backdrop-blur-xl rounded-3xl p-12 xl:p-16 2xl:p-20 border border-white/20 shadow-2xl w-full max-w-none">
-            <div className="text-center space-y-2">
-              <div>
-                <div className="flex flex-col items-center -mt-20">
-                  <img 
-                    src="/Logo.jpg" 
-                    alt="AutomaClinic Logo" 
-                    className="w-72 xl:w-80 h-auto object-contain mb-6"
-                  />
-                  <h1 className="text-3xl xl:text-4xl font-black bg-gradient-to-r from-white via-blue-100 to-purple-100 bg-clip-text text-transparent leading-tight mb-4">
-                    Bem-vindo à<br/>AutomaClinic
-                  </h1>
-                </div>
-                <p className="text-sm xl:text-base text-white/90 mb-4 font-light leading-relaxed">
-                  CRM com IA para Estética — Automatize captação de leads, agendamentos e atendimento via WhatsApp com inteligência artificial.
-                </p>
-                <div className="w-24 h-1 bg-gradient-to-r from-blue-400 to-purple-400 rounded-full mx-auto"></div>
+      {/* LADO ESQUERDO - Branding */}
+      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden flex-col justify-between p-12 xl:p-16">
+        <div className="absolute inset-0 bg-gradient-to-br from-secondary-600 via-primary-500 to-primary-700" />
+        <div className="absolute inset-0 overflow-hidden">
+          <div className="absolute -top-24 -right-24 h-96 w-96 rounded-full bg-white/10 blur-3xl" />
+          <div className="absolute bottom-0 left-0 h-80 w-80 rounded-full bg-primary-300/20 blur-3xl" />
+          <div className="absolute top-1/2 right-1/3 h-64 w-64 rounded-full bg-secondary-300/15 blur-2xl" />
+        </div>
+
+        <div className="relative">
+          <img src="/Logo.jpg" alt="AutoClinic" className="h-14 w-auto max-w-[160px] object-contain"
+            onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none' }} />
+        </div>
+
+        <div className="relative flex-1 flex flex-col justify-center py-12">
+          <div className="mb-3 inline-flex w-fit items-center gap-2 rounded-full bg-white/15 px-3 py-1 text-xs font-semibold text-white/90">
+            <Sparkles className="h-3 w-3" />
+            Comece agora mesmo
+          </div>
+          <h1 className="font-display mb-5 text-4xl xl:text-5xl font-bold leading-tight text-white">
+            Sua clinica merece crescer
+            <span className="block text-secondary-200"> com inteligencia</span>
+          </h1>
+          <p className="mb-10 text-base leading-relaxed text-white/80">
+            Cadastre-se e tenha acesso ao CRM com IA mais completo para clinicas de estetica.
+            Automatize o WhatsApp e comece a converter mais pacientes hoje.
+          </p>
+          <div className="grid grid-cols-2 gap-4">
+            {[
+              { label: 'Atendimento 24/7', desc: 'IA responde enquanto voce atende' },
+              { label: 'Mais agendamentos', desc: 'Converte leads automaticamente' },
+              { label: 'Menos no-shows', desc: 'Lembretes e confirmacoes auto' },
+              { label: 'Faturamento maior', desc: 'Upsell e retorno automaticos' },
+            ].map((item) => (
+              <div key={item.label} className="rounded-2xl bg-white/10 p-4">
+                <p className="text-sm font-bold text-white">{item.label}</p>
+                <p className="mt-1 text-xs text-white/70">{item.desc}</p>
               </div>
-              
-              <div className="grid grid-cols-2 gap-4 mt-8">
-                <div className="bg-white/5 backdrop-blur-sm rounded-2xl p-5 border border-white/10">
-                  <div className="w-12 h-12 bg-blue-500/20 rounded-xl flex items-center justify-center mb-4 mx-auto">
-                    <svg className="w-6 h-6 text-blue-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
-                    </svg>
-                  </div>
-                  <h3 className="font-bold text-white mb-2">Gestão Inteligente</h3>
-                  <p className="text-white/80 text-sm">Organize pacientes, procedimentos e agendamentos com IA integrada ao WhatsApp para atendimento 24/7.</p>
-                </div>
-                
-                <div className="bg-white/5 backdrop-blur-sm rounded-2xl p-5 border border-white/10">
-                  <div className="w-12 h-12 bg-purple-500/20 rounded-xl flex items-center justify-center mb-4 mx-auto">
-                    <svg className="w-6 h-6 text-purple-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                    </svg>
-                  </div>
-                  <h3 className="font-bold text-white mb-2">Análises Avançadas</h3>
-                  <p className="text-white/80 text-sm">Acompanhe métricas da clínica, conversões e performance em tempo real com dashboards e relatórios inteligentes.</p>
-                </div>
-              </div>
-            </div>
+            ))}
           </div>
         </div>
 
-          {/* Right side - Register Form with depth */}
-          <div className="flex justify-center items-center relative p-8 lg:p-16 xl:p-20 2xl:p-24 w-full h-full">
-            <div className="relative w-full max-w-md xl:max-w-lg 2xl:max-w-xl">
-            <div className="lg:hidden text-center mb-8">
-              <img 
-                src="/Logo.jpg" 
-                alt="AutomaClinic Logo" 
-                className="w-48 sm:w-56 h-auto mx-auto mb-4 object-contain"
-              />
-              <p className="text-white/80 text-sm sm:text-base">
-                CRM com IA para Estética
-              </p>
-            </div>
+        <div className="relative">
+          <p className="text-xs text-white/50">{'\u00a9'} {new Date().getFullYear()} AutoClinic {'\u2014'} Todos os direitos reservados</p>
+        </div>
+      </div>
 
-              {/* Register form with enhanced depth */}
-              <div className="relative">
-                <div className="absolute inset-0 bg-gradient-to-r from-indigo-800 to-purple-700 rounded-3xl blur opacity-20"></div>
-                <Card className="relative bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border-white/20 shadow-2xl rounded-3xl overflow-hidden w-full">
-            <CardHeader>
-              <div className="flex items-center gap-2 mb-2">
-                <Link 
-                  to="/login"
-                  className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors"
-                >
-                  <ArrowLeft className="h-4 w-4 text-gray-500" />
+      {/* LADO DIREITO - Formulario */}
+      <div className="flex w-full lg:w-1/2 flex-col items-center justify-center bg-[#f7f4fb] px-6 py-12 sm:px-12 overflow-y-auto">
+
+        {/* Logo mobile */}
+        <div className="mb-6 flex flex-col items-center lg:hidden">
+          <img src="/Logo.jpg" alt="AutoClinic" className="h-12 w-auto max-w-[140px] object-contain"
+            onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none' }} />
+          <p className="mt-3 text-sm text-neutral-500">CRM com IA para clinicas de estetica</p>
+        </div>
+
+        <div className="w-full max-w-md">
+
+          {/* Step indicator */}
+          {step !== 'done' && (
+            <div className="mb-6 flex items-center gap-2">
+              <div className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold transition-all ${step === 'form' ? 'bg-primary-600 text-white shadow-md' : 'bg-primary-100 text-primary-600'}`}>
+                {step === 'otp' ? <CheckCircle2 className="h-4 w-4" /> : '1'}
+              </div>
+              <span className={`text-xs font-medium ${step === 'form' ? 'text-neutral-800' : 'text-neutral-400'}`}>Dados da conta</span>
+              <div className="h-px w-8 bg-neutral-300" />
+              <div className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold transition-all ${step === 'otp' ? 'bg-primary-600 text-white shadow-md' : 'bg-neutral-200 text-neutral-400'}`}>
+                2
+              </div>
+              <span className={`text-xs font-medium ${step === 'otp' ? 'text-neutral-800' : 'text-neutral-400'}`}>Verificacao WhatsApp</span>
+            </div>
+          )}
+
+          {/* STEP 1: Dados da conta */}
+          {step === 'form' && (
+            <>
+              <div className="mb-6 flex items-center gap-3">
+                <Link to="/login" className="flex h-8 w-8 items-center justify-center rounded-full bg-white border border-neutral-200 text-neutral-500 hover:bg-neutral-50 shadow-sm transition-colors">
+                  <ArrowLeft className="h-4 w-4" />
                 </Link>
                 <div>
-                  <CardTitle className="text-2xl flex items-center gap-2">
-                    <UserPlus className="h-6 w-6 text-primary-600" />
-                    Criar Conta
-                  </CardTitle>
-                  <CardDescription>
-                    Cadastre-se para acessar o sistema
-                  </CardDescription>
+                  <h2 className="font-display text-3xl font-bold text-neutral-900">Criar conta</h2>
+                  <p className="text-sm text-neutral-500">Preencha os dados para comecar</p>
                 </div>
               </div>
-            </CardHeader>
-          
-          <form onSubmit={handleSubmit}>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="fullName">Nome Completo</Label>
-                <Input
-                  id="fullName"
-                  type="text"
-                  placeholder="Seu nome completo"
-                  value={formData.fullName}
-                  onChange={(e) => handleInputChange('fullName', e.target.value)}
-                  disabled={loading}
-                  required
-                />
+
+              <div className="rounded-3xl border border-neutral-100 bg-white p-8 shadow-md">
+                <form onSubmit={handleFormSubmit} className="space-y-4">
+                  <div className="space-y-1.5">
+                    <label htmlFor="fullName" className="block text-sm font-medium text-neutral-700">Nome completo</label>
+                    <input id="fullName" type="text" placeholder="Dra. Maria Silva"
+                      value={formData.fullName} onChange={(e) => handleInputChange('fullName', e.target.value)}
+                      disabled={loading} required
+                      className="h-11 w-full rounded-xl border border-neutral-200 bg-neutral-50 px-4 text-sm text-neutral-900 placeholder:text-neutral-400 focus:border-primary-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary-200 transition-all disabled:opacity-50" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label htmlFor="email" className="block text-sm font-medium text-neutral-700">E-mail</label>
+                    <input id="email" type="email" placeholder="seu@email.com"
+                      value={formData.email} onChange={(e) => handleInputChange('email', e.target.value)}
+                      disabled={loading} required
+                      className="h-11 w-full rounded-xl border border-neutral-200 bg-neutral-50 px-4 text-sm text-neutral-900 placeholder:text-neutral-400 focus:border-primary-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary-200 transition-all disabled:opacity-50" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label htmlFor="password" className="block text-sm font-medium text-neutral-700">Senha</label>
+                    <div className="relative">
+                      <input id="password" type={showPassword ? 'text' : 'password'} placeholder="Minimo 6 caracteres"
+                        value={formData.password} onChange={(e) => handleInputChange('password', e.target.value)}
+                        disabled={loading} required
+                        className="h-11 w-full rounded-xl border border-neutral-200 bg-neutral-50 px-4 pr-11 text-sm text-neutral-900 placeholder:text-neutral-400 focus:border-primary-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary-200 transition-all disabled:opacity-50" />
+                      <button type="button" onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600 transition-colors">
+                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label htmlFor="confirmPassword" className="block text-sm font-medium text-neutral-700">Confirmar senha</label>
+                    <div className="relative">
+                      <input id="confirmPassword" type={showConfirmPassword ? 'text' : 'password'} placeholder="Repita a senha"
+                        value={formData.confirmPassword} onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
+                        disabled={loading} required
+                        className="h-11 w-full rounded-xl border border-neutral-200 bg-neutral-50 px-4 pr-11 text-sm text-neutral-900 placeholder:text-neutral-400 focus:border-primary-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary-200 transition-all disabled:opacity-50" />
+                      <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600 transition-colors">
+                        {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
+                    </div>
+                  </div>
+                  <div ref={turnstileRef} className="flex justify-center" />
+
+                  <button type="submit" disabled={loading || !captchaToken}
+                    className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-primary-500 to-primary-700 text-sm font-bold text-white shadow-md shadow-primary-200 transition-all hover:opacity-90 hover:shadow-lg disabled:opacity-60 mt-2">
+                    {loading ? <><Loader2 className="h-4 w-4 animate-spin" /> Aguarde...</> : 'Continuar'}
+                  </button>
+                </form>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="email">E-mail</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="seu@email.com"
-                  value={formData.email}
-                  onChange={(e) => handleInputChange('email', e.target.value)}
-                  disabled={loading}
-                  required
-                />
-              </div>
+              <p className="mt-6 text-center text-sm text-neutral-500">
+                Ja tem uma conta?{' '}
+                <Link to="/login" className="font-semibold text-primary-600 hover:text-primary-700 transition-colors">Faca login</Link>
+              </p>
+            </>
+          )}
 
-
-              <div className="space-y-2">
-                <Label htmlFor="password">Senha</Label>
-                <div className="relative">
-                  <Input
-                    id="password"
-                    type={showPassword ? 'text' : 'password'}
-                    placeholder="••••••••"
-                    value={formData.password}
-                    onChange={(e) => handleInputChange('password', e.target.value)}
-                    disabled={loading}
-                    required
-                  />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                    onClick={() => setShowPassword(!showPassword)}
-                    disabled={loading}
-                  >
-                    {showPassword ? (
-                      <EyeOff className="h-4 w-4 text-gray-500" />
-                    ) : (
-                      <Eye className="h-4 w-4 text-gray-500" />
-                    )}
-                  </Button>
-                </div>
-                <p className="text-xs text-gray-500">Mínimo de 6 caracteres</p>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="confirmPassword">Confirmar Senha</Label>
-                <div className="relative">
-                  <Input
-                    id="confirmPassword"
-                    type={showConfirmPassword ? 'text' : 'password'}
-                    placeholder="••••••••"
-                    value={formData.confirmPassword}
-                    onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
-                    disabled={loading}
-                    required
-                  />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    disabled={loading}
-                  >
-                    {showConfirmPassword ? (
-                      <EyeOff className="h-4 w-4 text-gray-500" />
-                    ) : (
-                      <Eye className="h-4 w-4 text-gray-500" />
-                    )}
-                  </Button>
+          {/* STEP 2: Verificacao WhatsApp */}
+          {step === 'otp' && (
+            <>
+              <div className="mb-6 flex items-center gap-3">
+                <button type="button" onClick={() => setStep('form')}
+                  className="flex h-8 w-8 items-center justify-center rounded-full bg-white border border-neutral-200 text-neutral-500 hover:bg-neutral-50 shadow-sm transition-colors">
+                  <ArrowLeft className="h-4 w-4" />
+                </button>
+                <div>
+                  <h2 className="font-display text-3xl font-bold text-neutral-900">Verificar WhatsApp</h2>
+                  <p className="text-sm text-neutral-500">Confirme que o numero e seu</p>
                 </div>
               </div>
-            </CardContent>
 
-            <CardFooter className="flex flex-col space-y-4">
-              <Button
-                type="submit"
-                className="w-full"
-                disabled={loading}
-              >
-                {loading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Criando conta...
-                  </>
-                ) : (
-                  <>
-                    <UserPlus className="mr-2 h-4 w-4" />
-                    Criar Conta
-                  </>
+              <div className="rounded-3xl border border-neutral-100 bg-white p-8 shadow-md space-y-5">
+                {/* Campo telefone + botao enviar */}
+                <div className="space-y-1.5">
+                  <label htmlFor="phone" className="block text-sm font-medium text-neutral-700">
+                    Numero do WhatsApp
+                  </label>
+                  <div className="flex gap-2">
+                    <input id="phone" type="tel" placeholder="11999999999"
+                      value={phone} onChange={(e) => setPhone(e.target.value)}
+                      disabled={otpSent}
+                      className="h-11 flex-1 rounded-xl border border-neutral-200 bg-neutral-50 px-4 text-sm text-neutral-900 placeholder:text-neutral-400 focus:border-primary-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary-200 transition-all disabled:opacity-50" />
+                    <button type="button" onClick={handleSendOtp} disabled={otpLoading || otpSent}
+                      className="h-11 px-4 rounded-xl bg-primary-600 text-sm font-bold text-white hover:bg-primary-700 transition-colors disabled:opacity-50 flex items-center gap-1.5 shrink-0">
+                      {otpLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                      {otpSent ? 'Enviado' : 'Enviar'}
+                    </button>
+                  </div>
+                  <p className="text-xs text-neutral-400">Formato: DDD + numero, sem espacos (ex: 11999999999)</p>
+                </div>
+
+                {/* Campo codigo OTP */}
+                {otpSent && (
+                  <form onSubmit={handleVerifyAndCreate} className="space-y-4">
+                    <div className="rounded-xl bg-green-50 border border-green-200 px-4 py-3 text-sm text-green-700">
+                      Codigo enviado para o seu WhatsApp! Valido por 5 minutos.
+                    </div>
+                    <div className="space-y-1.5">
+                      <label htmlFor="otpCode" className="block text-sm font-medium text-neutral-700">
+                        Codigo de verificacao
+                      </label>
+                      <input id="otpCode" type="text" inputMode="numeric" maxLength={6} placeholder="000000"
+                        value={otpCode} onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                        required
+                        className="h-11 w-full rounded-xl border border-neutral-200 bg-neutral-50 px-4 text-center text-xl font-bold tracking-[0.5em] text-neutral-900 placeholder:text-neutral-300 placeholder:tracking-normal focus:border-primary-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary-200 transition-all" />
+                    </div>
+                    <button type="submit" disabled={otpLoading || loading || otpCode.length !== 6}
+                      className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-primary-500 to-primary-700 text-sm font-bold text-white shadow-md shadow-primary-200 transition-all hover:opacity-90 hover:shadow-lg disabled:opacity-60">
+                      {(otpLoading || loading) ? <><Loader2 className="h-4 w-4 animate-spin" /> Verificando...</> : 'Verificar e criar conta'}
+                    </button>
+                    <button type="button" onClick={() => { setOtpSent(false); setOtpCode('') }}
+                      className="flex w-full items-center justify-center gap-1.5 text-xs text-neutral-400 hover:text-neutral-600 transition-colors pt-1">
+                      <RefreshCw className="h-3 w-3" />
+                      Reenviar codigo
+                    </button>
+                  </form>
                 )}
-              </Button>
-              
-              <div className="text-center">
-                <span className="text-sm text-gray-600 dark:text-gray-400">
-                  Já tem uma conta?{' '}
-                </span>
-                <Link
-                  to="/login"
-                  className="text-sm text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 font-medium"
-                >
-                  Faça login
-                </Link>
               </div>
-            </CardFooter>
-          </form>
-                </Card>
+            </>
+          )}
 
-                <p className="text-center mt-6 text-sm text-white/60">
-                  © 2024 AutomaClinic. Todos os direitos reservados.
+          {/* STEP 3: Sucesso */}
+          {step === 'done' && (
+            <div className="rounded-3xl border border-neutral-100 bg-white p-10 shadow-md text-center space-y-5">
+              <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-green-50 border border-green-100">
+                <CheckCircle2 className="h-10 w-10 text-green-500" />
+              </div>
+              <div>
+                <h2 className="font-display text-2xl font-bold text-neutral-900">Conta criada!</h2>
+                <p className="mt-2 text-sm leading-relaxed text-neutral-500">
+                  Enviamos um e-mail de confirmacao para <strong className="text-neutral-700">{formData.email}</strong>.
+                  Verifique sua caixa de entrada e clique no link antes de fazer login.
                 </p>
               </div>
+              <button type="button" onClick={() => navigate('/login')}
+                className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-primary-500 to-primary-700 text-sm font-bold text-white shadow-md shadow-primary-200 transition-all hover:opacity-90">
+                Ir para o login
+              </button>
             </div>
-          </div>
+          )}
+
+        </div>
       </div>
     </div>
   )

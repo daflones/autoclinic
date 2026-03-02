@@ -11,6 +11,7 @@ import axios from 'axios'
 import path from 'path'
 import fs from 'fs'
 import { fileURLToPath } from 'url'
+import crypto from 'crypto'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -3287,6 +3288,151 @@ app.post('/api/admin/createUser', async (req, res) => {
   } catch (err) {
     console.error('[createUser] Error:', err?.message || err)
     res.status(500).json({ error: err?.message || 'Erro interno' })
+  }
+})
+
+// =====================================================
+// OTP — Verificação de WhatsApp no cadastro
+// POST /api/otp/send   → gera código, salva hash, envia WA
+// POST /api/otp/verify → valida código
+// Não exige Bearer token (é usado ANTES do login)
+// =====================================================
+
+const OTP_INSTANCE = process.env.OTP_INSTANCE_NAME || process.env.EVOLUTION_INSTANCE_NAME || ''
+const OTP_EXPIRES_MINUTES = 5
+const OTP_MAX_ATTEMPTS = 3
+
+function hashOtp(code) {
+  return crypto.createHash('sha256').update(String(code)).digest('hex')
+}
+
+function formatOtpPhone(raw) {
+  // Remove tudo que não for dígito
+  const digits = String(raw).replace(/\D/g, '')
+  // Garante prefixo 55 (Brasil)
+  if (digits.startsWith('55') && digits.length >= 12) return digits
+  return '55' + digits
+}
+
+// POST /api/otp/send
+app.post('/api/otp/send', async (req, res) => {
+  try {
+    const rawPhone = String(req.body?.phone || '').trim()
+    if (!rawPhone) return res.status(400).json({ error: 'Telefone obrigatório' })
+
+    const phone = formatOtpPhone(rawPhone)
+    if (phone.length < 12 || phone.length > 14) {
+      return res.status(400).json({ error: 'Número de telefone inválido. Use o formato com DDD: 11999999999' })
+    }
+
+    if (!OTP_INSTANCE) {
+      return res.status(500).json({ error: 'Instância OTP não configurada no servidor (OTP_INSTANCE_NAME)' })
+    }
+
+    // Gera código de 6 dígitos
+    const code = crypto.randomInt(100000, 999999)
+    const codeHash = hashOtp(code)
+    const expiresAt = new Date(Date.now() + OTP_EXPIRES_MINUTES * 60 * 1000).toISOString()
+
+    // Remove OTPs anteriores para este telefone (evita acúmulo)
+    try {
+      await supabaseRest(`otp_verificacoes?phone=eq.${encodeURIComponent(phone)}`, {
+        method: 'DELETE',
+      })
+    } catch (_) { /* ignora se não existir */ }
+
+    // Salva novo OTP
+    await supabaseRest('otp_verificacoes', {
+      method: 'POST',
+      data: { phone, code_hash: codeHash, expires_at: expiresAt, attempts: 0, verified: false },
+    })
+
+    // Envia via Evolution API
+    const waNumber = `${phone}@s.whatsapp.net`
+    const message = `[AutomaClinic] Seu código de verificação é: *${code}*\n\nVálido por ${OTP_EXPIRES_MINUTES} minutos. Não compartilhe com ninguém.`
+
+    console.log(`[OTP] Enviando código para ${phone} via instância ${OTP_INSTANCE}`)
+
+    await evolutionRequest(`/message/sendText/${encodeURIComponent(OTP_INSTANCE)}`, {
+      method: 'POST',
+      body: { number: waNumber, text: message, delay: 500 },
+    })
+
+    console.log(`[OTP] Código enviado para ${phone}`)
+    res.json({ ok: true, message: 'Código enviado via WhatsApp' })
+  } catch (err) {
+    console.error('[OTP send] Erro:', err?.message || err)
+    const status = err?.statusCode || 500
+    res.status(status).json({ error: err?.message || 'Erro ao enviar código OTP' })
+  }
+})
+
+// POST /api/otp/verify
+app.post('/api/otp/verify', async (req, res) => {
+  try {
+    const rawPhone = String(req.body?.phone || '').trim()
+    const code = String(req.body?.code || '').trim()
+
+    if (!rawPhone || !code) {
+      return res.status(400).json({ error: 'Telefone e código são obrigatórios' })
+    }
+
+    const phone = formatOtpPhone(rawPhone)
+    const codeHash = hashOtp(code)
+
+    // Busca OTP mais recente para este telefone
+    const rows = await supabaseRest(
+      `otp_verificacoes?phone=eq.${encodeURIComponent(phone)}&order=created_at.desc&limit=1`,
+      { method: 'GET' }
+    )
+
+    if (!rows || rows.length === 0) {
+      return res.status(400).json({ error: 'Nenhum código encontrado para este número. Solicite um novo.' })
+    }
+
+    const otp = rows[0]
+
+    // Já verificado?
+    if (otp.verified) {
+      return res.status(400).json({ error: 'Este código já foi utilizado. Solicite um novo.' })
+    }
+
+    // Expirou?
+    if (new Date(otp.expires_at) < new Date()) {
+      return res.status(400).json({ error: 'Código expirado. Solicite um novo.' })
+    }
+
+    // Tentativas esgotadas?
+    if (otp.attempts >= OTP_MAX_ATTEMPTS) {
+      return res.status(429).json({ error: 'Número máximo de tentativas atingido. Solicite um novo código.' })
+    }
+
+    // Código incorreto?
+    if (otp.code_hash !== codeHash) {
+      // Incrementa tentativas
+      await supabaseRest(`otp_verificacoes?id=eq.${otp.id}`, {
+        method: 'PATCH',
+        data: { attempts: otp.attempts + 1 },
+      })
+      const remaining = OTP_MAX_ATTEMPTS - (otp.attempts + 1)
+      return res.status(400).json({
+        error: remaining > 0
+          ? `Código incorreto. ${remaining} tentativa(s) restante(s).`
+          : 'Código incorreto. Tentativas esgotadas. Solicite um novo código.',
+      })
+    }
+
+    // Sucesso — marca como verificado
+    await supabaseRest(`otp_verificacoes?id=eq.${otp.id}`, {
+      method: 'PATCH',
+      data: { verified: true, attempts: otp.attempts + 1 },
+    })
+
+    console.log(`[OTP] Telefone ${phone} verificado com sucesso`)
+    res.json({ ok: true, message: 'Número verificado com sucesso', phone })
+  } catch (err) {
+    console.error('[OTP verify] Erro:', err?.message || err)
+    res.status(500).json({ error: err?.message || 'Erro ao verificar código OTP' })
   }
 })
 

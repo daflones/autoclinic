@@ -3908,11 +3908,7 @@ app.get('/api/instagram/auth-url', requireAuth, async (req, res) => {
     if (!IG_APP_ID) return res.status(503).json({ error: 'INSTAGRAM_APP_ID não configurado no .env' })
     if (!IG_APP_SECRET) return res.status(503).json({ error: 'INSTAGRAM_APP_SECRET não configurado no .env' })
 
-    // Compute redirect URI from the request Origin header so it works in both dev and production
-    const requestOrigin = req.headers.origin || req.headers.referer?.split('/').slice(0, 3).join('/')
-    const redirectUri = requestOrigin
-      ? `${requestOrigin}/app/instagram/callback`
-      : IG_REDIRECT_URI
+    const redirectUri = IG_REDIRECT_URI
 
     // Encode redirect_uri in state so the callback endpoint uses the exact same URI
     const state = Buffer.from(JSON.stringify({ redirect_uri: redirectUri })).toString('base64')

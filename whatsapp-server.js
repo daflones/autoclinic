@@ -3888,7 +3888,7 @@ app.patch('/api/admin/clinicas/:id/ia-config', adminAuthMiddleware, async (req, 
 
 // =====================================================
 // Instagram OAuth 2.0 (Instagram API with Business Login)
-// Auth:  https://www.instagram.com/oauth/authorize
+// Auth:  https://api.instagram.com/oauth/authorize
 // Token: https://api.instagram.com/oauth/access_token
 // Graph: https://graph.instagram.com
 // =====================================================
@@ -3897,7 +3897,7 @@ const IG_APP_ID = process.env.INSTAGRAM_APP_ID || ''
 const IG_APP_SECRET = process.env.INSTAGRAM_APP_SECRET || ''
 const IG_REDIRECT_URI = process.env.INSTAGRAM_REDIRECT_URI || 'http://localhost:5173/app/instagram/callback'
 
-const IG_AUTH_URL = 'https://www.instagram.com/oauth/authorize'
+const IG_AUTH_URL = 'https://api.instagram.com/oauth/authorize'
 const IG_TOKEN_URL = 'https://api.instagram.com/oauth/access_token'
 const IG_LONG_TOKEN_URL = 'https://graph.instagram.com/access_token'
 const IG_GRAPH_BASE = 'https://graph.instagram.com'

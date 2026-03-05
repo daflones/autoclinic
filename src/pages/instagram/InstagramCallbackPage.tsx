@@ -41,7 +41,7 @@ export function InstagramCallbackPage() {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${session?.access_token}`,
           },
-          body: JSON.stringify({ code }),
+          body: JSON.stringify({ code, state }),
         })
         const data = await res.json()
         if (!res.ok) throw new Error(data.error || 'Erro ao conectar Instagram')

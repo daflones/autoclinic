@@ -3893,8 +3893,9 @@ app.patch('/api/admin/clinicas/:id/ia-config', adminAuthMiddleware, async (req, 
 const IG_APP_ID = process.env.INSTAGRAM_APP_ID || ''
 const IG_APP_SECRET = process.env.INSTAGRAM_APP_SECRET || ''
 const IG_REDIRECT_URI = process.env.INSTAGRAM_REDIRECT_URI || 'http://localhost:5173/app/instagram/callback'
+const IG_CONFIG_ID = process.env.INSTAGRAM_CONFIG_ID || ''
 
-const IG_GRAPH_VERSION = process.env.INSTAGRAM_GRAPH_VERSION || 'v19.0'
+const IG_GRAPH_VERSION = process.env.INSTAGRAM_GRAPH_VERSION || 'v21.0'
 
 function getFacebookDialogOAuthUrl() {
   return `https://www.facebook.com/${IG_GRAPH_VERSION}/dialog/oauth`
@@ -3918,19 +3919,24 @@ app.get('/api/instagram/auth-url', requireAuth, async (req, res) => {
     // Encode redirect_uri in state so the callback endpoint uses the exact same URI
     const state = Buffer.from(JSON.stringify({ redirect_uri: redirectUri })).toString('base64')
 
-    // Instagram Graph API uses Facebook Login (not instagram.com/oauth/authorize)
-    // Note: These permissions require the app products/config in Meta Developer.
-    const scopes = [
-      'instagram_basic',
-      'instagram_content_publish',
-      'instagram_manage_comments',
-      'instagram_manage_insights',
-      'pages_show_list',
-      'pages_read_engagement',
-      'business_management',
-    ].join(',')
-
-    const url = `${getFacebookDialogOAuthUrl()}?client_id=${encodeURIComponent(IG_APP_ID)}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(scopes)}&response_type=code&state=${encodeURIComponent(state)}`
+    let url
+    if (IG_CONFIG_ID) {
+      // Facebook Login for Business: use config_id instead of scope (required for Business type apps)
+      // config_id is created in Meta Developer Console > Facebook Login for Business > Settings > Create Configuration
+      url = `${getFacebookDialogOAuthUrl()}?client_id=${encodeURIComponent(IG_APP_ID)}&redirect_uri=${encodeURIComponent(redirectUri)}&config_id=${encodeURIComponent(IG_CONFIG_ID)}&response_type=code&override_default_response_type=true&state=${encodeURIComponent(state)}`
+    } else {
+      // Fallback: legacy Facebook Login with explicit scopes (works only for non-Business type apps)
+      const scopes = [
+        'instagram_basic',
+        'instagram_content_publish',
+        'instagram_manage_comments',
+        'instagram_manage_insights',
+        'pages_show_list',
+        'pages_read_engagement',
+        'business_management',
+      ].join(',')
+      url = `${getFacebookDialogOAuthUrl()}?client_id=${encodeURIComponent(IG_APP_ID)}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(scopes)}&response_type=code&state=${encodeURIComponent(state)}`
+    }
     res.json({ url })
   } catch (err) { res.status(500).json({ error: err?.message }) }
 })
@@ -4050,14 +4056,14 @@ app.post('/api/instagram/callback', requireAuth, async (req, res) => {
 app.get('/api/instagram/status', requireAuth, async (req, res) => {
   try {
     const { clinicAdminId } = await resolveClinicAdminAndInstance(req.accessToken)
-    if (!clinicAdminId) return res.status(401).json({ connected: false, appConfigured: Boolean(IG_APP_ID) })
+    if (!clinicAdminId) return res.status(401).json({ connected: false, appConfigured: Boolean(IG_APP_ID), configIdConfigured: Boolean(IG_CONFIG_ID) })
 
     const rows = await supabaseRest(
       `profiles?select=instagram_token,instagram_username,instagram_user_id,instagram_token_expires_at&id=eq.${clinicAdminId}`,
       { method: 'GET' }
     )
     const p = Array.isArray(rows) ? rows[0] : rows
-    if (!p?.instagram_token) return res.json({ connected: false, appConfigured: Boolean(IG_APP_ID) })
+    if (!p?.instagram_token) return res.json({ connected: false, appConfigured: Boolean(IG_APP_ID), configIdConfigured: Boolean(IG_CONFIG_ID) })
 
     const expired = p.instagram_token_expires_at && new Date(p.instagram_token_expires_at) < new Date()
     res.json({
@@ -4066,6 +4072,7 @@ app.get('/api/instagram/status', requireAuth, async (req, res) => {
       userId: p.instagram_user_id,
       expiresAt: p.instagram_token_expires_at,
       appConfigured: Boolean(IG_APP_ID),
+      configIdConfigured: Boolean(IG_CONFIG_ID),
     })
   } catch (err) {
     // If columns don't exist, treat as not connected

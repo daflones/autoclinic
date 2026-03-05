@@ -15,6 +15,7 @@ export function InstagramCallbackPage() {
     calledRef.current = true
 
     const code = searchParams.get('code')
+    const state = searchParams.get('state')
     const error = searchParams.get('error')
 
     if (error) {

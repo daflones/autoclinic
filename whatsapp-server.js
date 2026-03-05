@@ -3909,6 +3909,15 @@ app.get('/api/instagram/auth-url', requireAuth, async (req, res) => {
   try {
     if (!IG_APP_ID) return res.status(503).json({ error: 'Instagram App ID não configurado. Adicione INSTAGRAM_APP_ID no .env' })
 
+    // Compute redirect URI from the request Origin header so it works in both dev and production
+    const requestOrigin = req.headers.origin || req.headers.referer?.split('/').slice(0, 3).join('/')
+    const redirectUri = requestOrigin
+      ? `${requestOrigin}/app/instagram/callback`
+      : IG_REDIRECT_URI
+
+    // Encode redirect_uri in state so the callback endpoint uses the exact same URI
+    const state = Buffer.from(JSON.stringify({ redirect_uri: redirectUri })).toString('base64')
+
     // Instagram Graph API uses Facebook Login (not instagram.com/oauth/authorize)
     // Note: These permissions require the app products/config in Meta Developer.
     const scopes = [
@@ -3921,7 +3930,7 @@ app.get('/api/instagram/auth-url', requireAuth, async (req, res) => {
       'business_management',
     ].join(',')
 
-    const url = `${getFacebookDialogOAuthUrl()}?client_id=${encodeURIComponent(IG_APP_ID)}&redirect_uri=${encodeURIComponent(IG_REDIRECT_URI)}&scope=${encodeURIComponent(scopes)}&response_type=code`
+    const url = `${getFacebookDialogOAuthUrl()}?client_id=${encodeURIComponent(IG_APP_ID)}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(scopes)}&response_type=code&state=${encodeURIComponent(state)}`
     res.json({ url })
   } catch (err) { res.status(500).json({ error: err?.message }) }
 })
@@ -3930,8 +3939,17 @@ app.get('/api/instagram/auth-url', requireAuth, async (req, res) => {
 app.post('/api/instagram/callback', requireAuth, async (req, res) => {
   try {
     if (!IG_APP_ID || !IG_APP_SECRET) return res.status(503).json({ error: 'Instagram App ID/Secret não configurados' })
-    const { code } = req.body
+    const { code, state } = req.body
     if (!code) return res.status(400).json({ error: 'Código OAuth ausente' })
+
+    // Extract the redirect_uri that was used when generating the auth URL
+    let redirectUri = IG_REDIRECT_URI
+    if (state) {
+      try {
+        const parsed = JSON.parse(Buffer.from(state, 'base64').toString())
+        if (parsed.redirect_uri) redirectUri = parsed.redirect_uri
+      } catch (_) {}
+    }
 
     const { clinicAdminId } = await resolveClinicAdminAndInstance(req.accessToken)
     if (!clinicAdminId) return res.status(401).json({ error: 'Clínica não identificada' })
@@ -3941,7 +3959,7 @@ app.post('/api/instagram/callback', requireAuth, async (req, res) => {
       params: {
         client_id: IG_APP_ID,
         client_secret: IG_APP_SECRET,
-        redirect_uri: IG_REDIRECT_URI,
+        redirect_uri: redirectUri,
         code,
       },
       validateStatus: () => true,

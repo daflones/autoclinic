@@ -26,7 +26,7 @@ import { Badge } from '@/components/ui/badge'
 import { Switch } from '@/components/ui/switch'
 import { FileUploadButton } from '@/components/ui/file-upload-button'
 import { Plus, Search, Package, Edit, Trash2, Image as ImageIcon, GripVertical, Ban, Check } from 'lucide-react'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 import {
   useCreateProtocoloPacote,
   useDeleteProtocoloPacote,

@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { segmentosService, type Segmento, type SegmentoCreateData, type SegmentoUpdateData } from '@/services/api/segmentos'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 
 export const useSegmentos = () => {
   return useQuery<Segmento[]>({

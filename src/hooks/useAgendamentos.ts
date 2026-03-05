@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { agendamentosService, type Agendamento, type AgendamentoCreateData, type AgendamentoUpdateData } from '@/services/api/agendamentos'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 
 export const useAgendamentos = (filters?: {
   vendedor_id?: string

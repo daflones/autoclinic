@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { vendedoresService, type Vendedor, type VendedorCreateData, type VendedorUpdateData } from '@/services/api/vendedores'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 
 export const useVendedores = () => {
   return useQuery<Vendedor[]>({

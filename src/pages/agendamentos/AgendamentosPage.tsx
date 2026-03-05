@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import { Button } from '@/components/ui/button'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'

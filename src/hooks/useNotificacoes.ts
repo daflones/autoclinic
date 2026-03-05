@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { NotificacaoService, type Notificacao, type NotificacaoCreateData, type NotificacaoFilters } from '@/services/api/notificacoes'
 import { useAuthStore } from '@/stores/authStore'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 import { supabase } from '@/lib/supabase'
 
 // Hook para buscar notificações

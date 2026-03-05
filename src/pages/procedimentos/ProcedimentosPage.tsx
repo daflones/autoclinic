@@ -30,7 +30,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Plus, Search, Stethoscope, Edit, Trash2, DollarSign, Clock, Upload } from 'lucide-react'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 import {
   useProcedimentos,
   useCreateProcedimento,

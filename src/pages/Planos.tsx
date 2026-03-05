@@ -1,100 +1,6 @@
 import { useState } from 'react'
-import { Check, Zap, Crown, Sparkles, Mic, Image, Volume2, RefreshCw, MessageSquare, Calendar, BarChart3, ArrowRight, Star } from 'lucide-react'
-
-const plans = [
-  {
-    id: 'essential',
-    name: 'Essential',
-    tagline: 'Comece a converter',
-    priceLabel: 'R$ 197',
-    period: '/mês',
-    tokens: '1.000',
-    icon: Zap,
-    popular: false,
-    description: 'Para clínicas que querem dar o primeiro passo na automação do atendimento via WhatsApp.',
-    accentFrom: '#C265A3',
-    accentTo: '#A15486',
-    badgeBg: 'bg-primary-100',
-    badgeText: 'text-primary-700',
-    ringClass: 'ring-primary-200',
-    iconBg: 'from-primary-400 to-primary-600',
-    checkBg: 'bg-primary-500',
-    features: [
-      { text: '1.000 tokens/mês — 1 token por mensagem ou ação da IA', highlight: true },
-      { text: 'Renovação automática todo mês', highlight: false },
-      { text: 'IA lê e interpreta imagens enviadas', highlight: false, icon: Image },
-      { text: 'IA transcreve e entende áudios', highlight: false, icon: Mic },
-      { text: 'Atendimento automático no WhatsApp', highlight: false, icon: MessageSquare },
-      { text: 'CRM completo de pacientes', highlight: false, icon: BarChart3 },
-      { text: 'Agendamento inteligente', highlight: false, icon: Calendar },
-    ],
-    notIncluded: [
-      'IA envia áudios personalizados',
-    ],
-    cta: 'Começar com Essential',
-  },
-  {
-    id: 'clinica_pro',
-    name: 'Clínica Pro',
-    tagline: 'O preferido das clínicas',
-    priceLabel: 'R$ 347',
-    period: '/mês',
-    tokens: '2.000',
-    icon: Sparkles,
-    popular: true,
-    description: 'Para clínicas em crescimento que querem dobrar os agendamentos sem aumentar a equipe.',
-    accentFrom: '#C265A3',
-    accentTo: '#8655FF',
-    badgeBg: 'bg-secondary-200',
-    badgeText: 'text-secondary-800',
-    ringClass: 'ring-secondary-300',
-    iconBg: 'from-primary-500 to-secondary-600',
-    checkBg: 'bg-primary-500',
-    features: [
-      { text: '2.000 tokens/mês — 1 token por mensagem ou ação da IA', highlight: true },
-      { text: 'Renovação automática todo mês', highlight: false },
-      { text: 'IA lê e interpreta imagens enviadas', highlight: false, icon: Image },
-      { text: 'IA transcreve e entende áudios', highlight: false, icon: Mic },
-      { text: 'Atendimento automático no WhatsApp', highlight: false, icon: MessageSquare },
-      { text: 'CRM completo de pacientes', highlight: false, icon: BarChart3 },
-      { text: 'Agendamento inteligente', highlight: false, icon: Calendar },
-    ],
-    notIncluded: [
-      'IA envia áudios personalizados',
-    ],
-    cta: 'Quero o Clínica Pro',
-  },
-  {
-    id: 'elite_ia',
-    name: 'Elite IA',
-    tagline: 'Experiência total com IA',
-    priceLabel: 'R$ 547',
-    period: '/mês',
-    tokens: '2.500',
-    icon: Crown,
-    popular: false,
-    description: 'Para clínicas premium que querem o máximo de conversão e uma experiência de atendimento inesquecível.',
-    accentFrom: '#A15486',
-    accentTo: '#6A30F0',
-    badgeBg: 'bg-secondary-100',
-    badgeText: 'text-secondary-700',
-    ringClass: 'ring-secondary-200',
-    iconBg: 'from-primary-600 to-secondary-700',
-    checkBg: 'bg-secondary-600',
-    features: [
-      { text: '2.500 tokens/mês — 1 token por mensagem ou ação da IA', highlight: true },
-      { text: 'Renovação automática todo mês', highlight: false },
-      { text: 'IA lê e interpreta imagens enviadas', highlight: false, icon: Image },
-      { text: 'IA transcreve e entende áudios', highlight: false, icon: Mic },
-      { text: 'IA envia áudios personalizados', highlight: true, icon: Volume2 },
-      { text: 'Atendimento automático no WhatsApp', highlight: false, icon: MessageSquare },
-      { text: 'CRM completo de pacientes', highlight: false, icon: BarChart3 },
-      { text: 'Agendamento inteligente', highlight: false, icon: Calendar },
-    ],
-    notIncluded: [],
-    cta: 'Quero o Elite IA',
-  },
-]
+import { Check, Sparkles, RefreshCw, ArrowRight, Star, Loader2, Zap, MessageSquare, Calendar } from 'lucide-react'
+import { usePlanos } from '@/hooks/usePlanos'
 
 const testimonials = [
   {
@@ -141,6 +47,7 @@ const faq = [
 
 export default function PlanosPage() {
   const [openFaq, setOpenFaq] = useState<number | null>(null)
+  const { planos, loading: planosLoading }  = usePlanos()
 
   return (
     <div className="min-h-screen bg-[#f7f4fb]">
@@ -245,15 +152,20 @@ export default function PlanosPage() {
             <p className="text-neutral-500 text-lg">Todos incluem renovação automática de tokens a cada mês</p>
           </div>
 
+          {planosLoading ? (
+            <div className="flex justify-center py-20">
+              <Loader2 className="h-8 w-8 animate-spin text-primary-400" />
+            </div>
+          ) : (
           <div className="grid gap-8 lg:grid-cols-3">
-            {plans.map((plan) => {
+            {planos.map((plan) => {
               const PlanIcon = plan.icon
               return (
                 <div
                   key={plan.id}
                   className={`relative flex flex-col rounded-3xl border bg-white shadow-md transition-all duration-300 hover:-translate-y-1 hover:shadow-xl ${
                     plan.popular
-                      ? `border-primary-300 shadow-lg ring-2 ${plan.ringClass}`
+                      ? `border-primary-300 shadow-lg ring-2 ${plan.config.ringClass}`
                       : 'border-neutral-100'
                   }`}
                 >
@@ -270,13 +182,13 @@ export default function PlanosPage() {
                     {/* Ícone + badge */}
                     <div className="mb-6 flex items-start justify-between">
                       <div>
-                        <div className={`mb-3 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br ${plan.iconBg} shadow-md`}>
+                        <div className={`mb-3 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br ${plan.config.iconBg} shadow-md`}>
                           <PlanIcon className="h-6 w-6 text-white" />
                         </div>
                         <p className="text-xs font-semibold uppercase tracking-widest text-neutral-400 mb-1">{plan.tagline}</p>
-                        <h3 className="font-display text-2xl font-bold text-neutral-900">{plan.name}</h3>
+                        <h3 className="font-display text-2xl font-bold text-neutral-900">{plan.nome}</h3>
                       </div>
-                      <span className={`rounded-full px-3 py-1 text-xs font-bold ${plan.badgeBg} ${plan.badgeText}`}>
+                      <span className={`rounded-full px-3 py-1 text-xs font-bold ${plan.config.badgeBg} ${plan.config.badgeText}`}>
                         {plan.tokens} tokens
                       </span>
                     </div>
@@ -285,17 +197,18 @@ export default function PlanosPage() {
                     <div className="mb-6">
                       <div className="flex items-end gap-1">
                         <span className="font-display text-5xl font-extrabold text-neutral-900">{plan.priceLabel}</span>
+
                         <span className="mb-2 text-neutral-400 text-sm">{plan.period}</span>
                       </div>
-                      <p className="mt-2 text-sm leading-relaxed text-neutral-500">{plan.description}</p>
+                      <p className="mt-2 text-sm leading-relaxed text-neutral-500">{plan.descricao}</p>
                     </div>
 
                     {/* CTA */}
                     <button
-                      style={{ background: `linear-gradient(135deg, ${plan.accentFrom}, ${plan.accentTo})` }}
+                      style={{ background: `linear-gradient(135deg, ${plan.config.accentFrom}, ${plan.config.accentTo})` }}
                       className="mb-8 flex w-full items-center justify-center gap-2 rounded-2xl px-6 py-3.5 text-sm font-bold text-white shadow-md transition-all duration-200 hover:opacity-90 hover:shadow-lg"
                     >
-                      {plan.cta}
+                      {plan.config.cta}
                       <ArrowRight className="h-4 w-4" />
                     </button>
 
@@ -304,7 +217,7 @@ export default function PlanosPage() {
                     {/* Token card */}
                     <div className="mb-6 rounded-2xl border border-primary-100 bg-primary-50 p-4">
                       <div className="flex items-center gap-3">
-                        <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ${plan.iconBg} shadow`}>
+                        <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ${plan.config.iconBg} shadow`}>
                           <RefreshCw className="h-4 w-4 text-white" />
                         </div>
                         <div>
@@ -318,7 +231,7 @@ export default function PlanosPage() {
                     <ul className="space-y-3">
                       {plan.features.map((feat, i) => (
                         <li key={i} className="flex items-start gap-3">
-                          <div className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full ${feat.highlight ? plan.checkBg : 'bg-neutral-100'}`}>
+                          <div className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full ${feat.highlight ? plan.config.checkBg : 'bg-neutral-100'}`}>
                             <Check className={`h-3 w-3 ${feat.highlight ? 'text-white' : 'text-neutral-500'}`} />
                           </div>
                           <span className={`text-sm ${feat.highlight ? 'font-semibold text-neutral-900' : 'text-neutral-600'}`}>
@@ -326,7 +239,7 @@ export default function PlanosPage() {
                           </span>
                         </li>
                       ))}
-                      {plan.notIncluded.map((item, i) => (
+                      {plan.notIncluded.map((item: string, i: number) => (
                         <li key={`no-${i}`} className="flex items-start gap-3 opacity-40">
                           <div className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-neutral-100">
                             <span className="text-xs leading-none text-neutral-400">—</span>
@@ -340,6 +253,7 @@ export default function PlanosPage() {
               )
             })}
           </div>
+          )}
 
           <p className="mt-8 text-center text-sm text-neutral-400">
             Todos os planos incluem acesso ao CRM completo, suporte e atualizações automáticas.

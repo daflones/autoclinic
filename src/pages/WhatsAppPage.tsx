@@ -33,7 +33,7 @@ import { useProfile } from '@/hooks/useConfiguracoes'
 import { useClinicaIAConfig, useUpdateClinicaIAConfig } from '@/hooks/useClinicaIAConfig'
 import { QRCodeDisplay } from '@/components/whatsapp/QRCodeDisplay'
 import { usePacientes } from '@/hooks/usePacientes'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -788,7 +788,7 @@ export default function WhatsAppPage() {
         <div>
           <h1 className="text-3xl font-semibold tracking-tight text-foreground flex items-center gap-3">
             <MessageCircle className="h-8 w-8 text-primary" />
-            WhatsApp/Automação
+            WhatsApp/Instagram
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
             Configure e gerencie a integração do WhatsApp com automação inteligente.

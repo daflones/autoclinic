@@ -8,7 +8,7 @@ import {
   type ProfissionalUpdateData,
   type StatusProfissional,
 } from '@/services/api/profissionais-clinica'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 
 export function useProfissionaisClinica(filters: ProfissionalFilters = {}) {
   const query = useQuery({

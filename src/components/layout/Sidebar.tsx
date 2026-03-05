@@ -21,7 +21,8 @@ import {
   AlertTriangle,
   RefreshCw,
   Stethoscope,
-  CalendarCheck
+  CalendarCheck,
+  Instagram,
 } from 'lucide-react'
 
 type AppRole = 'clinica' | 'admin' | 'profissional' | 'recepcao' | 'gestor'
@@ -145,7 +146,7 @@ const menuItems: MenuItem[] = [
     allowedRoles: ADMIN_ROLES,
   },
   {
-    label: 'WhatsApp/Automação',
+    label: 'WhatsApp/Instagram',
     icon: MessageCircle,
     href: '/app/whatsapp',
     color: 'from-primary-400 to-secondary-400',
@@ -163,6 +164,13 @@ const menuItems: MenuItem[] = [
         icon: Send,
         href: '/app/whatsapp?section=disparos',
         color: 'from-primary-400 to-secondary-400',
+        allowedRoles: ADMIN_ROLES,
+      },
+      {
+        label: 'Instagram',
+        icon: Instagram,
+        href: '/app/instagram',
+        color: 'from-pink-400 to-purple-500',
         allowedRoles: ADMIN_ROLES,
       },
     ],

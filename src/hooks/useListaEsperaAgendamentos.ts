@@ -6,7 +6,7 @@ import {
   type ListaEsperaAgendamentoUpdateData,
   type ListaEsperaAgendamentosFilters,
 } from '@/services/api/lista-espera-agendamentos'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 
 export function useListaEsperaAgendamentos(filters: ListaEsperaAgendamentosFilters = {}) {
   return useQuery<{ data: ListaEsperaAgendamento[]; count: number }>({

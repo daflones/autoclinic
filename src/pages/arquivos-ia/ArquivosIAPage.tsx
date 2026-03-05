@@ -14,7 +14,7 @@ import {
   FileText, Image, Video, File, Archive,
   Plus, Eye, Download, AlertTriangle, Bot
 } from 'lucide-react'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 import { useNotifications } from '@/contexts/NotificationContext'
 import { PlanoAtivoButton } from '@/components/PlanoAtivoGuard'
 import { useQuery } from '@tanstack/react-query'

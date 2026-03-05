@@ -23,7 +23,7 @@ import {
   History,
   RotateCcw
 } from 'lucide-react'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 import { useProspeccao } from '../../hooks/useProspeccao'
 import { useWhatsAppInstance } from '../../hooks/useWhatsApp'
 import LogsProspeccaoTable from '../../components/prospeccao/LogsProspeccaoTable'

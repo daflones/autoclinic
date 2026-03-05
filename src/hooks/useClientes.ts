@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { clientesService } from '@/services/api/clientes'
 import { useIsAdmin, useCurrentVendedorId } from '@/hooks/useAuth'
 import { useAutoRefresh } from '@/hooks/useAutoRefresh'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 import { useMemo } from 'react'
 
 interface UseClientesOptions {

@@ -22,7 +22,7 @@ import { Switch } from '@/components/ui/switch'
 import { useSetores, useUpdateSetor, useToggleSetorStatus } from '@/hooks/useSetores'
 import { Badge } from '@/components/ui/badge'
 import type { Setor, SetorResponsavel } from '@/services/api/setores'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 
 type PrioridadeOptions = 'baixa' | 'media' | 'alta' | 'urgente'
 

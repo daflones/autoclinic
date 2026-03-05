@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { propostasService, type Proposta, type PropostaCreateData, type PropostaUpdateData } from '@/services/api/propostas'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 
 export const usePropostas = (filters?: {
   vendedor_id?: string

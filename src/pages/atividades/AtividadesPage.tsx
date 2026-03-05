@@ -28,7 +28,7 @@ import { useVendedores } from '@/hooks/useVendedores'
 import { useIsAdmin } from '@/hooks/useAuth'
 import { formatDistanceToNow } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 
 const actionIcons = {
   criar: <Users className="h-4 w-4" />,

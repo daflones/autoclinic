@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { getTags, getAllTags, getTag, createTag, updateTag, deleteTag, reorderTags } from '@/services/api/tags'
 import type { TagCreateData, TagUpdateData } from '@/types/tag'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 
 // Hook para buscar tags ativas
 export const useTags = () => {

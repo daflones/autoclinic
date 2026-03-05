@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuthStore } from '@/stores/authStore'
 import { ArrowLeft, Loader2, Mail, ShieldCheck, CheckCircle2 } from 'lucide-react'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 
 const TURNSTILE_SITE_KEY = '0x4AAAAAAClGLg91CsyHG0lg'
 

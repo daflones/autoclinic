@@ -19,7 +19,7 @@ import {
   ZoomOut,
   Move
 } from 'lucide-react'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 
 interface ImageEditorModalProps {
   isOpen: boolean

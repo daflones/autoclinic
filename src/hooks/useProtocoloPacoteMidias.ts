@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 import { useAutoRefresh } from '@/hooks/useAutoRefresh'
 import {
   protocoloPacoteMidiasService,

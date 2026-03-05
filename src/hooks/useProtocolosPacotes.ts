@@ -7,7 +7,7 @@ import {
   type ProtocoloPacoteCreateData,
   type ProtocoloPacoteUpdateData,
 } from '@/services/api/protocolos-pacotes'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 
 export function useProtocolosPacotes(filters: ProtocoloPacoteFilters = {}) {
   const query = useQuery({

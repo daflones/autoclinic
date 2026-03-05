@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { produtosService, type Produto, type ProdutoCreateData, type ProdutoUpdateData } from '@/services/api/produtos'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 
 export const useProdutos = (filters?: {
   categoria_id?: string

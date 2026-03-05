@@ -1,5 +1,5 @@
 import { type ReactNode } from 'react';
-import { toast } from 'sonner';
+import { toast } from '@/lib/toast'
 import { useSubscriptionStatus } from '../hooks/useSubscriptionStatus';
 import { AlertTriangle, Lock, CreditCard } from 'lucide-react';
 import { Link } from 'react-router-dom';

@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { SetorService, type Setor, type SetorCreateData, type SetorUpdateData } from '@/services/api/setores'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 
 export function useSetores() {
   return useQuery({

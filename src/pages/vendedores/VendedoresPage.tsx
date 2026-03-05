@@ -25,7 +25,7 @@ import { useSegmentos } from '@/hooks/useSegmentos'
 import { useNotifications } from '@/contexts/NotificationContext'
 import { PlanoAtivoButton } from '@/components/PlanoAtivoGuard'
 import type { Vendedor } from '@/services/api/vendedores'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 
 // Ordem correta dos dias da semana
 const diasDaSemanaOrdem = ['domingo', 'segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado']

@@ -22,7 +22,7 @@ import {
 } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
 import { Plus, Search, UserSquare, Edit, Trash2, Mail, Phone, Award, Clock, Stethoscope, Calendar } from 'lucide-react'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 import { FileUploadButton } from '@/components/ui/file-upload-button'
 import { deleteMidia, getSignedMidiaUrl, uploadMidia } from '@/services/api/storage-midias'
 import {

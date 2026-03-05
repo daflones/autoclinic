@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label'
 import { useVendedores, useVendedoresStats, useCreateVendedor, useUpdateVendedor } from '@/hooks/useVendedores'
 import { VendedorCard } from '@/components/VendedorCard'
 import type { Vendedor } from '@/services/api/vendedores'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 import { useNotifications } from '@/contexts/NotificationContext'
 
 interface VendedorFormData {

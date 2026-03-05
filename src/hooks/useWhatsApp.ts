@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { whatsappService } from '@/services/api/whatsapp'
 import { useAutoRefresh } from '@/hooks/useAutoRefresh'
 import { supabase } from '@/lib/supabase'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 
 export function useWhatsAppInstance() {
   return useQuery({

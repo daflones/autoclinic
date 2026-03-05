@@ -17,7 +17,7 @@ import type { TicketSuporte, TicketCreateData, TicketUpdateData, StatusTicket, P
 import { STATUS_LABELS, PRIORIDADE_LABELS, STATUS_COLORS, PRIORIDADE_COLORS } from '@/types/ticket'
 import { formatDistanceToNow } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 
 export function TicketsSuportePage() {
   const [searchTerm, setSearchTerm] = useState('')

@@ -31,7 +31,7 @@ import {
 } from '@/hooks/useSessoesTratamento'
 import { type StatusPlanoTratamento, type PlanoTratamento } from '@/services/api/planos-tratamento'
 import { useAgendamentosClinica } from '@/hooks/useAgendamentosClinica'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 import {
   FileText,
   Loader2,

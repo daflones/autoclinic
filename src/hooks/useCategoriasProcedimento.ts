@@ -8,7 +8,7 @@ import {
   type CategoriaUpdateData,
   type StatusCategoria,
 } from '@/services/api/categorias-procedimento'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 
 export function useCategoriasProcedimento(filters: CategoriaFilters = {}) {
   const query = useQuery({

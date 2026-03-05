@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { pacientesService, type Paciente, type PacienteFilters, type PacienteCreateData, type PacienteUpdateData } from '@/services/api/pacientes'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 import { useAutoRefresh } from '@/hooks/useAutoRefresh'
 
 export function usePacientes(filters: PacienteFilters = {}) {
@@ -51,9 +51,9 @@ export function useCreatePaciente() {
 
   return useMutation({
     mutationFn: (payload: PacienteCreateData) => pacientesService.create(payload),
-    onSuccess: async () => {
+    onSuccess: async (paciente) => {
       await refreshAfterMutation('paciente', 'create')
-      toast.success('Paciente cadastrado com sucesso!')
+      toast.success(`Paciente "${paciente?.nome_completo || 'cadastrado'}" cadastrado!`)
     },
     onError: (error: Error) => {
       toast.error(error.message || 'Erro ao cadastrar paciente')
@@ -68,9 +68,9 @@ export function useUpdatePaciente() {
 
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: PacienteUpdateData }) => pacientesService.update(id, data),
-    onSuccess: async () => {
+    onSuccess: async (paciente) => {
       await refreshAfterMutation('paciente', 'update')
-      toast.success('Paciente atualizado com sucesso!')
+      toast.success(`Paciente "${paciente?.nome_completo || 'atualizado'}" atualizado!`)
     },
     onError: (error: Error) => {
       toast.error(error.message || 'Erro ao atualizar paciente')

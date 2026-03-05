@@ -23,6 +23,7 @@ import {
   RefreshCw,
   Stethoscope,
   CalendarCheck,
+  Instagram,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -76,10 +77,11 @@ const menuItems: MobileMenuItem[] = [
   },
   { label: 'Biblioteca IA', icon: Bot, href: '/app/arquivos-ia', allowedRoles: ADMIN_ROLES },
   {
-    label: 'WhatsApp', icon: MessageCircle, href: '/app/whatsapp', allowedRoles: ADMIN_ROLES,
+    label: 'WhatsApp/Instagram', icon: MessageCircle, href: '/app/whatsapp', allowedRoles: ADMIN_ROLES,
     subItems: [
-      { label: 'Chat', icon: MessageCircle, href: '/app/chat', allowedRoles: ALL_ROLES },
+      { label: 'Chat WhatsApp', icon: MessageCircle, href: '/app/chat', allowedRoles: ALL_ROLES },
       { label: 'Disparos', icon: Send, href: '/app/whatsapp?section=disparos', allowedRoles: ADMIN_ROLES },
+      { label: 'Instagram', icon: Instagram, href: '/app/instagram', allowedRoles: ADMIN_ROLES },
     ],
   },
   {

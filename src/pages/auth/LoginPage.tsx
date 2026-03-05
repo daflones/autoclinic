@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuthStore } from '@/stores/authStore'
 import { Eye, EyeOff, Loader2, Check } from 'lucide-react'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 
 declare global {
   interface Window {
@@ -14,6 +14,7 @@ declare global {
 }
 
 const TURNSTILE_SITE_KEY = '0x4AAAAAAClGLg91CsyHG0lg'
+const CAPTCHA_DISABLED = import.meta.env.VITE_DISABLE_CAPTCHA === 'true'
 
 export function LoginPage() {
   const navigate = useNavigate()
@@ -26,6 +27,7 @@ export function LoginPage() {
   const widgetIdRef = useRef<string | null>(null)
 
   useEffect(() => {
+    if (CAPTCHA_DISABLED) return
     const render = () => {
       if (!turnstileRef.current || !window.turnstile) return
       if (widgetIdRef.current) return
@@ -53,7 +55,7 @@ export function LoginPage() {
       toast.error('Por favor, preencha todos os campos')
       return
     }
-    if (!captchaToken) {
+    if (!CAPTCHA_DISABLED && !captchaToken) {
       toast.error('Por favor, complete a verificação de segurança')
       return
     }
@@ -62,7 +64,7 @@ export function LoginPage() {
       toast.success('Login realizado com sucesso!')
       navigate('/app/dashboard')
     } catch (error: any) {
-      if (widgetIdRef.current && window.turnstile) {
+      if (!CAPTCHA_DISABLED && widgetIdRef.current && window.turnstile) {
         window.turnstile.reset(widgetIdRef.current)
         setCaptchaToken('')
       }
@@ -196,11 +198,11 @@ export function LoginPage() {
                 </Link>
               </div>
 
-              <div ref={turnstileRef} className="flex justify-center" />
+              {!CAPTCHA_DISABLED && <div ref={turnstileRef} className="flex justify-center" />}
 
               <button
                 type="submit"
-                disabled={loading || !captchaToken}
+                disabled={loading || (!CAPTCHA_DISABLED && !captchaToken)}
                 className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-primary-500 to-primary-700 text-sm font-bold text-white shadow-md shadow-primary-200 transition-all hover:opacity-90 hover:shadow-lg disabled:opacity-60"
               >
                 {loading ? <><Loader2 className="h-4 w-4 animate-spin" /> Entrando...</> : 'Entrar na conta'}

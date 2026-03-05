@@ -45,7 +45,7 @@ import { type StatusPlanoTratamento } from '@/services/api/planos-tratamento'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { useNavigate } from 'react-router-dom'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 
 export function PacientesProtocolosAtivosPage() {
   const navigate = useNavigate()

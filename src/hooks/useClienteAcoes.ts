@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { clienteAcoesService } from '@/services/api/cliente-acoes'
 import type { ClienteAcaoCreateData, ClienteAcaoUpdateData } from '@/types/cliente-acao'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 
 export function useClienteAcoes(clienteId: string) {
   const queryClient = useQueryClient()

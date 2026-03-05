@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { supabase } from '@/lib/supabase'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -39,6 +40,12 @@ import {
   type WhatsAppMensagem,
 } from '@/hooks/useWhatsAppChat'
 import { getMediaBase64 } from '@/services/api/whatsapp-chat'
+import { getAdminContext } from '@/services/api/_tenant'
+import { toast } from '@/lib/toast'
+import { agendamentosClinicaService, type AgendamentoClinica } from '@/services/api/agendamentos-clinica'
+import { planosTratamentoService, type PlanoTratamento } from '@/services/api/planos-tratamento'
+import { pacientesService, type StatusPacienteDetalhado } from '@/services/api/pacientes'
+import { useIAConfig } from '@/hooks/useIAConfig'
 import {
   MessageSquare,
   Send,
@@ -54,8 +61,6 @@ import {
   MapPin,
   Check,
   CheckCheck,
-  Clock,
-  RefreshCw,
   Archive,
   Pin,
   BellOff,
@@ -81,7 +86,16 @@ export function ChatPage() {
   const instanceCheck = useWhatsAppInstanceCheck()
   const { user } = useAuthStore()
   const profissionalId = user?.profissional_clinica_id || undefined
+  const { data: iaConfig } = useIAConfig()
   const [selectedConversa, setSelectedConversa] = useState<WhatsAppConversa | null>(null)
+  const [pacienteByRemoteJid, setPacienteByRemoteJid] = useState<Record<string, any>>({})
+  const [patientDialogOpen, setPatientDialogOpen] = useState(false)
+  const [patientDialogLoading, setPatientDialogLoading] = useState(false)
+  const [patientDialogAgendamentos, setPatientDialogAgendamentos] = useState<AgendamentoClinica[]>([])
+  const [patientDialogPlanos, setPatientDialogPlanos] = useState<PlanoTratamento[]>([])
+  const [patientDialogPaciente, setPatientDialogPaciente] = useState<any>(null)
+  const [patientDialogEditMode, setPatientDialogEditMode] = useState(false)
+  const [patientDialogDraft, setPatientDialogDraft] = useState<any>({})
   const [searchQuery, setSearchQuery] = useState('')
   const [sidebarFilter, setSidebarFilter] = useState<'all' | 'unread' | 'pinned' | 'archived'>('all')
   const [messageText, setMessageText] = useState('')
@@ -109,6 +123,276 @@ export function ChatPage() {
 
   const conversasQuery = useWhatsAppConversas()
   const mensagensQuery = useWhatsAppMensagens(selectedConversa?.id || null)
+
+  const normalizePhoneDigits = (value?: string | null) => {
+    if (!value) return ''
+    const digits = String(value).replace(/\D/g, '')
+    return digits
+  }
+
+  const getConversaPhoneDigits = (conversa: WhatsAppConversa) => {
+    const n = normalizePhoneDigits(conversa.numero_telefone)
+    if (n) return n
+    const fromRemote = normalizePhoneDigits(conversa.remote_jid?.split('@')[0])
+    return fromRemote
+  }
+
+  const getIAStatusBadge = (paciente: any) => {
+    const atendimentoIA = String(paciente?.atendimento_ia || '').trim().toLowerCase()
+    // Vazio, 'reativada' ou não existe = Ativa
+    // 'pause' = Inativa
+    if (atendimentoIA === 'pause') {
+      return { label: 'IA Inativa', className: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300' }
+    }
+    return { label: 'IA Ativa', className: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300' }
+  }
+
+  const handleReligarIA = async () => {
+    const p = getPacienteForConversa(selectedConversa)
+    if (!p?.id) {
+      toast.error('Paciente não encontrado')
+      return
+    }
+    try {
+      await pacientesService.update(p.id, { atendimento_ia: 'reativada' } as any)
+      // Atualiza o paciente no cache local
+      setPacienteByRemoteJid(prev => ({
+        ...prev,
+        [selectedConversa!.remote_jid]: { ...p, atendimento_ia: 'reativada' }
+      }))
+      toast.success('IA religada com sucesso!')
+    } catch (e: any) {
+      toast.error(e?.message || 'Erro ao religar IA')
+    }
+  }
+
+  const handlePauseIAOnSend = async () => {
+    const p = getPacienteForConversa(selectedConversa)
+    if (!p?.id) return
+    // Só pausa se estiver ativa (não está em 'pause')
+    const atendimentoIA = String(p?.atendimento_ia || '').trim().toLowerCase()
+    if (atendimentoIA === 'pause') return // Já está pausada
+    try {
+      await pacientesService.update(p.id, { atendimento_ia: 'pause' } as any)
+      // Atualiza o paciente no cache local
+      setPacienteByRemoteJid(prev => ({
+        ...prev,
+        [selectedConversa!.remote_jid]: { ...p, atendimento_ia: 'pause' }
+      }))
+    } catch (e) {
+      console.error('Erro ao pausar IA:', e)
+    }
+  }
+
+  const getKanbanBadge = (status?: StatusPacienteDetalhado | string | null) => {
+    const key = String(status ?? '').trim().toLowerCase()
+    if (!key) return null
+    if (key === 'arquivado' || key === 'arquivados') return { label: 'Arquivado', className: 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-100' }
+    if (key === 'concluido' || key === 'concluidos') return { label: 'Concluído', className: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300' }
+    if (key === 'agendado') return { label: 'Agendado', className: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' }
+    return { label: 'Novos', className: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300' }
+  }
+
+  const getDisplayName = (conversa: WhatsAppConversa) => {
+    const evoName = String(conversa.nome_contato ?? '').trim()
+    if (evoName) return evoName
+    const p = pacienteByRemoteJid[conversa.remote_jid]
+    const dbName = String(p?.nome_completo ?? p?.nome_social ?? '').trim()
+    if (dbName) return dbName
+    return conversa.numero_telefone || conversa.remote_jid?.split('@')[0] || 'Desconhecido'
+  }
+
+  const getPacienteForConversa = (conversa: WhatsAppConversa | null) => {
+    if (!conversa) return null
+    return pacienteByRemoteJid[conversa.remote_jid] || conversa.paciente || null
+  }
+
+  useEffect(() => {
+    let cancelled = false
+    async function enrichConversasWithPacientes() {
+      const conversas = conversasQuery.data || []
+      if (conversas.length === 0) {
+        if (!cancelled) setPacienteByRemoteJid({})
+        return
+      }
+
+      const phoneByRemote: Record<string, string> = {}
+      const uniquePhones = new Set<string>()
+      conversas.forEach((c) => {
+        const digits = getConversaPhoneDigits(c)
+        if (!digits) return
+        phoneByRemote[c.remote_jid] = digits
+        const last11 = digits.slice(-11)
+        if (last11) uniquePhones.add(last11)
+        const last10 = digits.slice(-10)
+        if (last10) uniquePhones.add(last10)
+      })
+
+      const phones = Array.from(uniquePhones).filter(Boolean)
+      if (phones.length === 0) {
+        if (!cancelled) setPacienteByRemoteJid({})
+        return
+      }
+
+      const { adminProfileId } = await getAdminContext()
+
+      const orParts: string[] = []
+      phones.forEach((p) => {
+        orParts.push(`telefone.ilike.%${p}%`)
+        orParts.push(`whatsapp.ilike.%${p}%`)
+      })
+
+      const { data, error } = await supabase
+        .from('pacientes')
+        .select('id,nome_completo,nome_social,telefone,whatsapp,status_detalhado,tags,status,atendimento_ia')
+        .eq('admin_profile_id', adminProfileId)
+        .or(orParts.join(','))
+        .limit(200)
+
+      if (cancelled) return
+      if (error) {
+        setPacienteByRemoteJid({})
+        return
+      }
+
+      const pacientes = (data || []) as any[]
+
+      const map: Record<string, any> = {}
+      conversas.forEach((c) => {
+        const convDigits = phoneByRemote[c.remote_jid]
+        if (!convDigits) return
+
+        const match = pacientes.find((p) => {
+          const pt = normalizePhoneDigits(p?.telefone)
+          const pw = normalizePhoneDigits(p?.whatsapp)
+          const needle11 = convDigits.slice(-11)
+          const needle10 = convDigits.slice(-10)
+          return (pt && (pt.endsWith(needle11) || pt.endsWith(needle10))) || (pw && (pw.endsWith(needle11) || pw.endsWith(needle10)))
+        })
+
+        if (match) map[c.remote_jid] = match
+      })
+
+      setPacienteByRemoteJid(map)
+    }
+
+    void enrichConversasWithPacientes()
+    return () => {
+      cancelled = true
+    }
+  }, [conversasQuery.data])
+
+  const openPatientDialog = async () => {
+    if (!selectedConversa) return
+    setPatientDialogOpen(true)
+
+    setPatientDialogEditMode(false)
+    setPatientDialogDraft({})
+    setPatientDialogPaciente(null)
+
+    const p = getPacienteForConversa(selectedConversa)
+    if (!p?.id) {
+      setPatientDialogAgendamentos([])
+      setPatientDialogPlanos([])
+      setPatientDialogLoading(false)
+      return
+    }
+
+    setPatientDialogLoading(true)
+    try {
+      const fullPaciente = await pacientesService.getById(p.id)
+      setPatientDialogPaciente(fullPaciente)
+      setPatientDialogDraft({
+        nome_completo: fullPaciente?.nome_completo ?? '',
+        nome_social: (fullPaciente as any)?.nome_social ?? '',
+        email: (fullPaciente as any)?.email ?? '',
+        telefone: (fullPaciente as any)?.telefone ?? '',
+        whatsapp: (fullPaciente as any)?.whatsapp ?? '',
+        status_detalhado: (fullPaciente as any)?.status_detalhado ?? 'novos',
+        tags: (fullPaciente as any)?.tags ?? [],
+      })
+
+      const [agRes, plRes] = await Promise.all([
+        agendamentosClinicaService.getAll({ paciente_id: p.id, limit: 10, page: 1 }),
+        planosTratamentoService.getAll({ paciente_id: p.id, limit: 10, page: 1 }),
+      ])
+      setPatientDialogAgendamentos(agRes.data || [])
+      setPatientDialogPlanos(plRes.data || [])
+    } finally {
+      setPatientDialogLoading(false)
+    }
+  }
+
+  const handleSavePatientDialog = async () => {
+    const p = patientDialogPaciente
+    if (!p?.id) return
+    setPatientDialogLoading(true)
+    try {
+      const updated = await pacientesService.update(p.id, {
+        nome_completo: patientDialogDraft.nome_completo,
+        nome_social: patientDialogDraft.nome_social || null,
+        email: patientDialogDraft.email || null,
+        telefone: patientDialogDraft.telefone || null,
+        whatsapp: patientDialogDraft.whatsapp || null,
+        status_detalhado: patientDialogDraft.status_detalhado || null,
+        tags: Array.isArray(patientDialogDraft.tags) ? patientDialogDraft.tags : [],
+      } as any)
+
+      setPatientDialogPaciente(updated)
+      setPatientDialogEditMode(false)
+
+      if (selectedConversa) {
+        setPacienteByRemoteJid((prev) => ({ ...prev, [selectedConversa.remote_jid]: updated }))
+        setSelectedConversa((prev) => (prev ? { ...prev, paciente: updated as any } : prev))
+      }
+      await conversasQuery.refetch()
+    } catch (e: any) {
+      alert(e?.message || 'Erro ao salvar paciente')
+    } finally {
+      setPatientDialogLoading(false)
+    }
+  }
+
+  const handleAutoCreatePaciente = async () => {
+    if (!selectedConversa) return
+    const existing = getPacienteForConversa(selectedConversa)
+    if (existing?.id) {
+      await openPatientDialog()
+      return
+    }
+
+    const displayName = getDisplayName(selectedConversa)
+    const phoneDigits = getConversaPhoneDigits(selectedConversa)
+    if (!phoneDigits) {
+      alert('Não foi possível identificar o número do WhatsApp para cadastrar o paciente.')
+      return
+    }
+
+    setPatientDialogLoading(true)
+    try {
+      const created = await pacientesService.create({
+        nome_completo: displayName || 'Cliente',
+        whatsapp: phoneDigits,
+        telefone: null,
+        status: 'ativo',
+        status_detalhado: 'novos',
+      } as any)
+
+      await updateConversaMutation.mutateAsync({
+        id: selectedConversa.id,
+        data: { paciente_id: created.id },
+      })
+
+      setPacienteByRemoteJid((prev) => ({ ...prev, [selectedConversa.remote_jid]: created }))
+      await conversasQuery.refetch()
+      setSelectedConversa((prev) => (prev ? { ...prev, paciente_id: created.id, paciente: created as any } : prev))
+      await openPatientDialog()
+    } catch (e: any) {
+      alert(e?.message || 'Erro ao cadastrar paciente automaticamente')
+    } finally {
+      setPatientDialogLoading(false)
+    }
+  }
   
   const syncConversas = useSyncConversas()
   const syncMensagens = useSyncMensagens()
@@ -120,7 +404,7 @@ export function ChatPage() {
   const editMessage = useEditMessage()
   const deleteMessage = useDeleteMessage()
   const markAsRead = useMarkAsRead()
-  const updateConversa = useUpdateConversa()
+  const updateConversaMutation = useUpdateConversa()
 
   const conversas = conversasQuery.data ?? []
   const mensagens = mensagensQuery.data ?? []
@@ -288,6 +572,8 @@ export function ChatPage() {
         profissionalId,
         quotedMessageId: replyingTo?.message_id,
       })
+      // Pausa a IA quando clínica envia mensagem
+      await handlePauseIAOnSend()
       setMessageText('')
       setReplyingTo(null)
       inputRef.current?.focus()
@@ -570,7 +856,7 @@ export function ChatPage() {
       case 'SENT':
         return <Check className="h-3 w-3 text-gray-400" />
       default:
-        return <Clock className="h-3 w-3 text-gray-400" />
+        return <Check className="h-3 w-3 text-gray-400" />
     }
   }
 
@@ -752,14 +1038,7 @@ export function ChatPage() {
               <MessageSquare className="h-6 w-6" />
               Chat WhatsApp
             </h1>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => syncConversas.mutate()}
-              disabled={syncConversas.isPending}
-            >
-              <RefreshCw className={cn("h-5 w-5", syncConversas.isPending && "animate-spin")} />
-            </Button>
+            {/* Reload button oculto - atualização silenciosa em background */}
           </div>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -868,10 +1147,33 @@ export function ChatPage() {
                     </AvatarFallback>
                   </Avatar>
                   <div className="flex-1 min-w-0">
+                    {(() => {
+                      const p = pacienteByRemoteJid[conversa.remote_jid] || conversa.paciente
+                      if (p?.id) return null
+                      return (
+                        <div className="mb-0.5">
+                          <span className="inline-flex px-1.5 py-0.5 rounded-full text-[9px] font-medium bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
+                            Cliente não cadastrado
+                          </span>
+                        </div>
+                      )
+                    })()}
                     <div className="flex items-center justify-between">
-                      <p className="font-medium text-gray-900 dark:text-white truncate text-sm">
-                        {conversa.nome_contato || conversa.numero_telefone || conversa.remote_jid?.split('@')[0] || 'Desconhecido'}
-                      </p>
+                      <div className="flex items-center gap-2 min-w-0">
+                        <p className="font-medium text-gray-900 dark:text-white truncate text-sm">
+                          {getDisplayName(conversa)}
+                        </p>
+                        {(() => {
+                          const p = pacienteByRemoteJid[conversa.remote_jid] || conversa.paciente
+                          const badge = getKanbanBadge((p as any)?.status_detalhado)
+                          if (!badge) return null
+                          return (
+                            <span className={cn('px-2 py-0.5 rounded-full text-[10px] font-medium flex-shrink-0', badge.className)}>
+                              {badge.label}
+                            </span>
+                          )
+                        })()}
+                      </div>
                       <div className="flex items-center gap-1 ml-1 flex-shrink-0">
                         {conversa.fixado && <Pin className="h-3 w-3 text-yellow-500" />}
                         {conversa.silenciado && <BellOff className="h-3 w-3 text-gray-400" />}
@@ -898,12 +1200,22 @@ export function ChatPage() {
                         )}
                       </div>
                     </div>
-                    {conversa.paciente && (
-                      <p className="text-[10px] text-purple-600 dark:text-purple-400 mt-0.5 flex items-center gap-1 truncate">
-                        <User className="h-3 w-3 flex-shrink-0" />
-                        {conversa.paciente.nome_completo || conversa.paciente.nome_social}
-                      </p>
-                    )}
+                    {(() => {
+                      const p = pacienteByRemoteJid[conversa.remote_jid] || conversa.paciente
+                      if (!p) return null
+                      const pacienteName = String(p.nome_completo || p.nome_social || '').trim()
+                      if (!pacienteName) return null
+
+                      const displayName = String(getDisplayName(conversa) || '').trim()
+                      if (displayName && displayName.toLowerCase() === pacienteName.toLowerCase()) return null
+
+                      return (
+                        <p className="text-[10px] text-purple-600 dark:text-purple-400 mt-0.5 flex items-center gap-1 truncate">
+                          <User className="h-3 w-3 flex-shrink-0" />
+                          {pacienteName}
+                        </p>
+                      )
+                    })()}
                   </div>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
@@ -941,6 +1253,11 @@ export function ChatPage() {
             {/* Header do Chat */}
             <div className="h-16 px-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex items-center justify-between">
               <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  className="flex items-center gap-3 text-left"
+                  onClick={openPatientDialog}
+                >
                 <Avatar className="h-10 w-10">
                   <AvatarImage src={selectedConversa.foto_perfil_url || ''} />
                   <AvatarFallback className="bg-purple-100 text-purple-600">
@@ -948,25 +1265,48 @@ export function ChatPage() {
                   </AvatarFallback>
                 </Avatar>
                 <div>
-                  <p className="font-medium text-gray-900 dark:text-white">
-                    {selectedConversa.nome_contato || selectedConversa.numero_telefone || selectedConversa.remote_jid?.split('@')[0] || 'Desconhecido'}
-                  </p>
+                  <div className="flex items-center gap-2">
+                    {(() => {
+                      const p = getPacienteForConversa(selectedConversa)
+                      const iaBadge = getIAStatusBadge(p)
+                      const isPaused = iaBadge.label === 'IA Inativa'
+                      return (
+                        <>
+                          <span className={cn('px-2 py-0.5 rounded-full text-[10px] font-medium', iaBadge.className)}>
+                            {iaBadge.label}
+                          </span>
+                          {isPaused && (
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              className="h-6 px-2 text-[10px]"
+                              onClick={(event) => {
+                                event.stopPropagation()
+                                handleReligarIA()
+                              }}
+                            >
+                              Religar IA
+                            </Button>
+                          )}
+                        </>
+                      )
+                    })()}
+                    {(() => {
+                      const p = getPacienteForConversa(selectedConversa)
+                      if (p?.id) return null
+                      return (
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
+                          Cliente não cadastrado
+                        </span>
+                      )
+                    })()}
+                  </div>
                   <p className="text-xs text-gray-500">
                     {selectedConversa.numero_telefone || selectedConversa.remote_jid?.split('@')[0]}
                   </p>
                 </div>
+                </button>
               </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => syncMensagens.mutate({
-                  conversaId: selectedConversa.id,
-                  remoteJid: selectedConversa.remote_jid,
-                })}
-                disabled={syncMensagens.isPending}
-              >
-                <RefreshCw className={cn("h-5 w-5", syncMensagens.isPending && "animate-spin")} />
-              </Button>
             </div>
 
             {/* Mensagens */}
@@ -1002,10 +1342,14 @@ export function ChatPage() {
                             : "bg-white dark:bg-gray-700"
                         )}
                       >
+                        {(() => {
+                          const p = selectedConversa ? (pacienteByRemoteJid[selectedConversa.remote_jid] || selectedConversa.paciente) : null
+                          return null
+                        })()}
                         {/* Nome do remetente (profissional ou Admin) */}
                         {mensagem.from_me && (
                           <p className="text-xs font-semibold text-purple-600 dark:text-purple-400 mb-1">
-                            {mensagem.profissional?.nome || 'Admin'}
+                            {(mensagem.profissional?.nome || iaConfig?.nome_agente || 'Admin')}
                           </p>
                         )}
 
@@ -1050,7 +1394,7 @@ export function ChatPage() {
                                 "absolute top-1 h-6 w-6 rounded-full flex items-center justify-center",
                                 "opacity-0 group-hover:opacity-100 transition-opacity",
                                 "bg-white/80 dark:bg-gray-600/80 hover:bg-white dark:hover:bg-gray-600 shadow-sm",
-                                mensagem.from_me ? "left-1" : "right-1"
+                                mensagem.from_me ? "right-1" : "right-1"
                               )}
                             >
                               <ChevronDown className="h-4 w-4 text-gray-500" />
@@ -1360,6 +1704,218 @@ export function ChatPage() {
           />
         </div>
       )}
+
+      <Dialog open={patientDialogOpen} onOpenChange={setPatientDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Perfil do Paciente</DialogTitle>
+            <DialogDescription>
+              {selectedConversa ? getDisplayName(selectedConversa) : ''}
+            </DialogDescription>
+          </DialogHeader>
+
+          {(() => {
+            if (!selectedConversa) return null
+            const p = getPacienteForConversa(selectedConversa)
+            if (!p?.id) {
+              return (
+                <div className="space-y-3">
+                  <div className="text-sm text-gray-700 dark:text-gray-200">
+                    Este número ainda não está cadastrado no CRM.
+                  </div>
+                  <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700 dark:border-amber-900/40 dark:bg-amber-900/10 dark:text-amber-200">
+                    Cliente não cadastrado
+                  </div>
+                  <div className="flex gap-2">
+                    <Button onClick={handleAutoCreatePaciente} disabled={patientDialogLoading}>
+                      {patientDialogLoading ? 'Cadastrando...' : 'Cadastrar automaticamente'}
+                    </Button>
+                    <Button variant="outline" onClick={() => navigate('/app/pacientes')}>
+                      Cadastrar manualmente
+                    </Button>
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    Será criado com nome: <span className="font-medium">{getDisplayName(selectedConversa)}</span> e número: <span className="font-medium">{selectedConversa.numero_telefone || selectedConversa.remote_jid?.split('@')[0]}</span>
+                  </div>
+                </div>
+              )
+            }
+
+            const badge = getKanbanBadge((patientDialogPaciente as any)?.status_detalhado ?? (p as any)?.status_detalhado)
+            const displayName = String((patientDialogPaciente as any)?.nome_completo || (patientDialogPaciente as any)?.nome_social || p.nome_completo || p.nome_social || 'Paciente')
+            const activePlanos = (patientDialogPlanos || []).filter((pl) => {
+              const st = String(pl.status || '').toLowerCase()
+              return st === 'aprovado' || st === 'em_execucao' || st === 'em_aprovacao'
+            })
+
+            return (
+              <div className="space-y-4">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="min-w-0 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <p className="font-semibold text-gray-900 dark:text-white truncate">
+                        {displayName}
+                      </p>
+                      {badge && (
+                        <span className={cn('px-2 py-0.5 rounded-full text-[10px] font-medium', badge.className)}>
+                          {badge.label}
+                        </span>
+                      )}
+                    </div>
+                    <Avatar className="h-24 w-24">
+                      <AvatarImage src={selectedConversa.foto_perfil_url || ''} alt={displayName} />
+                      <AvatarFallback className="bg-purple-100 text-purple-600 text-2xl font-semibold">
+                        {(displayName || 'P').charAt(0).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <p className="text-xs text-gray-500">Telefone: {(patientDialogPaciente as any)?.telefone || (patientDialogPaciente as any)?.whatsapp || p.telefone || p.whatsapp || selectedConversa.numero_telefone || selectedConversa.remote_jid?.split('@')[0]}</p>
+                    {Array.isArray((patientDialogPaciente as any)?.tags) && (patientDialogPaciente as any).tags.length > 0 && (
+                      <div className="mt-2 flex flex-wrap gap-1">
+                        {(patientDialogPaciente as any).tags.slice(0, 8).map((t: string) => (
+                          <span key={t} className="px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-100 text-[10px]">
+                            {t}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex gap-2">
+                    {!patientDialogEditMode ? (
+                      <Button variant="outline" onClick={() => setPatientDialogEditMode(true)}>
+                        Editar
+                      </Button>
+                    ) : (
+                      <>
+                        <Button variant="outline" onClick={() => {
+                          setPatientDialogEditMode(false)
+                          setPatientDialogDraft({
+                            nome_completo: patientDialogPaciente?.nome_completo ?? '',
+                            nome_social: (patientDialogPaciente as any)?.nome_social ?? '',
+                            email: (patientDialogPaciente as any)?.email ?? '',
+                            telefone: (patientDialogPaciente as any)?.telefone ?? '',
+                            whatsapp: (patientDialogPaciente as any)?.whatsapp ?? '',
+                            status_detalhado: (patientDialogPaciente as any)?.status_detalhado ?? 'novos',
+                            tags: (patientDialogPaciente as any)?.tags ?? [],
+                          })
+                        }}>
+                          Cancelar
+                        </Button>
+                        <Button onClick={handleSavePatientDialog} disabled={patientDialogLoading}>
+                          {patientDialogLoading ? 'Salvando...' : 'Salvar'}
+                        </Button>
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-3 space-y-3">
+                  <div className="text-xs font-medium text-gray-500">Detalhes</div>
+                  {!patientDialogEditMode ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                      <div>
+                        <div className="text-[11px] text-gray-500">Email</div>
+                        <div className="text-gray-800 dark:text-gray-100 break-words">{(patientDialogPaciente as any)?.email || '—'}</div>
+                      </div>
+                      <div>
+                        <div className="text-[11px] text-gray-500">WhatsApp</div>
+                        <div className="text-gray-800 dark:text-gray-100 break-words">{(patientDialogPaciente as any)?.whatsapp || '—'}</div>
+                      </div>
+                      <div>
+                        <div className="text-[11px] text-gray-500">Telefone</div>
+                        <div className="text-gray-800 dark:text-gray-100 break-words">{(patientDialogPaciente as any)?.telefone || '—'}</div>
+                      </div>
+                      <div>
+                        <div className="text-[11px] text-gray-500">Kanban</div>
+                        <div className="text-gray-800 dark:text-gray-100 break-words">{String((patientDialogPaciente as any)?.status_detalhado || 'novos')}</div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <div className="text-[11px] text-gray-500 mb-1">Nome completo</div>
+                        <Input value={patientDialogDraft.nome_completo ?? ''} onChange={(e) => setPatientDialogDraft((prev: any) => ({ ...prev, nome_completo: e.target.value }))} />
+                      </div>
+                      <div>
+                        <div className="text-[11px] text-gray-500 mb-1">Nome social</div>
+                        <Input value={patientDialogDraft.nome_social ?? ''} onChange={(e) => setPatientDialogDraft((prev: any) => ({ ...prev, nome_social: e.target.value }))} />
+                      </div>
+                      <div>
+                        <div className="text-[11px] text-gray-500 mb-1">Email</div>
+                        <Input value={patientDialogDraft.email ?? ''} onChange={(e) => setPatientDialogDraft((prev: any) => ({ ...prev, email: e.target.value }))} />
+                      </div>
+                      <div>
+                        <div className="text-[11px] text-gray-500 mb-1">WhatsApp</div>
+                        <Input value={patientDialogDraft.whatsapp ?? ''} onChange={(e) => setPatientDialogDraft((prev: any) => ({ ...prev, whatsapp: e.target.value }))} />
+                      </div>
+                      <div>
+                        <div className="text-[11px] text-gray-500 mb-1">Telefone</div>
+                        <Input value={patientDialogDraft.telefone ?? ''} onChange={(e) => setPatientDialogDraft((prev: any) => ({ ...prev, telefone: e.target.value }))} />
+                      </div>
+                      <div>
+                        <div className="text-[11px] text-gray-500 mb-1">Kanban</div>
+                        <select
+                          className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
+                          value={patientDialogDraft.status_detalhado ?? 'novos'}
+                          onChange={(e) => setPatientDialogDraft((prev: any) => ({ ...prev, status_detalhado: e.target.value }))}
+                        >
+                          <option value="novos">Novos</option>
+                          <option value="agendado">Agendado</option>
+                          <option value="concluido">Concluído</option>
+                          <option value="arquivado">Arquivado</option>
+                        </select>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-3">
+                    <div className="text-xs text-gray-500 mb-1">Agendamentos (últimos / próximos)</div>
+                    {patientDialogLoading ? (
+                      <div className="text-sm text-gray-500">Carregando...</div>
+                    ) : patientDialogAgendamentos.length === 0 ? (
+                      <div className="text-sm text-gray-500">Nenhum agendamento.</div>
+                    ) : (
+                      <div className="space-y-2">
+                        {patientDialogAgendamentos.slice(0, 5).map((a) => (
+                          <div key={a.id} className="text-sm">
+                            <div className="font-medium text-gray-800 dark:text-gray-100 truncate">{a.titulo}</div>
+                            <div className="text-xs text-gray-500">{new Date(a.data_inicio).toLocaleString('pt-BR')} • {a.status}</div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-3">
+                    <div className="text-xs text-gray-500 mb-1">Planos ativos</div>
+                    {patientDialogLoading ? (
+                      <div className="text-sm text-gray-500">Carregando...</div>
+                    ) : activePlanos.length === 0 ? (
+                      <div className="text-sm text-gray-500">Nenhum plano ativo.</div>
+                    ) : (
+                      <div className="space-y-2">
+                        {activePlanos.slice(0, 5).map((pl) => (
+                          <div key={pl.id} className="text-sm">
+                            <div className="font-medium text-gray-800 dark:text-gray-100 truncate">{pl.titulo}</div>
+                            <div className="text-xs text-gray-500">Status: {pl.status}</div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )
+          })()}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPatientDialogOpen(false)}>
+              Fechar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

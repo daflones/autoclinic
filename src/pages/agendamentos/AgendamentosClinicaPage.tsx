@@ -32,7 +32,7 @@ import {
 } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 import FullCalendar from '@fullcalendar/react'
 import timeGridPlugin from '@fullcalendar/timegrid'
 import dayGridPlugin from '@fullcalendar/daygrid'
@@ -195,7 +195,6 @@ export function AgendamentosClinicaPage() {
       })
       if (novoPaciente?.id) {
         setFormState((prev) => ({ ...prev, paciente_id: novoPaciente.id }))
-        toast.success(`Paciente "${nome.trim()}" cadastrado!`)
       }
     } catch {
       // error handled by mutation hook

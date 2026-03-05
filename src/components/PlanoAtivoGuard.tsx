@@ -1,5 +1,5 @@
 import React from 'react';
-import { toast } from 'sonner';
+import { toast } from '@/lib/toast'
 import { usePlanoAtivo } from '../hooks/usePlanoAtivo';
 import { Lock, CreditCard } from 'lucide-react';
 

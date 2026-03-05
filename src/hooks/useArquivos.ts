@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { arquivosService, type Arquivo, type ArquivoUpdateData, type CategoriaArquivo, type ArquivoCreateData } from '@/services/api/arquivos'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 
 export const useArquivos = (filters?: {
   categoria?: CategoriaArquivo

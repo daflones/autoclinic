@@ -133,6 +133,12 @@ export interface PacienteCreateData {
 
 export type PacienteUpdateData = Partial<PacienteCreateData>
 
+function normalizeOptionalDate(value?: string | null) {
+  if (value === undefined || value === null) return null
+  const trimmed = String(value).trim()
+  return trimmed ? trimmed : null
+}
+
 export const pacientesService = {
   async getAll(filters: PacienteFilters = {}): Promise<{ data: Paciente[]; count: number }> {
     const { adminProfileId } = await getAdminContext()
@@ -182,7 +188,7 @@ export const pacientesService = {
 
     if (error) {
       console.error('Erro ao buscar pacientes:', error)
-      throw new Error(`Erro ao buscar pacientes: ${error.message}`)
+      throw new Error(error.message)
     }
 
     return {
@@ -230,7 +236,7 @@ export const pacientesService = {
 
     if (error) {
       console.error('Erro ao buscar paciente:', error)
-      throw new Error(`Erro ao buscar paciente: ${error.message}`)
+      throw new Error(error.message)
     }
 
     return data as Paciente | null
@@ -251,7 +257,7 @@ export const pacientesService = {
       documento: pacienteData.documento ?? null,
       cpf: pacienteData.cpf ?? null,
       rg: pacienteData.rg ?? null,
-      data_nascimento: pacienteData.data_nascimento ?? null,
+      data_nascimento: normalizeOptionalDate(pacienteData.data_nascimento),
       sexo: pacienteData.sexo ?? 'nao_informado',
       email: pacienteData.email ?? null,
       telefone: pacienteData.telefone ?? null,
@@ -266,10 +272,10 @@ export const pacientesService = {
       status_detalhado: pacienteData.status_detalhado ?? null,
       tags: pacienteData.tags ?? [],
       fonte_captacao: pacienteData.fonte_captacao ?? null,
-      data_primeiro_atendimento: pacienteData.data_primeiro_atendimento ?? null,
-      data_ultimo_atendimento: pacienteData.data_ultimo_atendimento ?? null,
+      data_primeiro_atendimento: normalizeOptionalDate(pacienteData.data_primeiro_atendimento),
+      data_ultimo_atendimento: normalizeOptionalDate(pacienteData.data_ultimo_atendimento),
       consentimento_assinado: pacienteData.consentimento_assinado ?? false,
-      consentimento_data: pacienteData.consentimento_data ?? null,
+      consentimento_data: normalizeOptionalDate(pacienteData.consentimento_data),
       created_by: userId,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
@@ -283,7 +289,7 @@ export const pacientesService = {
 
     if (error) {
       console.error('Erro ao criar paciente:', error)
-      throw new Error(`Erro ao criar paciente: ${error.message}`)
+      throw new Error(error.message)
     }
 
     await AtividadeService.criar(
@@ -306,6 +312,10 @@ export const pacientesService = {
 
     const updateData = {
       ...updates,
+      data_nascimento: updates.data_nascimento === undefined ? undefined : normalizeOptionalDate(updates.data_nascimento),
+      data_primeiro_atendimento: updates.data_primeiro_atendimento === undefined ? undefined : normalizeOptionalDate(updates.data_primeiro_atendimento),
+      data_ultimo_atendimento: updates.data_ultimo_atendimento === undefined ? undefined : normalizeOptionalDate(updates.data_ultimo_atendimento),
+      consentimento_data: updates.consentimento_data === undefined ? undefined : normalizeOptionalDate(updates.consentimento_data),
       updated_at: new Date().toISOString()
     }
 
@@ -319,7 +329,7 @@ export const pacientesService = {
 
     if (error) {
       console.error('Erro ao atualizar paciente:', error)
-      throw new Error(`Erro ao atualizar paciente: ${error.message}`)
+      throw new Error(error.message)
     }
 
     await AtividadeService.editar(
@@ -349,7 +359,7 @@ export const pacientesService = {
 
     if (error) {
       console.error('Erro ao excluir paciente:', error)
-      throw new Error(`Erro ao excluir paciente: ${error.message}`)
+      throw new Error(error.message)
     }
 
     await AtividadeService.deletar(

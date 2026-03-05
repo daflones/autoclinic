@@ -9,6 +9,9 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
+      devOptions: {
+        enabled: false,
+      },
       workbox: {
         globPatterns: ['**/*.{js,css,html,png,svg}'],
         maximumFileSizeToCacheInBytes: 3 * 1024 * 1024, // 3MB limit
@@ -81,6 +84,9 @@ export default defineConfig({
   server: {
     host: '0.0.0.0',
     port: 5173,
+    hmr: {
+      host: 'localhost',
+    },
     proxy: {
       '/api': {
         target: 'http://localhost:3000',
@@ -88,15 +94,6 @@ export default defineConfig({
         secure: false,
       },
     },
-    allowedHosts: [
-      'crm.nanosync.com.br',
-      'www.crm.nanosync.com.br',
-      'www.nanosync.com.br',
-      'nanosync.com.br',
-      'autoclinic.nanosync.com.br',
-      'automaclinic-autoclinic.owelyh.easypanel.host',
-      'localhost',
-      '127.0.0.1'
-    ]
+    allowedHosts: true
   }
 })

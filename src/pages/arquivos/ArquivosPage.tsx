@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 import { useNotifications } from '@/contexts/NotificationContext'
 import { PlanoAtivoButton } from '@/components/PlanoAtivoGuard'
 import { 

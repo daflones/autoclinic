@@ -31,8 +31,12 @@ const ClinicaIAConfigPage = lazy(() => import('./pages/configuracoes/ClinicaIACo
 const WhatsAppPage = lazy(() => import('./pages/WhatsAppPage'))
 const WhatsAppWebPage = lazy(() => import('./pages/whatsapp-web/WhatsAppWebPage'))
 const ChatPage = lazy(() => import('./pages/chat/ChatPage').then(m => ({ default: m.ChatPage })))
+const InstagramPage = lazy(() => import('./pages/instagram/InstagramPage').then(m => ({ default: m.InstagramPage })))
+const InstagramCallbackPage = lazy(() => import('./pages/instagram/InstagramCallbackPage').then(m => ({ default: m.InstagramCallbackPage })))
 const LandingPage = lazy(() => import('./pages/LandingPage'))
 const PlanosPage = lazy(() => import('./pages/Planos'))
+const AdminLoginPage = lazy(() => import('./pages/admin/AdminLoginPage'))
+const AdminPage = lazy(() => import('./pages/admin/AdminPage'))
 
 // Loading component for Suspense fallback
 const PageLoader = () => (
@@ -78,6 +82,14 @@ export const router = createBrowserRouter([
   {
     path: '/planos',
     element: withSuspense(PlanosPage),
+  },
+  {
+    path: '/admin-login',
+    element: withSuspense(AdminLoginPage),
+  },
+  {
+    path: '/admin-page',
+    element: withSuspense(AdminPage),
   },
   {
     path: '/',
@@ -210,6 +222,14 @@ export const router = createBrowserRouter([
       {
         path: 'chat',
         element: withSuspense(ChatPage),
+      },
+      {
+        path: 'instagram',
+        element: withSuspense(InstagramPage),
+      },
+      {
+        path: 'instagram/callback',
+        element: withSuspense(InstagramCallbackPage),
       },
       {
         path: 'prospeccao',

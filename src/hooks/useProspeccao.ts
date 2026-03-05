@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 import { useWhatsAppInstance } from './useWhatsApp'
 import { prospeccaoService } from '../services/api/prospeccao'
 import { clientesService } from '../services/api/clientes'

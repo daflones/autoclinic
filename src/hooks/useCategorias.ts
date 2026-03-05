@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { categoriasService, type Categoria, type CategoriaCreateData, type CategoriaUpdateData } from '@/services/api/categorias'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 
 export const useCategorias = () => {
   return useQuery<Categoria[]>({

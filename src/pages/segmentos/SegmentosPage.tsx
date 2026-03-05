@@ -51,7 +51,7 @@ import { useSegmentos, useCreateSegmento, useUpdateSegmento, useDeleteSegmento }
 import { useCategorias } from '@/hooks/useCategorias'
 import { useProdutos } from '@/hooks/useProdutos'
 import type { Segmento, SegmentoCreateData } from '@/services/api/segmentos'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 import { useNotifications } from '@/contexts/NotificationContext'
 
 // Icon mapping for segments

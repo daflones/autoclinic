@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { processPayment, createSubscription, type PaymentData } from '@/services/api/mercadopago'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 
 export const usePayment = () => {
   const [isProcessing, setIsProcessing] = useState(false)

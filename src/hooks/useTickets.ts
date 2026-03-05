@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { getTickets, getTicket, createTicket, updateTicket, deleteTicket, getTicketStats } from '@/services/api/tickets'
 import type { TicketCreateData, TicketUpdateData, StatusTicket } from '@/types/ticket'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 
 // Hook para buscar tickets com filtros
 export const useTickets = (filters?: {

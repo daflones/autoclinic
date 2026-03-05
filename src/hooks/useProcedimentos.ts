@@ -8,7 +8,7 @@ import {
   type ProcedimentoUpdateData,
   type StatusProcedimento,
 } from '@/services/api/procedimentos'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 
 export function useProcedimentos(filters: ProcedimentoFilters = {}) {
   const query = useQuery({

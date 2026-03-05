@@ -8,7 +8,7 @@ import {
   type AgendamentoClinicaUpdateData,
   type StatusAgendamentoClinica,
 } from '@/services/api/agendamentos-clinica'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 import { useAutoRefresh } from '@/hooks/useAutoRefresh'
 
 export function useAgendamentosClinica(filters: AgendamentoClinicaFilters = {}) {

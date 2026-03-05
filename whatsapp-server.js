@@ -12,6 +12,8 @@ import path from 'path'
 import fs from 'fs'
 import { fileURLToPath } from 'url'
 import crypto from 'crypto'
+import bcrypt from 'bcrypt'
+import jwt from 'jsonwebtoken'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -162,6 +164,23 @@ function getBearerToken(req) {
   if (!authHeader || typeof authHeader !== 'string') return null
   const match = authHeader.match(/^Bearer\s+(.+)$/i)
   return match ? match[1] : null
+}
+
+async function requireAuth(req, res, next) {
+  try {
+    const token = getBearerToken(req)
+    if (!token) return res.status(401).json({ error: 'Token de autenticação ausente' })
+
+    const user = await supabaseAuthUser(token)
+    if (!user?.id) return res.status(401).json({ error: 'Usuário não autenticado' })
+
+    req.user = user
+    req.accessToken = token
+    next()
+  } catch (error) {
+    console.error('[requireAuth]', error?.message || error)
+    return res.status(401).json({ error: 'Autenticação inválida' })
+  }
 }
 
 app.use('/api/evolution', async (req, res) => {
@@ -3439,6 +3458,641 @@ app.post('/api/otp/verify', async (req, res) => {
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
+
+// =====================================================
+// ADMIN — Painel de Administração
+// Autenticação própria via tabela admins (bcrypt + JWT simples)
+// Todas as rotas /api/admin/* exceto /login e /hash-password
+// exigem header: Authorization: Bearer <adminToken>
+// =====================================================
+
+const ADMIN_JWT_SECRET = process.env.ADMIN_JWT_SECRET || 'autoclinic-admin-secret-2025'
+const ADMIN_JWT_EXPIRES = '12h'
+
+function adminAuthMiddleware(req, res, next) {
+  const auth = req.headers.authorization || ''
+  const token = auth.startsWith('Bearer ') ? auth.slice(7) : ''
+  if (!token) return res.status(401).json({ error: 'Token admin obrigatório' })
+  try {
+    const payload = jwt.verify(token, ADMIN_JWT_SECRET)
+    if (payload.cargo !== 'dev') return res.status(403).json({ error: 'Acesso restrito a dev' })
+    req.adminUser = payload
+    next()
+  } catch {
+    return res.status(401).json({ error: 'Token inválido ou expirado' })
+  }
+}
+
+// Utilitário — gera hash bcrypt (apenas em dev/setup)
+app.post('/api/admin/hash-password', async (req, res) => {
+  try {
+    const { password } = req.body
+    if (!password) return res.status(400).json({ error: 'password obrigatório' })
+    const hash = await bcrypt.hash(password, 10)
+    res.json({ hash })
+  } catch (err) {
+    res.status(500).json({ error: err?.message })
+  }
+})
+
+// Login admin
+app.post('/api/admin/login', async (req, res) => {
+  try {
+    const { email, password } = req.body
+    if (!email || !password) return res.status(400).json({ error: 'email e password obrigatórios' })
+
+    const adminList = await supabaseRest(`admins?email=eq.${encodeURIComponent(email)}&limit=1`, { method: 'GET' })
+    if (!adminList?.length) return res.status(401).json({ error: 'Credenciais inválidas' })
+
+    const admin = adminList[0]
+    const ok = await bcrypt.compare(password, admin.password_hash)
+    if (!ok) return res.status(401).json({ error: 'Credenciais inválidas' })
+    if (admin.cargo !== 'dev') return res.status(403).json({ error: 'Acesso negado' })
+
+    const token = jwt.sign(
+      { id: admin.id, email: admin.email, cargo: admin.cargo, nome: admin.nome },
+      ADMIN_JWT_SECRET,
+      { expiresIn: ADMIN_JWT_EXPIRES }
+    )
+    res.json({ token, admin: { id: admin.id, email: admin.email, cargo: admin.cargo, nome: admin.nome } })
+  } catch (err) {
+    res.status(500).json({ error: err?.message })
+  }
+})
+
+// Verificar token admin
+app.get('/api/admin/me', adminAuthMiddleware, (req, res) => {
+  res.json({ admin: req.adminUser })
+})
+
+// ── Gestão de Admins ──
+
+app.get('/api/admin/admins', adminAuthMiddleware, async (req, res) => {
+  try {
+    const data = await supabaseRest('admins?select=id,email,cargo,nome,created_at&order=created_at.asc', { method: 'GET' })
+    res.json(data || [])
+  } catch (err) { res.status(500).json({ error: err?.message }) }
+})
+
+app.post('/api/admin/admins', adminAuthMiddleware, async (req, res) => {
+  try {
+    const { email, password, nome, cargo = 'dev' } = req.body
+    if (!email || !password) return res.status(400).json({ error: 'email e password obrigatórios' })
+    const password_hash = await bcrypt.hash(password, 10)
+    const newAdmin = await supabaseRest('admins', {
+      method: 'POST',
+      data: { email, password_hash, nome, cargo },
+    })
+    res.json({ ok: true, admin: newAdmin })
+  } catch (err) { res.status(500).json({ error: err?.message }) }
+})
+
+app.delete('/api/admin/admins/:id', adminAuthMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params
+    if (id === req.adminUser.id) return res.status(400).json({ error: 'Não pode deletar a si mesmo' })
+    await supabaseRest(`admins?id=eq.${id}`, { method: 'DELETE' })
+    res.json({ ok: true })
+  } catch (err) { res.status(500).json({ error: err?.message }) }
+})
+
+// ── Gestão de Clínicas ──
+
+app.get('/api/admin/clinicas', adminAuthMiddleware, async (req, res) => {
+  try {
+    const data = await supabaseRest(
+      'profiles?select=id,full_name,email,role,status,created_at,plano_ativo,plano_expira_em,instancia_whatsapp,whatsapp_status,tokens_count,total_tokens&order=created_at.desc',
+      { method: 'GET' }
+    )
+    res.json(data || [])
+  } catch (err) { res.status(500).json({ error: err?.message }) }
+})
+
+app.patch('/api/admin/clinicas/:id', adminAuthMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params
+    const updates = req.body
+    await supabaseRest(`profiles?id=eq.${id}`, { method: 'PATCH', data: updates })
+    res.json({ ok: true })
+  } catch (err) { res.status(500).json({ error: err?.message }) }
+})
+
+app.delete('/api/admin/clinicas/:id', adminAuthMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params
+    // Deleta dados vinculados e depois o perfil
+    for (const table of ['whatsapp_mensagens', 'whatsapp_conversas', 'otp_verificacoes']) {
+      try {
+        await supabaseRest(`${table}?admin_profile_id=eq.${id}`, { method: 'DELETE' })
+      } catch (_) {}
+    }
+    await supabaseRest(`profiles?id=eq.${id}`, { method: 'DELETE' })
+    res.json({ ok: true })
+  } catch (err) { res.status(500).json({ error: err?.message }) }
+})
+
+// ── Gestão de Planos ──
+
+app.get('/api/admin/planos', adminAuthMiddleware, async (req, res) => {
+  try {
+    const data = await supabaseRest('planos?order=ordem.asc', { method: 'GET' })
+    res.json(data || [])
+  } catch (err) { res.status(500).json({ error: err?.message }) }
+})
+
+app.patch('/api/admin/planos/:id', adminAuthMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params
+    const updates = req.body
+    await supabaseRest(`planos?id=eq.${id}`, { method: 'PATCH', data: updates })
+    res.json({ ok: true })
+  } catch (err) { res.status(500).json({ error: err?.message }) }
+})
+
+// ── Status instâncias WhatsApp ──
+
+app.get('/api/admin/whatsapp-status', adminAuthMiddleware, async (req, res) => {
+  try {
+    const clinicas = await supabaseRest(
+      'profiles?select=id,full_name,email,instancia_whatsapp&role=eq.clinica&instancia_whatsapp=not.is.null',
+      { method: 'GET' }
+    )
+
+    const results = await Promise.allSettled(
+      (clinicas || []).map(async (c) => {
+        try {
+          const status = await evolutionRequest(`/instance/fetchInstances`, { method: 'GET' })
+          const inst = Array.isArray(status) ? status.find(i => i.name === c.instancia_whatsapp) : null
+          return {
+            clinica_id: c.id,
+            clinica_nome: c.full_name,
+            instancia: c.instancia_whatsapp,
+            estado: inst?.connectionStatus || 'unknown',
+          }
+        } catch {
+          return {
+            clinica_id: c.id,
+            clinica_nome: c.full_name,
+            instancia: c.instancia_whatsapp,
+            estado: 'error',
+          }
+        }
+      })
+    )
+    res.json(results.map(r => r.status === 'fulfilled' ? r.value : { estado: 'error' }))
+  } catch (err) { res.status(500).json({ error: err?.message }) }
+})
+
+app.post('/api/admin/whatsapp-restart/:instancia', adminAuthMiddleware, async (req, res) => {
+  try {
+    const { instancia } = req.params
+    await evolutionRequest(`/instance/restart/${encodeURIComponent(instancia)}`, { method: 'PUT', body: {} })
+    res.json({ ok: true })
+  } catch (err) { res.status(500).json({ error: err?.message }) }
+})
+
+// Deletar instância Evolution API — DELETE /instance/deleteInstance/:name (doc oficial)
+app.delete('/api/admin/whatsapp-instance/:instancia', adminAuthMiddleware, async (req, res) => {
+  try {
+    const { instancia } = req.params
+    await evolutionRequest(`/instance/delete/${encodeURIComponent(instancia)}`, { method: 'DELETE' })
+    res.json({ ok: true })
+  } catch (err) { res.status(500).json({ error: err?.message }) }
+})
+
+// ── Detalhes de clínica: procedimentos, clientes, histórico ──
+
+app.get('/api/admin/clinicas/:id/procedimentos', adminAuthMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params
+    const data = await supabaseRest(
+      `procedimentos?admin_profile_id=eq.${id}&select=id,nome,valor_base,ativo,created_at&order=created_at.desc`,
+      { method: 'GET' }
+    )
+    res.json(data || [])
+  } catch (err) { res.status(500).json({ error: err?.message }) }
+})
+
+app.get('/api/admin/clinicas/:id/clientes', adminAuthMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params
+    const data = await supabaseRest(
+      `pacientes?admin_profile_id=eq.${id}&select=id,nome_completo,telefone,email,status,created_at&order=created_at.desc&limit=100`,
+      { method: 'GET' }
+    )
+    res.json(data || [])
+  } catch (err) { res.status(500).json({ error: err?.message }) }
+})
+
+// Histórico: loga patches de plano; usamos a própria tabela profiles com campos de datas
+// Como não há tabela de histórico dedicada, retornamos dados atuais + logs futuros via supabase audit
+// Por ora retorna snapshot atual com timestamps relevantes
+app.get('/api/admin/clinicas/:id/historico', adminAuthMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params
+    const data = await supabaseRest(
+      `profiles?id=eq.${id}&select=id,full_name,email,plano_ativo,plano_expira_em,total_tokens,tokens_count,created_at,updated_at`,
+      { method: 'GET' }
+    )
+    res.json(data?.[0] || null)
+  } catch (err) { res.status(500).json({ error: err?.message }) }
+})
+
+// Atualizar tokens de uma clínica
+app.patch('/api/admin/clinicas/:id/tokens', adminAuthMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params
+    const { total_tokens, tokens_count } = req.body
+    const patch = {}
+    if (total_tokens !== undefined) patch.total_tokens = String(total_tokens)
+    if (tokens_count !== undefined) patch.tokens_count = String(tokens_count)
+    if (!Object.keys(patch).length) return res.status(400).json({ error: 'Nenhum campo para atualizar' })
+    await supabaseRest(`profiles?id=eq.${id}`, { method: 'PATCH', data: patch })
+    res.json({ ok: true })
+  } catch (err) { res.status(500).json({ error: err?.message }) }
+})
+
+// ── Chats admin: listar conversas e mensagens de qualquer clínica ──
+
+app.get('/api/admin/clinicas/:id/chats', adminAuthMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params
+    const data = await supabaseRest(
+      `whatsapp_conversas?admin_profile_id=eq.${id}&select=id,remote_jid,nome_contato,numero_telefone,foto_perfil_url,ultima_mensagem,ultima_mensagem_timestamp,mensagens_nao_lidas,updated_at&order=ultima_mensagem_timestamp.desc.nullslast&limit=50`,
+      { method: 'GET' }
+    )
+    res.json(data || [])
+  } catch (err) { res.status(500).json({ error: err?.message }) }
+})
+
+app.get('/api/admin/clinicas/:id/chats/:conversaId/mensagens', adminAuthMiddleware, async (req, res) => {
+  try {
+    const { conversaId } = req.params
+    const data = await supabaseRest(
+      `whatsapp_mensagens?conversa_id=eq.${conversaId}&select=id,message_id,remote_jid,conteudo,tipo_mensagem,from_me,timestamp_msg,status,media_url,caption,created_at&order=timestamp_msg.asc&limit=200`,
+      { method: 'GET' }
+    )
+    res.json(data || [])
+  } catch (err) { res.status(500).json({ error: err?.message }) }
+})
+
+// ── Detalhes completos de clínica — leitura e edição ──
+
+// Pacientes — lista e detalhe
+app.get('/api/admin/clinicas/:id/pacientes', adminAuthMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params
+    const { search = '', limit = 100, offset = 0 } = req.query
+    let q = `pacientes?admin_profile_id=eq.${id}&select=id,nome_completo,nome_social,documento,data_nascimento,sexo,email,telefone,whatsapp,status,status_conversao,nivel_interesse,fase_conversao,procedimento_interesse,origem,created_at,updated_at&order=created_at.desc&limit=${limit}&offset=${offset}`
+    if (search) q += `&nome_completo=ilike.*${encodeURIComponent(search)}*`
+    const data = await supabaseRest(q, { method: 'GET' })
+    res.json(data || [])
+  } catch (err) { res.status(500).json({ error: err?.message }) }
+})
+
+app.get('/api/admin/clinicas/:id/pacientes/:pacienteId', adminAuthMiddleware, async (req, res) => {
+  try {
+    const { id, pacienteId } = req.params
+    const data = await supabaseRest(
+      `pacientes?admin_profile_id=eq.${id}&id=eq.${pacienteId}&select=*`,
+      { method: 'GET' }
+    )
+    res.json(data?.[0] || null)
+  } catch (err) { res.status(500).json({ error: err?.message }) }
+})
+
+app.patch('/api/admin/clinicas/:id/pacientes/:pacienteId', adminAuthMiddleware, async (req, res) => {
+  try {
+    const { id, pacienteId } = req.params
+    const updates = req.body
+    await supabaseRest(`pacientes?admin_profile_id=eq.${id}&id=eq.${pacienteId}`, { method: 'PATCH', data: updates })
+    res.json({ ok: true })
+  } catch (err) { res.status(500).json({ error: err?.message }) }
+})
+
+// Procedimentos — lista e edição
+app.get('/api/admin/clinicas/:id/procedimentos-full', adminAuthMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params
+    const data = await supabaseRest(
+      `procedimentos?admin_profile_id=eq.${id}&select=*&order=created_at.desc`,
+      { method: 'GET' }
+    )
+    res.json(data || [])
+  } catch (err) { res.status(500).json({ error: err?.message }) }
+})
+
+app.patch('/api/admin/clinicas/:id/procedimentos/:procId', adminAuthMiddleware, async (req, res) => {
+  try {
+    const { id, procId } = req.params
+    await supabaseRest(`procedimentos?admin_profile_id=eq.${id}&id=eq.${procId}`, { method: 'PATCH', data: req.body })
+    res.json({ ok: true })
+  } catch (err) { res.status(500).json({ error: err?.message }) }
+})
+
+// Protocolos / Pacotes
+app.get('/api/admin/clinicas/:id/protocolos', adminAuthMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params
+    const data = await supabaseRest(
+      `protocolos_pacotes?admin_profile_id=eq.${id}&select=id,nome,descricao,preco,ativo,economia_gerada,created_at,updated_at&order=created_at.desc`,
+      { method: 'GET' }
+    )
+    res.json(data || [])
+  } catch (err) { res.status(500).json({ error: err?.message }) }
+})
+
+app.get('/api/admin/clinicas/:id/protocolos/:protId', adminAuthMiddleware, async (req, res) => {
+  try {
+    const { id, protId } = req.params
+    const data = await supabaseRest(
+      `protocolos_pacotes?admin_profile_id=eq.${id}&id=eq.${protId}&select=*`,
+      { method: 'GET' }
+    )
+    res.json(data?.[0] || null)
+  } catch (err) { res.status(500).json({ error: err?.message }) }
+})
+
+app.patch('/api/admin/clinicas/:id/protocolos/:protId', adminAuthMiddleware, async (req, res) => {
+  try {
+    const { id, protId } = req.params
+    await supabaseRest(`protocolos_pacotes?admin_profile_id=eq.${id}&id=eq.${protId}`, { method: 'PATCH', data: req.body })
+    res.json({ ok: true })
+  } catch (err) { res.status(500).json({ error: err?.message }) }
+})
+
+// Planos de Tratamento
+app.get('/api/admin/clinicas/:id/planos-tratamento', adminAuthMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params
+    const data = await supabaseRest(
+      `planos_tratamento?admin_profile_id=eq.${id}&select=id,titulo,descricao,status,validade_dias,total_previsto,total_pago,criado_por,created_at,updated_at,paciente_id&order=created_at.desc&limit=100`,
+      { method: 'GET' }
+    )
+    res.json(data || [])
+  } catch (err) { res.status(500).json({ error: err?.message }) }
+})
+
+app.patch('/api/admin/clinicas/:id/planos-tratamento/:ptId', adminAuthMiddleware, async (req, res) => {
+  try {
+    const { id, ptId } = req.params
+    await supabaseRest(`planos_tratamento?admin_profile_id=eq.${id}&id=eq.${ptId}`, { method: 'PATCH', data: req.body })
+    res.json({ ok: true })
+  } catch (err) { res.status(500).json({ error: err?.message }) }
+})
+
+// Agendamentos (relatório)
+app.get('/api/admin/clinicas/:id/agendamentos', adminAuthMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params
+    const { from, to } = req.query
+    let q = `agendamentos_clinica?admin_profile_id=eq.${id}&select=id,titulo,status,data_inicio,data_fim,valor,is_avaliacao,created_at&order=data_inicio.desc&limit=200`
+    if (from) q += `&data_inicio=gte.${from}`
+    if (to)   q += `&data_inicio=lte.${to}`
+    const data = await supabaseRest(q, { method: 'GET' })
+    res.json(data || [])
+  } catch (err) { res.status(500).json({ error: err?.message }) }
+})
+
+// Sessões de tratamento (relatório)
+app.get('/api/admin/clinicas/:id/sessoes', adminAuthMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params
+    const data = await supabaseRest(
+      `sessoes_tratamento?admin_profile_id=eq.${id}&select=id,status,inicio_previsto,termino_previsto,inicio_real,termino_real,duracao_minutos,paciente_id,created_at&order=created_at.desc&limit=200`,
+      { method: 'GET' }
+    )
+    res.json(data || [])
+  } catch (err) { res.status(500).json({ error: err?.message }) }
+})
+
+// Configuração IA da clínica
+app.get('/api/admin/clinicas/:id/ia-config', adminAuthMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params
+    const data = await supabaseRest(
+      `clinica_ia_config?admin_profile_id=eq.${id}&select=*&limit=1`,
+      { method: 'GET' }
+    )
+    res.json(data?.[0] || null)
+  } catch (err) { res.status(500).json({ error: err?.message }) }
+})
+
+app.patch('/api/admin/clinicas/:id/ia-config', adminAuthMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params
+    await supabaseRest(`clinica_ia_config?admin_profile_id=eq.${id}`, { method: 'PATCH', data: req.body })
+    res.json({ ok: true })
+  } catch (err) { res.status(500).json({ error: err?.message }) }
+})
+
+// =====================================================
+// Instagram OAuth 2.0
+// =====================================================
+
+const IG_APP_ID = process.env.INSTAGRAM_APP_ID || ''
+const IG_APP_SECRET = process.env.INSTAGRAM_APP_SECRET || ''
+const IG_REDIRECT_URI = process.env.INSTAGRAM_REDIRECT_URI || 'http://localhost:5173/app/instagram/callback'
+
+const IG_GRAPH_VERSION = process.env.INSTAGRAM_GRAPH_VERSION || 'v19.0'
+
+function getFacebookDialogOAuthUrl() {
+  return `https://www.facebook.com/${IG_GRAPH_VERSION}/dialog/oauth`
+}
+
+function getFacebookGraphBaseUrl() {
+  return `https://graph.facebook.com/${IG_GRAPH_VERSION}`
+}
+
+// GET /api/instagram/auth-url  — returns the OAuth authorization URL
+app.get('/api/instagram/auth-url', requireAuth, async (req, res) => {
+  try {
+    if (!IG_APP_ID) return res.status(503).json({ error: 'Instagram App ID não configurado. Adicione INSTAGRAM_APP_ID no .env' })
+
+    // Instagram Graph API uses Facebook Login (not instagram.com/oauth/authorize)
+    // Note: These permissions require the app products/config in Meta Developer.
+    const scopes = [
+      'instagram_basic',
+      'instagram_content_publish',
+      'instagram_manage_comments',
+      'instagram_manage_insights',
+      'pages_show_list',
+      'pages_read_engagement',
+      'business_management',
+    ].join(',')
+
+    const url = `${getFacebookDialogOAuthUrl()}?client_id=${encodeURIComponent(IG_APP_ID)}&redirect_uri=${encodeURIComponent(IG_REDIRECT_URI)}&scope=${encodeURIComponent(scopes)}&response_type=code`
+    res.json({ url })
+  } catch (err) { res.status(500).json({ error: err?.message }) }
+})
+
+// POST /api/instagram/callback  — exchange code for token, save to DB
+app.post('/api/instagram/callback', requireAuth, async (req, res) => {
+  try {
+    if (!IG_APP_ID || !IG_APP_SECRET) return res.status(503).json({ error: 'Instagram App ID/Secret não configurados' })
+    const { code } = req.body
+    if (!code) return res.status(400).json({ error: 'Código OAuth ausente' })
+
+    const { clinicAdminId } = await resolveClinicAdminAndInstance(req.accessToken)
+    if (!clinicAdminId) return res.status(401).json({ error: 'Clínica não identificada' })
+
+    // Exchange code for short-lived Facebook user access token
+    const tokenRes = await axios.get(`${getFacebookGraphBaseUrl()}/oauth/access_token`, {
+      params: {
+        client_id: IG_APP_ID,
+        client_secret: IG_APP_SECRET,
+        redirect_uri: IG_REDIRECT_URI,
+        code,
+      },
+      validateStatus: () => true,
+    })
+
+    if (tokenRes.status < 200 || tokenRes.status >= 300) {
+      throw new Error(tokenRes.data?.error?.message || 'Falha ao trocar code por access_token (Facebook OAuth)')
+    }
+
+    const shortToken = tokenRes.data?.access_token
+    if (!shortToken) throw new Error('Access token ausente no retorno do OAuth')
+
+    // Exchange for long-lived token (~60 days)
+    const longRes = await axios.get(`${getFacebookGraphBaseUrl()}/oauth/access_token`, {
+      params: {
+        grant_type: 'fb_exchange_token',
+        client_id: IG_APP_ID,
+        client_secret: IG_APP_SECRET,
+        fb_exchange_token: shortToken,
+      },
+      validateStatus: () => true,
+    })
+
+    if (longRes.status < 200 || longRes.status >= 300) {
+      throw new Error(longRes.data?.error?.message || 'Falha ao gerar long-lived token')
+    }
+
+    const longToken = longRes.data?.access_token
+    const expires_in = longRes.data?.expires_in
+    if (!longToken) throw new Error('Long-lived token ausente')
+
+    // Find Instagram Business Account connected to a Facebook Page
+    const pagesRes = await axios.get(`${getFacebookGraphBaseUrl()}/me/accounts`, {
+      params: {
+        fields: 'id,name,instagram_business_account',
+        access_token: longToken,
+      },
+      validateStatus: () => true,
+    })
+
+    if (pagesRes.status < 200 || pagesRes.status >= 300) {
+      throw new Error(pagesRes.data?.error?.message || 'Falha ao buscar páginas (me/accounts)')
+    }
+
+    const pages = pagesRes.data?.data || []
+    const pageWithIg = pages.find((p) => p?.instagram_business_account?.id)
+    const igUserId = pageWithIg?.instagram_business_account?.id
+    if (!igUserId) {
+      throw new Error('Nenhuma conta Instagram Business/Creator encontrada vinculada a uma Página do Facebook. Verifique se o Instagram é conta Profissional e está conectado a uma Página.')
+    }
+
+    const profileRes = await axios.get(`${getFacebookGraphBaseUrl()}/${igUserId}`, {
+      params: {
+        fields: 'id,username,profile_picture_url',
+        access_token: longToken,
+      },
+      validateStatus: () => true,
+    })
+
+    if (profileRes.status < 200 || profileRes.status >= 300) {
+      throw new Error(profileRes.data?.error?.message || 'Falha ao buscar perfil do Instagram')
+    }
+
+    const profile = profileRes.data
+
+    const expiresAt = new Date(Date.now() + expires_in * 1000).toISOString()
+
+    // Save to DB in profiles table (instagram_token column)
+    await supabaseRest(`profiles?id=eq.${clinicAdminId}`, {
+      method: 'PATCH',
+      data: {
+        instagram_token: longToken,
+        instagram_user_id: String(igUserId),
+        instagram_username: profile.username,
+        instagram_token_expires_at: expiresAt,
+        updated_at: new Date().toISOString(),
+      },
+    })
+
+    res.json({ ok: true, username: profile.username, userId: igUserId, expiresAt })
+  } catch (err) {
+    console.error('[instagram/callback]', err?.response?.data || err?.message)
+    res.status(500).json({ error: err?.response?.data?.error_message || err?.message || 'Erro ao trocar código por token' })
+  }
+})
+
+// GET /api/instagram/status  — check if connected
+app.get('/api/instagram/status', requireAuth, async (req, res) => {
+  try {
+    const { clinicAdminId } = await resolveClinicAdminAndInstance(req.accessToken)
+    if (!clinicAdminId) return res.status(401).json({ connected: false, appConfigured: Boolean(IG_APP_ID) })
+
+    const rows = await supabaseRest(
+      `profiles?select=instagram_token,instagram_username,instagram_user_id,instagram_token_expires_at&id=eq.${clinicAdminId}`,
+      { method: 'GET' }
+    )
+    const p = Array.isArray(rows) ? rows[0] : rows
+    if (!p?.instagram_token) return res.json({ connected: false, appConfigured: Boolean(IG_APP_ID) })
+
+    const expired = p.instagram_token_expires_at && new Date(p.instagram_token_expires_at) < new Date()
+    res.json({
+      connected: !expired,
+      username: p.instagram_username,
+      userId: p.instagram_user_id,
+      expiresAt: p.instagram_token_expires_at,
+      appConfigured: Boolean(IG_APP_ID),
+    })
+  } catch (err) {
+    // If columns don't exist, treat as not connected
+    if (err.message?.includes('column') && err.message?.includes('does not exist')) {
+      return res.json({ connected: false, appConfigured: Boolean(IG_APP_ID) })
+    }
+    res.status(500).json({ connected: false, error: err?.message })
+  }
+})
+
+// DELETE /api/instagram/disconnect
+app.delete('/api/instagram/disconnect', requireAuth, async (req, res) => {
+  try {
+    const { clinicAdminId } = await resolveClinicAdminAndInstance(req.accessToken)
+    if (!clinicAdminId) return res.status(401).json({ error: 'Não autorizado' })
+    await supabaseRest(`profiles?id=eq.${clinicAdminId}`, {
+      method: 'PATCH',
+      data: { instagram_token: null, instagram_user_id: null, instagram_username: null, instagram_token_expires_at: null, updated_at: new Date().toISOString() },
+    })
+    res.json({ ok: true })
+  } catch (err) { res.status(500).json({ error: err?.message }) }
+})
+
+// GET /api/instagram/media  — fetch media list from Instagram Graph API
+app.get('/api/instagram/media', requireAuth, async (req, res) => {
+  try {
+    const { clinicAdminId } = await resolveClinicAdminAndInstance(req.accessToken)
+    const rows = await supabaseRest(`profiles?select=instagram_token,instagram_user_id&id=eq.${clinicAdminId}`, { method: 'GET' })
+    const p = Array.isArray(rows) ? rows[0] : rows
+    if (!p?.instagram_token) return res.status(401).json({ error: 'Instagram não conectado' })
+
+    const mediaRes = await axios.get(`${getFacebookGraphBaseUrl()}/${p.instagram_user_id}/media`, {
+      params: { fields: 'id,caption,media_type,media_url,thumbnail_url,timestamp,like_count,comments_count,permalink', access_token: p.instagram_token },
+      validateStatus: () => true,
+    })
+
+    if (mediaRes.status < 200 || mediaRes.status >= 300) {
+      throw new Error(mediaRes.data?.error?.message || 'Falha ao buscar mídia do Instagram')
+    }
+    res.json(mediaRes.data)
+  } catch (err) {
+    console.error('[instagram/media]', err?.response?.data || err?.message)
+    res.status(500).json({ error: err?.response?.data?.error?.message || err?.message })
+  }
+})
 
 // Servir frontend (Vite build) no mesmo host/porta.
 // - Rotas /api/* continuam funcionando normalmente.

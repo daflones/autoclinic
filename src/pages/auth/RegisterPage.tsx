@@ -2,7 +2,7 @@
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuthStore } from '@/stores/authStore'
 import { Loader2, Eye, EyeOff, ArrowLeft, Sparkles, CheckCircle2, RefreshCw } from 'lucide-react'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 
 const TURNSTILE_SITE_KEY = '0x4AAAAAAClGLg91CsyHG0lg'
 
@@ -18,6 +18,35 @@ export function RegisterPage() {
   const [otpCode, setOtpCode] = useState('')
   const [otpLoading, setOtpLoading] = useState(false)
   const [otpSent, setOtpSent] = useState(false)
+  const [sendCount, setSendCount] = useState(0)       // quantas vezes enviou
+  const [cooldown, setCooldown] = useState(0)          // segundos restantes
+  const cooldownRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  // Calcula o cooldown em segundos para o próximo envio
+  // envio 1→2: 0s | 2→3: 60s | 3→4: 3*60s | 4→5: 5*60s | ...
+  const getCooldownSeconds = (count: number): number => {
+    if (count <= 1) return 0
+    if (count === 2) return 60
+    return (count * 2 - 1) * 60
+  }
+
+  // Inicia o contador regressivo
+  const startCooldown = (seconds: number) => {
+    setCooldown(seconds)
+    if (cooldownRef.current) clearInterval(cooldownRef.current)
+    cooldownRef.current = setInterval(() => {
+      setCooldown(prev => {
+        if (prev <= 1) {
+          clearInterval(cooldownRef.current!)
+          cooldownRef.current = null
+          return 0
+        }
+        return prev - 1
+      })
+    }, 1000)
+  }
+
+  useEffect(() => () => { if (cooldownRef.current) clearInterval(cooldownRef.current) }, [])
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [captchaToken, setCaptchaToken] = useState('')
@@ -83,7 +112,12 @@ export function RegisterPage() {
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Erro ao enviar codigo')
+      const nextCount = sendCount + 1
+      setSendCount(nextCount)
       setOtpSent(true)
+      setOtpCode('')
+      const secs = getCooldownSeconds(nextCount)
+      if (secs > 0) startCooldown(secs)
       toast.success('Codigo enviado! Verifique seu WhatsApp.')
     } catch (err: any) {
       toast.error(err.message || 'Erro ao enviar codigo OTP')
@@ -287,7 +321,7 @@ export function RegisterPage() {
                       value={phone} onChange={(e) => setPhone(e.target.value)}
                       disabled={otpSent}
                       className="h-11 flex-1 rounded-xl border border-neutral-200 bg-neutral-50 px-4 text-sm text-neutral-900 placeholder:text-neutral-400 focus:border-primary-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary-200 transition-all disabled:opacity-50" />
-                    <button type="button" onClick={handleSendOtp} disabled={otpLoading || otpSent}
+                    <button type="button" onClick={handleSendOtp} disabled={otpLoading || otpSent || cooldown > 0}
                       className="h-11 px-4 rounded-xl bg-primary-600 text-sm font-bold text-white hover:bg-primary-700 transition-colors disabled:opacity-50 flex items-center gap-1.5 shrink-0">
                       {otpLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
                       {otpSent ? 'Enviado' : 'Enviar'}
@@ -315,10 +349,15 @@ export function RegisterPage() {
                       className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-primary-500 to-primary-700 text-sm font-bold text-white shadow-md shadow-primary-200 transition-all hover:opacity-90 hover:shadow-lg disabled:opacity-60">
                       {(otpLoading || loading) ? <><Loader2 className="h-4 w-4 animate-spin" /> Verificando...</> : 'Verificar e criar conta'}
                     </button>
-                    <button type="button" onClick={() => { setOtpSent(false); setOtpCode('') }}
-                      className="flex w-full items-center justify-center gap-1.5 text-xs text-neutral-400 hover:text-neutral-600 transition-colors pt-1">
+                    <button
+                      type="button"
+                      onClick={() => { setOtpSent(false); setOtpCode('') }}
+                      disabled={cooldown > 0}
+                      className="flex w-full items-center justify-center gap-1.5 text-xs transition-colors pt-1 disabled:cursor-not-allowed text-neutral-400 hover:text-neutral-600 disabled:text-neutral-300">
                       <RefreshCw className="h-3 w-3" />
-                      Reenviar codigo
+                      {cooldown > 0
+                        ? `Aguarde ${Math.floor(cooldown / 60)}:${String(cooldown % 60).padStart(2, '0')} para reenviar`
+                        : 'Reenviar codigo'}
                     </button>
                   </form>
                 )}

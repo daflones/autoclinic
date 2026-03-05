@@ -1,38 +1,78 @@
-Preciso adicionar o Cloudflare Turnstile (captcha) nas páginas de cadastro, login e esqueceu a senha.
-Regra principal: O usuário só consegue submeter qualquer formulário após passar pela verificação do Turnstile. O captcha é a primeira barreira, antes de qualquer processamento.
-Fluxo em todas as 3 páginas:
+Aqui está a análise e reescrita clara das instruções:
 
-Usuário preenche o formulário
-Resolve o Turnstile (widget managed)
-Frontend envia os dados + captchaToken
-Backend valida o token na Cloudflare antes de qualquer lógica
-Se captcha inválido → rejeita com erro 400
-Se válido → processa normalmente (cadastro / login / reset de senha)
+PROMPT — Página de Administração
+Acesso e Autenticação
 
-Frontend — adicionar em cada formulário:
-html<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async></script>
-<div class="cf-turnstile" data-sitekey="0x4AAAAAAC1GLg91CsyHG0lg"></div>
-Pegar o token e enviar no body: document.querySelector('[name="cf-turnstile-response"]').value
-Backend — função reutilizável:
-javascriptasync function validateCaptcha(token) {
-  const res = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      secret: '0x4AAAAAAC1GLvcjDGEkJCq1f0gPctkBe5s',
-      response: token
-    })
-  });
-  const data = await res.json();
-  return data.success;
-}
-Usar essa função no início de cada endpoint: POST /register, POST /login, POST /forgot-password. Se validateCaptcha retornar false, rejeitar com status 400 e { error: 'Captcha inválido' }.
-Tipo do widget: Managed (invisível para usuários reais, desafio só para bots).
+Rota: /admin-page
+Tabela no banco: admins com colunas email, password_hash e cargo
+Apenas usuários com cargo = 'dev' podem acessar
+Senha armazenada com password_hash (bcrypt)
+Login via email + senha, validado contra a tabela admins
+Se não autenticado ou cargo diferente de dev → redireciona para login ou retorna 403
+
+SQL de seed — criar primeiro admin:
+sqlINSERT INTO admins (email, password_hash, cargo)
+VALUES (
+  'nanosyncdev@gmail.com',
+  '$2b$10$HASH_GERADO_DO_226602Ju$$$', -- gerar com bcrypt antes de inserir
+  'dev'
+);
+
+O sistema deve ter uma função utilitária para gerar o hash antes de rodar o seed.
 
 
-Site Key
-0x4AAAAAAClGLg91CsyHG0lg
+Funcionalidades da Página de Admin
+1. Gestão de Admins
+
+Criar novos usuários admin com cargo dev
+Listar admins existentes
+Deletar admins
 
 
-Secret Key
-0x4AAAAAAClGLvCjDGEkJCq1f0gPctkBe5s
+2. Gestão de Clínicas
+Painel com todas as clínicas cadastradas, exibindo:
+
+Nome, email, plano contratado, status do plano
+Data de vencimento da mensalidade
+
+Filtros de status:
+
+✅ Em dia — plano ativo e mensalidade paga
+⚠️ Em atraso — já foi cliente, plano vencido e não renovou
+❌ Sem plano — se cadastrou mas nunca comprou um plano
+
+Ações por clínica:
+
+Ativar ou desativar plano manualmente
+Editar informações da clínica
+Deletar clínica e todos os dados vinculados
+Ver procedimentos cadastrados
+Ver clientes da clínica
+Ver histórico de planos contratados
+
+
+3. Monitoramento de Instâncias WhatsApp
+
+Listar a instância Evolution API de cada clínica
+Ver status da conexão em tempo real (conectado / desconectado / aguardando QR)
+Possibilidade de verificar/reiniciar instância direto pelo painel
+
+
+4. Chats das Clínicas
+
+Acessar e visualizar os chats de cada clínica pelo painel admin
+Leitura em tempo real
+
+
+5. Gestão de Planos e Preços
+
+Alterar os valores dos planos diretamente pelo painel admin
+As alterações refletem automaticamente na landing page e na página de planos do sistema
+Os valores devem ser salvos no banco e consumidos dinamicamente pelo frontend (sem hardcode)
+
+
+Observações Técnicas
+
+Todos os dados devem ser carregados em tempo real (websocket ou polling)
+Todas as ações destrutivas (deletar, desativar) devem ter confirmação antes de executar
+A página deve ser protegida tanto no frontend (rota privada) quanto no backend (middleware de autenticação + verificação de cargo)

@@ -2,10 +2,11 @@ import { useState, useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import {
   Check, ChevronRight, Star, ArrowRight, MessageSquare,
-  Calendar, BarChart3, RefreshCw, Zap, Sparkles, Crown,
+  Calendar, BarChart3, RefreshCw, Zap, Sparkles,
   Mic, Image, Volume2, ChevronDown, Menu, X, TrendingUp,
-  Users, Clock, ShieldCheck, Play, ChevronLeft,
+  Users, Clock, ShieldCheck, Play, ChevronLeft, Loader2,
 } from 'lucide-react'
+import { usePlanos } from '@/hooks/usePlanos'
 
 /* ─────────────────────────── DADOS ESTÁTICOS ─────────────────────────── */
 
@@ -102,49 +103,10 @@ const testimonials = [
   },
 ]
 
-const plans = [
-  {
-    id: 'essential',
-    name: 'Essential',
-    tagline: 'Comece a converter',
-    priceLabel: 'R$ 197',
-    period: '/mês',
-    tokens: '1.000',
-    icon: Zap,
-    popular: false,
-    features: ['1.000 tokens/mês', 'IA lê imagens', 'IA transcreve áudios', 'Atendimento WhatsApp 24/7', 'CRM completo', 'Agendamento automático'],
-    cta: 'Começar com Essential',
-  },
-  {
-    id: 'clinica_pro',
-    name: 'Clínica Pro',
-    tagline: 'O preferido das clínicas',
-    priceLabel: 'R$ 347',
-    period: '/mês',
-    tokens: '2.000',
-    icon: Sparkles,
-    popular: true,
-    features: ['2.000 tokens/mês', 'IA lê imagens', 'IA transcreve áudios', 'Atendimento WhatsApp 24/7', 'CRM completo', 'Agendamento automático'],
-    cta: 'Quero o Clínica Pro',
-  },
-  {
-    id: 'elite_ia',
-    name: 'Elite IA',
-    tagline: 'Experiência total com IA',
-    priceLabel: 'R$ 547',
-    period: '/mês',
-    tokens: '2.500',
-    icon: Crown,
-    popular: false,
-    features: ['2.500 tokens/mês', 'IA lê imagens', 'IA transcreve áudios', 'IA envia áudios personalizados', 'Atendimento WhatsApp 24/7', 'CRM completo', 'Agendamento automático'],
-    cta: 'Quero o Elite IA',
-  },
-]
-
 const faq = [
   { q: 'O AutomaClinic funciona para qualquer tipo de clínica?', a: 'Sim. O sistema é ideal para clínicas de estética facial, corporal, laser, harmonização e áreas afins. É configurado com os dados reais da sua clínica, então a IA fala especificamente sobre seus procedimentos.' },
   { q: 'Preciso ter experiência com tecnologia para usar?', a: 'Não. O AutomaClinic foi criado para ser simples. Você acessa o painel, visualiza os resultados e acompanha os pacientes.' },
-  { q: 'O que são tokens e como funcionam?', a: 'Tokens são as unidades que a IA usa para processar cada mensagem ou ação — resposta de texto, leitura de imagem, transcrição de áudio, agendamento, etc. Cada interação consome 1 token. Os tokens se renovam automaticamente todo mês.' },
+  { q: 'O que são tokens e como funcionam?', a: 'Tokens são as unidades que a IA usa para processar cada mensagem ou ação. Resposta de texto, leitura de imagem, transcrição de áudio, agendamento, etc. Cada interação consome 1 token. Os tokens se renovam automaticamente todo mês.' },
   { q: 'A IA realmente consegue agendar automaticamente?', a: 'Sim. A IA identifica a intenção do paciente, verifica a disponibilidade configurada por você e marca o horário sem precisar da recepção. Tudo registrado no CRM.' },
   { q: 'Posso personalizar as respostas da IA com informações da minha clínica?', a: 'Sim, e isso é o diferencial. Você alimenta a IA com seus procedimentos, valores, diferenciais, políticas e estratégias de conversão. Ela fala como se fosse parte da sua equipe.' },
   { q: 'Posso cancelar a qualquer momento?', a: 'Sim. Não há fidelidade ou multa. Você pode cancelar ou trocar de plano a qualquer momento diretamente pelo painel.' },
@@ -190,6 +152,7 @@ export default function LandingPage() {
   const [openFaq, setOpenFaq] = useState<number | null>(null)
   const [headerScrolled, setHeaderScrolled] = useState(false)
   const slideInterval = useRef<ReturnType<typeof setInterval> | null>(null)
+  const { planos, loading: planosLoading } = usePlanos()
 
   /* Auto-avanço do carrossel */
   useEffect(() => {
@@ -221,17 +184,12 @@ export default function LandingPage() {
       <header className={`sticky top-0 z-50 transition-all duration-300 ${headerScrolled ? 'bg-white/95 backdrop-blur-xl shadow-md shadow-primary-100/50' : 'bg-white/70 backdrop-blur-md'} border-b border-primary-50`}>
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
           {/* Logo */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center">
             <img
               src="/Logo.jpg"
               alt="AutoClinic"
-              className="h-10 w-auto rounded-xl object-contain"
-              onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none' }}
+              className="h-10 w-auto object-contain"
             />
-            <div className="hidden sm:block">
-              <span className="font-display text-lg font-bold text-neutral-900">AutoClinic</span>
-              <span className="ml-1.5 rounded-full bg-primary-100 px-2 py-0.5 text-[10px] font-bold text-primary-600">IA</span>
-            </div>
           </div>
 
           {/* Nav desktop */}
@@ -336,8 +294,8 @@ export default function LandingPage() {
               </h1>
 
               <p className="mb-8 text-lg leading-relaxed text-neutral-600 max-w-xl lg:max-w-none">
-                Um sistema inteligente que responde, converte, agenda, acompanha e traz o paciente de volta
-                — tudo de forma automática.
+                Um sistema inteligente que responde, converte, agenda, acompanha e traz o paciente de volta.
+                Tudo de forma automática.
               </p>
 
               <div className="mb-8 grid grid-cols-2 gap-3 max-w-md mx-auto lg:mx-0">
@@ -490,7 +448,7 @@ export default function LandingPage() {
             <SectionBadge>O problema real</SectionBadge>
             <h2 className="font-display text-3xl sm:text-4xl font-bold text-neutral-900 mb-4">
               Sua clínica perde dinheiro todos os dias
-              <span className="block text-primary-600">— mesmo com agenda vazia.</span>
+              <span className="block text-primary-600">mesmo com agenda vazia.</span>
             </h2>
             <p className="text-neutral-500 text-lg max-w-2xl mx-auto">
               A maioria das clínicas tem o mesmo problema:
@@ -609,7 +567,7 @@ export default function LandingPage() {
               Como o AutomaClinic aumenta seu faturamento
             </h2>
             <p className="text-neutral-500 text-lg max-w-2xl mx-auto">
-              Da primeira mensagem ao retorno do paciente — tudo automatizado, tudo registrado
+              Da primeira mensagem ao retorno do paciente. Tudo automatizado, tudo registrado
             </p>
           </div>
 
@@ -759,7 +717,7 @@ export default function LandingPage() {
                 você está deixando dinheiro na mesa.
               </p>
               <p className="text-neutral-400 text-sm leading-relaxed">
-                Cada lead que não recebe resposta rápida, cada paciente que some após a avaliação, cada procedimento sem retorno marcado — isso é receita perdida.
+                Cada lead que não recebe resposta rápida, cada paciente que some após a avaliação, cada procedimento sem retorno marcado. Isso é receita perdida.
               </p>
               <Link
                 to="/planos"
@@ -825,15 +783,20 @@ export default function LandingPage() {
             </p>
           </div>
 
+          {planosLoading ? (
+            <div className="flex justify-center py-16">
+              <Loader2 className="h-8 w-8 animate-spin text-primary-400" />
+            </div>
+          ) : (
           <div className="grid gap-6 lg:grid-cols-3 mb-10">
-            {plans.map((plan) => {
+            {planos.map((plan) => {
               const Icon = plan.icon
               return (
                 <div
                   key={plan.id}
                   className={`relative flex flex-col rounded-3xl border bg-white shadow-md transition-all hover:-translate-y-1 hover:shadow-xl ${
                     plan.popular
-                      ? 'border-primary-300 ring-2 ring-primary-200 shadow-lg'
+                      ? `border-primary-300 ring-2 ${plan.config.ringClass} shadow-lg`
                       : 'border-neutral-100'
                   }`}
                 >
@@ -849,13 +812,13 @@ export default function LandingPage() {
                   <div className="flex flex-col flex-1 p-7">
                     <div className="mb-5 flex items-start justify-between">
                       <div>
-                        <div className="mb-2 flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-primary-400 to-primary-700 shadow-md">
+                        <div className={`mb-2 flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br ${plan.config.iconBg} shadow-md`}>
                           <Icon className="h-5 w-5 text-white" />
                         </div>
                         <p className="text-xs font-semibold uppercase tracking-widest text-neutral-400">{plan.tagline}</p>
-                        <h3 className="font-display text-xl font-bold text-neutral-900">{plan.name}</h3>
+                        <h3 className="font-display text-xl font-bold text-neutral-900">{plan.nome}</h3>
                       </div>
-                      <span className="rounded-full bg-primary-100 px-3 py-1 text-xs font-bold text-primary-700">
+                      <span className={`rounded-full px-3 py-1 text-xs font-bold ${plan.config.badgeBg} ${plan.config.badgeText}`}>
                         {plan.tokens} tokens
                       </span>
                     </div>
@@ -868,10 +831,10 @@ export default function LandingPage() {
                     </div>
 
                     <ul className="mb-6 space-y-2 flex-1">
-                      {plan.features.map((f, i) => (
+                      {plan.features.map((f, i: number) => (
                         <li key={i} className="flex items-center gap-2 text-sm text-neutral-600">
                           <Check className="h-3.5 w-3.5 shrink-0 text-primary-500" />
-                          {f}
+                          {f.text}
                         </li>
                       ))}
                     </ul>
@@ -884,7 +847,7 @@ export default function LandingPage() {
                           : 'border border-primary-200 bg-primary-50 text-primary-700 hover:bg-primary-100'
                       }`}
                     >
-                      {plan.cta}
+                      {plan.config.cta}
                       <ChevronRight className="h-4 w-4" />
                     </Link>
                   </div>
@@ -892,6 +855,7 @@ export default function LandingPage() {
               )
             })}
           </div>
+          )}
 
           <p className="text-center text-sm text-neutral-400">
             Todos os planos incluem suporte, atualizações automáticas e CRM completo.{' '}

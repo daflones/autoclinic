@@ -8,7 +8,7 @@ import {
   type PlanoTratamentoUpdateData,
   type StatusPlanoTratamento,
 } from '@/services/api/planos-tratamento'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 import { useAutoRefresh } from '@/hooks/useAutoRefresh'
 
 export function usePlanosTratamento(filters: PlanoTratamentoFilters = {}) {

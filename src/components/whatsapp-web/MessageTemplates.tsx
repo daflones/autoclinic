@@ -20,7 +20,7 @@ import {
   Clock
 } from 'lucide-react'
 import type { WhatsAppContact } from '@/hooks/useWhatsAppWeb'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 
 interface MessageTemplate {
   id: string

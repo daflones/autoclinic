@@ -1,20 +1,21 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { upsertIAConfig, testIAConfig, type IAConfig } from '@/services/api/ia-config'
+import { getIAConfig, upsertIAConfig, testIAConfig, type IAConfig } from '@/services/api/ia-config'
 import { useAuthStore } from '@/stores/authStore'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 
 // Hook para buscar configurações de IA
 export const useIAConfig = () => {
   const { user } = useAuthStore()
 
-  return useQuery({
+  return useQuery<IAConfig | null>({
     queryKey: ['ia-config', user?.id],
     queryFn: async () => {
-      return { data: null }
+      if (!user?.id) return null
+      const { data } = await getIAConfig(user.id)
+      return data
     },
-    enabled: false,
+    enabled: !!user?.id,
     staleTime: 5 * 60 * 1000, // 5 minutos
-    select: (response) => response?.data,
     retry: false // Não tentar novamente em caso de 404
   })
 }

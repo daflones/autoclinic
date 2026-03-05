@@ -25,7 +25,7 @@ import { useSegmentos } from '@/hooks/useSegmentos'
 import { useIsAdmin } from '@/hooks/useAuth'
 import { PlanoAtivoButton } from '@/components/PlanoAtivoGuard'
 import { storageService } from '@/services/storage'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 import { useNotifications } from '@/contexts/NotificationContext'
 import type { Produto, ProdutoCreateData, ProdutoUpdateData } from '@/services/api/produtos'
 

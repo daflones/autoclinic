@@ -6,6 +6,7 @@ import { Loader2, Plus, Search, Users, UserPlus, Activity, Ban, Trash2, Pencil }
 import { useQueryClient } from '@tanstack/react-query'
 
 import { Button } from '@/components/ui/button'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { FileUploadButton } from '@/components/ui/file-upload-button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -46,6 +47,7 @@ import {
   useUpdatePaciente,
   useDeletePaciente,
 } from '@/hooks/usePacientes'
+import { useWhatsAppConversas } from '@/hooks/useWhatsAppChat'
 import {
   useAgendamentosClinica,
   useDeleteAgendamentoClinica,
@@ -105,7 +107,7 @@ const pacienteSchema = z.object({
   data_nascimento: z
     .string()
     .optional()
-    .transform((value) => (value && value.trim() === '' ? undefined : value)),
+    .transform((value) => (value !== undefined && String(value).trim() === '' ? undefined : value)),
   fonte_captacao: z
     .string()
     .optional()
@@ -220,6 +222,52 @@ export function PacientesPage() {
     count: totalPacientes = 0,
     isLoading,
   } = usePacientes(pacienteFilters)
+
+  const conversasQuery = useWhatsAppConversas()
+
+  const getPhoneDigits = (value?: string | null) => String(value || '').replace(/\D/g, '')
+
+  const getPhoneKeys = (digits: string) => {
+    if (!digits) return [] as string[]
+    const last11 = digits.slice(-11)
+    const last10 = digits.slice(-10)
+    return [digits, last11, last10].filter(Boolean)
+  }
+
+  const conversaPhotoByPacienteId = useMemo(() => {
+    const map = new Map<string, string>()
+    const phoneMap = new Map<string, string>()
+    const conversas = conversasQuery.data ?? []
+
+    conversas.forEach((conversa) => {
+      const foto = conversa.foto_perfil_url
+      if (!foto) return
+
+      if (conversa.paciente_id && !map.has(conversa.paciente_id)) {
+        map.set(conversa.paciente_id, foto)
+      }
+
+      const digits = getPhoneDigits(conversa.numero_telefone) || getPhoneDigits(conversa.remote_jid?.split('@')[0])
+      getPhoneKeys(digits).forEach((key) => {
+        if (key && !phoneMap.has(key)) phoneMap.set(key, foto)
+      })
+    })
+
+    return { byPacienteId: map, byPhone: phoneMap }
+  }, [conversasQuery.data])
+
+  const getPacienteAvatarUrl = (paciente: any) => {
+    if (!paciente) return ''
+    const direct = conversaPhotoByPacienteId.byPacienteId.get(paciente.id)
+    if (direct) return direct
+    const digits = getPhoneDigits(paciente.whatsapp || paciente.telefone)
+    const keys = getPhoneKeys(digits)
+    for (const key of keys) {
+      const foto = conversaPhotoByPacienteId.byPhone.get(key)
+      if (foto) return foto
+    }
+    return ''
+  }
 
   const kanbanColumns = useMemo(
     () => [
@@ -672,9 +720,12 @@ export function PacientesPage() {
                     className="flex items-center gap-3 rounded-xl border border-border/50 bg-background/60 p-3 active:bg-muted/40 transition-colors"
                     onClick={() => openPacienteDetails(paciente.id)}
                   >
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary-400 to-secondary-400 text-sm font-bold text-white">
-                      {paciente.nome_completo?.charAt(0).toUpperCase()}
-                    </div>
+                    <Avatar className="h-10 w-10 shrink-0">
+                      <AvatarImage src={getPacienteAvatarUrl(paciente)} alt={paciente.nome_completo || 'Paciente'} />
+                      <AvatarFallback className="bg-gradient-to-br from-primary-400 to-secondary-400 text-sm font-bold text-white">
+                        {(paciente.nome_completo || paciente.nome_social || 'P').charAt(0).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center justify-between gap-2">
                         <p className="truncate text-sm font-medium text-foreground">{paciente.nome_completo}</p>
@@ -748,10 +799,20 @@ export function PacientesPage() {
                           onClick={() => openPacienteDetails(paciente.id)}
                         >
                           <td className="px-5 py-4 align-top">
-                            <div className="font-medium text-foreground">{paciente.nome_completo}</div>
-                            {paciente.fonte_captacao && (
-                              <p className="text-xs text-muted-foreground">Fonte: {paciente.fonte_captacao}</p>
-                            )}
+                            <div className="flex items-start gap-3">
+                              <Avatar className="h-9 w-9 shrink-0">
+                                <AvatarImage src={getPacienteAvatarUrl(paciente)} alt={paciente.nome_completo || 'Paciente'} />
+                                <AvatarFallback className="bg-gradient-to-br from-primary-400 to-secondary-400 text-sm font-bold text-white">
+                                  {(paciente.nome_completo || paciente.nome_social || 'P').charAt(0).toUpperCase()}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div>
+                                <div className="font-medium text-foreground">{paciente.nome_completo}</div>
+                                {paciente.fonte_captacao && (
+                                  <p className="text-xs text-muted-foreground">Fonte: {paciente.fonte_captacao}</p>
+                                )}
+                              </div>
+                            </div>
                           </td>
                           <td className="px-5 py-4 align-top text-muted-foreground">
                             <div className="flex flex-col gap-1 text-xs">
@@ -857,7 +918,7 @@ export function PacientesPage() {
                                   <Trash2 className="h-4 w-4" />
                                 </Button>
                               </AlertDialogTrigger>
-                              <AlertDialogContent>
+                              <AlertDialogContent onClick={(e) => e.stopPropagation()}>
                                 <AlertDialogHeader>
                                   <AlertDialogTitle>Remover paciente?</AlertDialogTitle>
                                   <AlertDialogDescription>
@@ -876,7 +937,8 @@ export function PacientesPage() {
                                   </AlertDialogCancel>
                                   <AlertDialogAction
                                     disabled={deletePaciente.isPending}
-                                    onClick={async () => {
+                                    onClick={async (e) => {
+                                      e.stopPropagation()
                                       try {
                                         await deletePaciente.mutateAsync(paciente.id)
                                         setDeletePacienteId(null)
@@ -1249,10 +1311,10 @@ export function PacientesPage() {
 
             return (
               <div className="space-y-4">
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                  <div>
+                <div className="flex flex-col items-center gap-3 py-2">
+                  <div className="text-center space-y-2">
                     <div className="text-xl font-semibold text-foreground">{paciente.nome_completo}</div>
-                    <div className="mt-2 flex flex-wrap gap-2">
+                    <div className="flex flex-wrap gap-2 justify-center">
                       <span
                         className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ${getStatusColor(
                           paciente.status,
@@ -1265,9 +1327,13 @@ export function PacientesPage() {
                       </span>
                     </div>
                   </div>
-
-                  <div className="text-sm text-muted-foreground">
-                    {paciente.whatsapp ? `Whatsapp: ${paciente.whatsapp}` : paciente.telefone ? `Telefone: ${paciente.telefone}` : ''}
+                  <div className="relative">
+                    <Avatar className="h-32 w-28 rounded-xl border-4 border-white shadow-lg dark:border-gray-700">
+                      <AvatarImage src={getPacienteAvatarUrl(paciente)} alt={paciente.nome_completo || 'Paciente'} className="rounded-lg object-cover" />
+                      <AvatarFallback className="bg-gradient-to-br from-primary-400 to-secondary-400 text-2xl font-semibold text-white rounded-lg">
+                        {(paciente.nome_completo || paciente.nome_social || 'P').charAt(0).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
                   </div>
                 </div>
 

@@ -37,7 +37,7 @@ import { PlanoAtivoButton } from '@/components/PlanoAtivoGuard'
 import { useForm, useWatch } from 'react-hook-form'
 import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 import { useNotifications } from '@/contexts/NotificationContext'
 import {
   Dialog,

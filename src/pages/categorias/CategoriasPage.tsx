@@ -49,7 +49,7 @@ import {
 } from 'lucide-react'
 import { useCategorias, useCreateCategoria, useUpdateCategoria, useDeleteCategoria } from '@/hooks/useCategorias'
 import { useProdutos } from '@/hooks/useProdutos'
-import { toast } from 'sonner'
+import { toast } from '@/lib/toast'
 import { useNotifications } from '@/contexts/NotificationContext'
 import type { Categoria, CategoriaCreateData } from '@/services/api/categorias'
 

@@ -3887,28 +3887,26 @@ app.patch('/api/admin/clinicas/:id/ia-config', adminAuthMiddleware, async (req, 
 })
 
 // =====================================================
-// Instagram OAuth 2.0
+// Instagram OAuth 2.0 (Instagram API with Business Login)
+// Auth:  https://www.instagram.com/oauth/authorize
+// Token: https://api.instagram.com/oauth/access_token
+// Graph: https://graph.instagram.com
 // =====================================================
 
 const IG_APP_ID = process.env.INSTAGRAM_APP_ID || ''
 const IG_APP_SECRET = process.env.INSTAGRAM_APP_SECRET || ''
 const IG_REDIRECT_URI = process.env.INSTAGRAM_REDIRECT_URI || 'http://localhost:5173/app/instagram/callback'
-const IG_CONFIG_ID = process.env.INSTAGRAM_CONFIG_ID || ''
 
-const IG_GRAPH_VERSION = process.env.INSTAGRAM_GRAPH_VERSION || 'v21.0'
-
-function getFacebookDialogOAuthUrl() {
-  return `https://www.facebook.com/${IG_GRAPH_VERSION}/dialog/oauth`
-}
-
-function getFacebookGraphBaseUrl() {
-  return `https://graph.facebook.com/${IG_GRAPH_VERSION}`
-}
+const IG_AUTH_URL = 'https://www.instagram.com/oauth/authorize'
+const IG_TOKEN_URL = 'https://api.instagram.com/oauth/access_token'
+const IG_LONG_TOKEN_URL = 'https://graph.instagram.com/access_token'
+const IG_GRAPH_BASE = 'https://graph.instagram.com'
 
 // GET /api/instagram/auth-url  — returns the OAuth authorization URL
 app.get('/api/instagram/auth-url', requireAuth, async (req, res) => {
   try {
-    if (!IG_APP_ID) return res.status(503).json({ error: 'Instagram App ID não configurado. Adicione INSTAGRAM_APP_ID no .env' })
+    if (!IG_APP_ID) return res.status(503).json({ error: 'INSTAGRAM_APP_ID não configurado no .env' })
+    if (!IG_APP_SECRET) return res.status(503).json({ error: 'INSTAGRAM_APP_SECRET não configurado no .env' })
 
     // Compute redirect URI from the request Origin header so it works in both dev and production
     const requestOrigin = req.headers.origin || req.headers.referer?.split('/').slice(0, 3).join('/')
@@ -3919,24 +3917,16 @@ app.get('/api/instagram/auth-url', requireAuth, async (req, res) => {
     // Encode redirect_uri in state so the callback endpoint uses the exact same URI
     const state = Buffer.from(JSON.stringify({ redirect_uri: redirectUri })).toString('base64')
 
-    let url
-    if (IG_CONFIG_ID) {
-      // Facebook Login for Business: use config_id instead of scope (required for Business type apps)
-      // config_id is created in Meta Developer Console > Facebook Login for Business > Settings > Create Configuration
-      url = `${getFacebookDialogOAuthUrl()}?client_id=${encodeURIComponent(IG_APP_ID)}&redirect_uri=${encodeURIComponent(redirectUri)}&config_id=${encodeURIComponent(IG_CONFIG_ID)}&response_type=code&override_default_response_type=true&state=${encodeURIComponent(state)}`
-    } else {
-      // Fallback: Instagram API with Business Login scopes (only used if INSTAGRAM_CONFIG_ID is not set)
-      const scopes = [
-        'instagram_business_basic',
-        'instagram_business_content_publish',
-        'instagram_business_manage_comments',
-        'instagram_business_manage_messages',
-        'instagram_business_manage_insights',
-        'pages_show_list',
-        'pages_read_engagement',
-      ].join(',')
-      url = `${getFacebookDialogOAuthUrl()}?client_id=${encodeURIComponent(IG_APP_ID)}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(scopes)}&response_type=code&state=${encodeURIComponent(state)}`
-    }
+    // Instagram API with Business Login scopes
+    const scopes = [
+      'instagram_business_basic',
+      'instagram_business_manage_comments',
+      'instagram_business_manage_messages',
+      'instagram_business_manage_insights',
+      'instagram_business_content_publish',
+    ].join(',')
+
+    const url = `${IG_AUTH_URL}?client_id=${encodeURIComponent(IG_APP_ID)}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(scopes)}&response_type=code&state=${encodeURIComponent(state)}`
     res.json({ url })
   } catch (err) { res.status(500).json({ error: err?.message }) }
 })
@@ -3960,31 +3950,32 @@ app.post('/api/instagram/callback', requireAuth, async (req, res) => {
     const { clinicAdminId } = await resolveClinicAdminAndInstance(req.accessToken)
     if (!clinicAdminId) return res.status(401).json({ error: 'Clínica não identificada' })
 
-    // Exchange code for short-lived Facebook user access token
-    const tokenRes = await axios.get(`${getFacebookGraphBaseUrl()}/oauth/access_token`, {
-      params: {
-        client_id: IG_APP_ID,
-        client_secret: IG_APP_SECRET,
-        redirect_uri: redirectUri,
-        code,
-      },
+    // 1. Exchange code for short-lived Instagram token
+    const tokenRes = await axios.post(IG_TOKEN_URL, new URLSearchParams({
+      client_id: IG_APP_ID,
+      client_secret: IG_APP_SECRET,
+      grant_type: 'authorization_code',
+      redirect_uri: redirectUri,
+      code,
+    }).toString(), {
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       validateStatus: () => true,
     })
 
     if (tokenRes.status < 200 || tokenRes.status >= 300) {
-      throw new Error(tokenRes.data?.error?.message || 'Falha ao trocar code por access_token (Facebook OAuth)')
+      throw new Error(tokenRes.data?.error_message || tokenRes.data?.error?.message || 'Falha ao trocar code por access_token')
     }
 
     const shortToken = tokenRes.data?.access_token
+    const igUserId = String(tokenRes.data?.user_id || '')
     if (!shortToken) throw new Error('Access token ausente no retorno do OAuth')
 
-    // Exchange for long-lived token (~60 days)
-    const longRes = await axios.get(`${getFacebookGraphBaseUrl()}/oauth/access_token`, {
+    // 2. Exchange for long-lived token (~60 days)
+    const longRes = await axios.get(IG_LONG_TOKEN_URL, {
       params: {
-        grant_type: 'fb_exchange_token',
-        client_id: IG_APP_ID,
+        grant_type: 'ig_exchange_token',
         client_secret: IG_APP_SECRET,
-        fb_exchange_token: shortToken,
+        access_token: shortToken,
       },
       validateStatus: () => true,
     })
@@ -3994,32 +3985,13 @@ app.post('/api/instagram/callback', requireAuth, async (req, res) => {
     }
 
     const longToken = longRes.data?.access_token
-    const expires_in = longRes.data?.expires_in
+    const expires_in = longRes.data?.expires_in || 5183944
     if (!longToken) throw new Error('Long-lived token ausente')
 
-    // Find Instagram Business Account connected to a Facebook Page
-    const pagesRes = await axios.get(`${getFacebookGraphBaseUrl()}/me/accounts`, {
+    // 3. Fetch Instagram profile
+    const profileRes = await axios.get(`${IG_GRAPH_BASE}/me`, {
       params: {
-        fields: 'id,name,instagram_business_account',
-        access_token: longToken,
-      },
-      validateStatus: () => true,
-    })
-
-    if (pagesRes.status < 200 || pagesRes.status >= 300) {
-      throw new Error(pagesRes.data?.error?.message || 'Falha ao buscar páginas (me/accounts)')
-    }
-
-    const pages = pagesRes.data?.data || []
-    const pageWithIg = pages.find((p) => p?.instagram_business_account?.id)
-    const igUserId = pageWithIg?.instagram_business_account?.id
-    if (!igUserId) {
-      throw new Error('Nenhuma conta Instagram Business/Creator encontrada vinculada a uma Página do Facebook. Verifique se o Instagram é conta Profissional e está conectado a uma Página.')
-    }
-
-    const profileRes = await axios.get(`${getFacebookGraphBaseUrl()}/${igUserId}`, {
-      params: {
-        fields: 'id,username,profile_picture_url',
+        fields: 'id,username,profile_picture_url,followers_count,follows_count,media_count',
         access_token: longToken,
       },
       validateStatus: () => true,
@@ -4030,22 +4002,21 @@ app.post('/api/instagram/callback', requireAuth, async (req, res) => {
     }
 
     const profile = profileRes.data
-
     const expiresAt = new Date(Date.now() + expires_in * 1000).toISOString()
 
-    // Save to DB in profiles table (instagram_token column)
+    // 4. Save to DB
     await supabaseRest(`profiles?id=eq.${clinicAdminId}`, {
       method: 'PATCH',
       data: {
         instagram_token: longToken,
-        instagram_user_id: String(igUserId),
+        instagram_user_id: String(igUserId || profile.id),
         instagram_username: profile.username,
         instagram_token_expires_at: expiresAt,
         updated_at: new Date().toISOString(),
       },
     })
 
-    res.json({ ok: true, username: profile.username, userId: igUserId, expiresAt })
+    res.json({ ok: true, username: profile.username, userId: igUserId || profile.id, expiresAt })
   } catch (err) {
     console.error('[instagram/callback]', err?.response?.data || err?.message)
     res.status(500).json({ error: err?.response?.data?.error_message || err?.message || 'Erro ao trocar código por token' })
@@ -4056,14 +4027,14 @@ app.post('/api/instagram/callback', requireAuth, async (req, res) => {
 app.get('/api/instagram/status', requireAuth, async (req, res) => {
   try {
     const { clinicAdminId } = await resolveClinicAdminAndInstance(req.accessToken)
-    if (!clinicAdminId) return res.status(401).json({ connected: false, appConfigured: Boolean(IG_APP_ID), configIdConfigured: Boolean(IG_CONFIG_ID) })
+    if (!clinicAdminId) return res.status(401).json({ connected: false, appConfigured: Boolean(IG_APP_ID) })
 
     const rows = await supabaseRest(
       `profiles?select=instagram_token,instagram_username,instagram_user_id,instagram_token_expires_at&id=eq.${clinicAdminId}`,
       { method: 'GET' }
     )
     const p = Array.isArray(rows) ? rows[0] : rows
-    if (!p?.instagram_token) return res.json({ connected: false, appConfigured: Boolean(IG_APP_ID), configIdConfigured: Boolean(IG_CONFIG_ID) })
+    if (!p?.instagram_token) return res.json({ connected: false, appConfigured: Boolean(IG_APP_ID) })
 
     const expired = p.instagram_token_expires_at && new Date(p.instagram_token_expires_at) < new Date()
     res.json({
@@ -4072,13 +4043,8 @@ app.get('/api/instagram/status', requireAuth, async (req, res) => {
       userId: p.instagram_user_id,
       expiresAt: p.instagram_token_expires_at,
       appConfigured: Boolean(IG_APP_ID),
-      configIdConfigured: Boolean(IG_CONFIG_ID),
     })
   } catch (err) {
-    // If columns don't exist, treat as not connected
-    if (err.message?.includes('column') && err.message?.includes('does not exist')) {
-      return res.json({ connected: false, appConfigured: Boolean(IG_APP_ID) })
-    }
     res.status(500).json({ connected: false, error: err?.message })
   }
 })
@@ -4104,7 +4070,7 @@ app.get('/api/instagram/media', requireAuth, async (req, res) => {
     const p = Array.isArray(rows) ? rows[0] : rows
     if (!p?.instagram_token) return res.status(401).json({ error: 'Instagram não conectado' })
 
-    const mediaRes = await axios.get(`${getFacebookGraphBaseUrl()}/${p.instagram_user_id}/media`, {
+    const mediaRes = await axios.get(`${IG_GRAPH_BASE}/${p.instagram_user_id}/media`, {
       params: { fields: 'id,caption,media_type,media_url,thumbnail_url,timestamp,like_count,comments_count,permalink', access_token: p.instagram_token },
       validateStatus: () => true,
     })

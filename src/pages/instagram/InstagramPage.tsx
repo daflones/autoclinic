@@ -14,7 +14,6 @@ interface IGStatus {
   userId?: string
   expiresAt?: string
   appConfigured?: boolean
-  configIdConfigured?: boolean
 }
 
 interface IGMedia {
@@ -60,16 +59,12 @@ async function apiFetch(path: string, opts: RequestInit = {}) {
   return json
 }
 
-function ConnectInstagramScreen({ appConfigured, configIdConfigured }: { appConfigured: boolean; configIdConfigured: boolean }) {
+function ConnectInstagramScreen({ appConfigured }: { appConfigured: boolean }) {
   const [loading, setLoading] = useState(false)
 
   const handleConnect = async () => {
     if (!appConfigured) {
       toast.error('INSTAGRAM_APP_ID não configurado no servidor. Adicione no .env e reinicie.')
-      return
-    }
-    if (!configIdConfigured) {
-      toast.error('INSTAGRAM_CONFIG_ID não configurado. Crie uma configuração no Meta Developer e adicione no .env.')
       return
     }
     setLoading(true)
@@ -129,37 +124,13 @@ function ConnectInstagramScreen({ appConfigured, configIdConfigured }: { appConf
         </div>
       )}
 
-      {appConfigured && !configIdConfigured && (
-        <div className="mb-4 w-full max-w-sm rounded-2xl border border-red-200 bg-red-50 px-5 py-4 text-left dark:border-red-800/40 dark:bg-red-900/20">
-          <div className="mb-1 flex items-center gap-2 text-sm font-semibold text-red-700 dark:text-red-400">
-            <AlertCircle className="h-4 w-4" />
-            Config ID obrigatório (Facebook Login para Empresas)
-          </div>
-          <p className="text-xs text-red-600 dark:text-red-300">
-            Seu app é do tipo <strong>Empresa</strong>. Você precisa criar uma <strong>Configuração</strong> no Meta Developer e adicionar o <code className="rounded bg-red-100 px-1 dark:bg-red-800/40">INSTAGRAM_CONFIG_ID</code> no <code className="rounded bg-red-100 px-1 dark:bg-red-800/40">.env</code>.
-          </p>
-          <p className="mt-1.5 text-xs text-red-500 dark:text-red-400">
-            Caminho: <strong>Meta Developer → Login do Facebook para Empresas → Configurações → Criar configuração</strong>
-          </p>
-          <a
-            href="https://developers.facebook.com/apps"
-            target="_blank"
-            rel="noreferrer"
-            className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-red-700 hover:underline dark:text-red-300"
-          >
-            <ExternalLink className="h-3 w-3" />
-            Abrir Meta Developer Console
-          </a>
-        </div>
-      )}
-
       <Button
         size="lg"
-        disabled={loading || !appConfigured || !configIdConfigured}
+        disabled={loading || !appConfigured}
         onClick={handleConnect}
         className={cn(
           'gap-2 bg-gradient-to-r from-pink-500 via-purple-500 to-orange-400 text-white shadow-lg hover:opacity-90',
-          (!appConfigured || !configIdConfigured) && 'opacity-50 cursor-not-allowed'
+          !appConfigured && 'opacity-50 cursor-not-allowed'
         )}
       >
         {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <LogIn className="h-4 w-4" />}
@@ -511,7 +482,7 @@ export function InstagramPage() {
       </div>
 
       {!isConnected ? (
-        <ConnectInstagramScreen appConfigured={status?.appConfigured ?? false} configIdConfigured={status?.configIdConfigured ?? false} />
+        <ConnectInstagramScreen appConfigured={status?.appConfigured ?? false} />
       ) : (
         <>
           <div className="flex gap-1 overflow-x-auto rounded-2xl border border-white/40 bg-white/50 p-1.5 shadow-sm dark:border-white/10 dark:bg-neutral-800/50">

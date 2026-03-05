@@ -3925,15 +3925,15 @@ app.get('/api/instagram/auth-url', requireAuth, async (req, res) => {
       // config_id is created in Meta Developer Console > Facebook Login for Business > Settings > Create Configuration
       url = `${getFacebookDialogOAuthUrl()}?client_id=${encodeURIComponent(IG_APP_ID)}&redirect_uri=${encodeURIComponent(redirectUri)}&config_id=${encodeURIComponent(IG_CONFIG_ID)}&response_type=code&override_default_response_type=true&state=${encodeURIComponent(state)}`
     } else {
-      // Fallback: legacy Facebook Login with explicit scopes (works only for non-Business type apps)
+      // Fallback: Instagram API with Business Login scopes (only used if INSTAGRAM_CONFIG_ID is not set)
       const scopes = [
-        'instagram_basic',
-        'instagram_content_publish',
-        'instagram_manage_comments',
-        'instagram_manage_insights',
+        'instagram_business_basic',
+        'instagram_business_content_publish',
+        'instagram_business_manage_comments',
+        'instagram_business_manage_messages',
+        'instagram_business_manage_insights',
         'pages_show_list',
         'pages_read_engagement',
-        'business_management',
       ].join(',')
       url = `${getFacebookDialogOAuthUrl()}?client_id=${encodeURIComponent(IG_APP_ID)}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(scopes)}&response_type=code&state=${encodeURIComponent(state)}`
     }

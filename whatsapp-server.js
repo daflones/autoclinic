@@ -3908,7 +3908,11 @@ app.get('/api/instagram/auth-url', requireAuth, async (req, res) => {
     if (!IG_APP_ID) return res.status(503).json({ error: 'INSTAGRAM_APP_ID não configurado no .env' })
     if (!IG_APP_SECRET) return res.status(503).json({ error: 'INSTAGRAM_APP_SECRET não configurado no .env' })
 
-    const redirectUri = IG_REDIRECT_URI
+    // Dynamic: use request origin so localhost and production both work
+    const requestOrigin = req.headers.origin || req.headers.referer?.split('/').slice(0, 3).join('/')
+    const redirectUri = requestOrigin ? `${requestOrigin}/app/instagram/callback` : IG_REDIRECT_URI
+
+    console.log('[instagram/auth-url] redirect_uri being used:', redirectUri)
 
     // Encode redirect_uri in state so the callback endpoint uses the exact same URI
     const state = Buffer.from(JSON.stringify({ redirect_uri: redirectUri })).toString('base64')
@@ -4062,21 +4066,283 @@ app.delete('/api/instagram/disconnect', requireAuth, async (req, res) => {
 app.get('/api/instagram/media', requireAuth, async (req, res) => {
   try {
     const { clinicAdminId } = await resolveClinicAdminAndInstance(req.accessToken)
-    const rows = await supabaseRest(`profiles?select=instagram_token,instagram_user_id&id=eq.${clinicAdminId}`, { method: 'GET' })
+    const rows = await supabaseRest(`profiles?select=instagram_token&id=eq.${clinicAdminId}`, { method: 'GET' })
     const p = Array.isArray(rows) ? rows[0] : rows
     if (!p?.instagram_token) return res.status(401).json({ error: 'Instagram não conectado' })
 
-    const mediaRes = await axios.get(`${IG_GRAPH_BASE}/${p.instagram_user_id}/media`, {
-      params: { fields: 'id,caption,media_type,media_url,thumbnail_url,timestamp,like_count,comments_count,permalink', access_token: p.instagram_token },
+    const mediaRes = await axios.get(`${IG_GRAPH_BASE}/me/media`, {
+      params: {
+        fields: 'id,caption,media_type,media_url,thumbnail_url,timestamp,like_count,comments_count,permalink,children{id,media_type,media_url,thumbnail_url}',
+        limit: 20,
+        access_token: p.instagram_token,
+      },
       validateStatus: () => true,
     })
 
     if (mediaRes.status < 200 || mediaRes.status >= 300) {
+      console.error('[instagram/media] API error:', mediaRes.status, JSON.stringify(mediaRes.data))
       throw new Error(mediaRes.data?.error?.message || 'Falha ao buscar mídia do Instagram')
     }
     res.json(mediaRes.data)
   } catch (err) {
     console.error('[instagram/media]', err?.response?.data || err?.message)
+    res.status(500).json({ error: err?.response?.data?.error?.message || err?.message })
+  }
+})
+
+// GET /api/instagram/comments — fetch comments from recent posts
+app.get('/api/instagram/comments', requireAuth, async (req, res) => {
+  try {
+    const { clinicAdminId } = await resolveClinicAdminAndInstance(req.accessToken)
+    const rows = await supabaseRest(`profiles?select=instagram_token&id=eq.${clinicAdminId}`, { method: 'GET' })
+    const p = Array.isArray(rows) ? rows[0] : rows
+    if (!p?.instagram_token) return res.status(401).json({ error: 'Instagram não conectado' })
+
+    const mediaRes = await axios.get(`${IG_GRAPH_BASE}/me/media`, {
+      params: { fields: 'id,caption', limit: 10, access_token: p.instagram_token },
+      validateStatus: () => true,
+    })
+    if (mediaRes.status < 200 || mediaRes.status >= 300) throw new Error(mediaRes.data?.error?.message || 'Falha ao buscar mídia')
+
+    const posts = mediaRes.data?.data || []
+    const allComments = []
+    await Promise.all(posts.slice(0, 8).map(async (post) => {
+      try {
+        const commRes = await axios.get(`${IG_GRAPH_BASE}/${post.id}/comments`, {
+          params: { fields: 'id,text,username,timestamp,replies{id,text,username,timestamp}', access_token: p.instagram_token },
+          validateStatus: () => true,
+        })
+        if (commRes.status === 200 && commRes.data?.data?.length) {
+          commRes.data.data.forEach(c => {
+            const replies = (c.replies?.data || []).map(r => ({ ...r }))
+            allComments.push({ ...c, replies: { data: replies }, post_id: post.id, post_caption: (post.caption || 'Post').slice(0, 60) })
+          })
+        }
+      } catch (_) {}
+    }))
+    allComments.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+    res.json({ data: allComments })
+  } catch (err) {
+    console.error('[instagram/comments]', err?.response?.data || err?.message)
+    res.status(500).json({ error: err?.response?.data?.error?.message || err?.message })
+  }
+})
+
+// POST /api/instagram/comments/:commentId/reply — reply to a comment
+app.post('/api/instagram/comments/:commentId/reply', requireAuth, async (req, res) => {
+  try {
+    const { clinicAdminId } = await resolveClinicAdminAndInstance(req.accessToken)
+    const rows = await supabaseRest(`profiles?select=instagram_token&id=eq.${clinicAdminId}`, { method: 'GET' })
+    const p = Array.isArray(rows) ? rows[0] : rows
+    if (!p?.instagram_token) return res.status(401).json({ error: 'Instagram não conectado' })
+    const { commentId } = req.params
+    const { message } = req.body
+    if (!message) return res.status(400).json({ error: 'Mensagem obrigatória' })
+    const replyRes = await axios.post(`${IG_GRAPH_BASE}/${commentId}/replies`, null, {
+      params: { message, access_token: p.instagram_token },
+      validateStatus: () => true,
+    })
+    if (replyRes.status < 200 || replyRes.status >= 300) throw new Error(replyRes.data?.error?.message || 'Falha ao responder comentário')
+    res.json({ ok: true, id: replyRes.data?.id })
+  } catch (err) {
+    console.error('[instagram/comments/reply]', err?.response?.data || err?.message)
+    res.status(500).json({ error: err?.response?.data?.error?.message || err?.message })
+  }
+})
+
+// GET /api/instagram/conversations — list Instagram DM conversations
+app.get('/api/instagram/conversations', requireAuth, async (req, res) => {
+  try {
+    const { clinicAdminId } = await resolveClinicAdminAndInstance(req.accessToken)
+    const rows = await supabaseRest(`profiles?select=instagram_token,instagram_user_id,instagram_username&id=eq.${clinicAdminId}`, { method: 'GET' })
+    const p = Array.isArray(rows) ? rows[0] : rows
+    if (!p?.instagram_token) return res.status(401).json({ error: 'Instagram não conectado' })
+    const convRes = await axios.get(`${IG_GRAPH_BASE}/me/conversations`, {
+      params: {
+        platform: 'instagram',
+        fields: 'id,participants{id,username,name,profile_pic},updated_time,messages.limit(1){id,from{id,username,name,profile_pic},message,created_time}',
+        access_token: p.instagram_token,
+      },
+      validateStatus: () => true,
+    })
+    if (convRes.status < 200 || convRes.status >= 300) {
+      console.error('[instagram/conversations] API error:', convRes.status, JSON.stringify(convRes.data))
+      throw new Error(convRes.data?.error?.message || 'Falha ao buscar conversas')
+    }
+    res.json({ ...convRes.data, myUserId: p.instagram_user_id, myUsername: p.instagram_username })
+  } catch (err) {
+    console.error('[instagram/conversations]', err?.response?.data || err?.message)
+    res.status(500).json({ error: err?.response?.data?.error?.message || err?.message })
+  }
+})
+
+// GET /api/instagram/conversations/:id/messages — messages in a conversation
+app.get('/api/instagram/conversations/:id/messages', requireAuth, async (req, res) => {
+  try {
+    const { clinicAdminId } = await resolveClinicAdminAndInstance(req.accessToken)
+    const rows = await supabaseRest(`profiles?select=instagram_token,instagram_user_id,instagram_username&id=eq.${clinicAdminId}`, { method: 'GET' })
+    const p = Array.isArray(rows) ? rows[0] : rows
+    if (!p?.instagram_token) return res.status(401).json({ error: 'Instagram não conectado' })
+    const { id } = req.params
+    const msgRes = await axios.get(`${IG_GRAPH_BASE}/${id}/messages`, {
+      params: { fields: 'id,from{id,username,name,profile_pic},message,created_time', limit: 50, access_token: p.instagram_token },
+      validateStatus: () => true,
+    })
+    if (msgRes.status < 200 || msgRes.status >= 300) throw new Error(msgRes.data?.error?.message || 'Falha ao buscar mensagens')
+    res.json({ ...msgRes.data, myUserId: p.instagram_user_id, myUsername: p.instagram_username })
+  } catch (err) {
+    console.error('[instagram/conversations/messages]', err?.response?.data || err?.message)
+    res.status(500).json({ error: err?.response?.data?.error?.message || err?.message })
+  }
+})
+
+// POST /api/instagram/messages/send — send Instagram DM
+app.post('/api/instagram/messages/send', requireAuth, async (req, res) => {
+  try {
+    const { clinicAdminId } = await resolveClinicAdminAndInstance(req.accessToken)
+    const rows = await supabaseRest(`profiles?select=instagram_token,instagram_user_id&id=eq.${clinicAdminId}`, { method: 'GET' })
+    const p = Array.isArray(rows) ? rows[0] : rows
+    if (!p?.instagram_token) return res.status(401).json({ error: 'Instagram não conectado' })
+    const userId = p.instagram_user_id
+    if (!userId) return res.status(400).json({ error: 'instagram_user_id não encontrado no perfil' })
+    const { recipientId, message } = req.body
+    if (!recipientId || !message) return res.status(400).json({ error: 'recipientId e message são obrigatórios' })
+    const sendRes = await axios.post(`${IG_GRAPH_BASE}/${userId}/messages`, {
+      recipient: { id: recipientId },
+      message: { text: message },
+    }, {
+      params: { access_token: p.instagram_token },
+      validateStatus: () => true,
+    })
+    if (sendRes.status < 200 || sendRes.status >= 300) throw new Error(sendRes.data?.error?.message || 'Falha ao enviar mensagem')
+    res.json({ ok: true, ...sendRes.data })
+  } catch (err) {
+    console.error('[instagram/messages/send]', err?.response?.data || err?.message)
+    res.status(500).json({ error: err?.response?.data?.error?.message || err?.message })
+  }
+})
+
+// POST /api/instagram/comments/:id/like — like a comment
+app.post('/api/instagram/comments/:id/like', requireAuth, async (req, res) => {
+  try {
+    const { clinicAdminId } = await resolveClinicAdminAndInstance(req.accessToken)
+    const rows = await supabaseRest(`profiles?select=instagram_token&id=eq.${clinicAdminId}`, { method: 'GET' })
+    const p = Array.isArray(rows) ? rows[0] : rows
+    if (!p?.instagram_token) return res.status(401).json({ error: 'Instagram não conectado' })
+    const { id } = req.params
+    const likeRes = await axios.post(`${IG_GRAPH_BASE}/${id}/likes`, null, {
+      params: { access_token: p.instagram_token },
+      validateStatus: () => true,
+    })
+    if (likeRes.status < 200 || likeRes.status >= 300) throw new Error(likeRes.data?.error?.message || 'Falha ao curtir comentário')
+    res.json({ ok: true })
+  } catch (err) {
+    console.error('[instagram/comments/like]', err?.response?.data || err?.message)
+    res.status(500).json({ error: err?.response?.data?.error?.message || err?.message })
+  }
+})
+
+// GET /api/instagram/image-proxy — proxy Instagram CDN images to avoid tracking/CORS blocks
+app.get('/api/instagram/image-proxy', async (req, res) => {
+  try {
+    const { url } = req.query
+    if (!url || typeof url !== 'string') return res.status(400).json({ error: 'url param required' })
+    if (!url.startsWith('https://') || (!url.includes('cdninstagram.com') && !url.includes('fbcdn.net') && !url.includes('instagram.com'))) {
+      return res.status(403).json({ error: 'URL não permitida' })
+    }
+    const imgRes = await axios.get(url, { responseType: 'arraybuffer', validateStatus: () => true })
+    const contentType = imgRes.headers['content-type'] || 'image/jpeg'
+    res.set('Content-Type', contentType)
+    res.set('Cache-Control', 'public, max-age=3600')
+    res.send(imgRes.data)
+  } catch (err) {
+    res.status(500).json({ error: err?.message })
+  }
+})
+
+// DELETE /api/instagram/media/:id — delete a published post
+app.delete('/api/instagram/media/:id', requireAuth, async (req, res) => {
+  try {
+    const { clinicAdminId } = await resolveClinicAdminAndInstance(req.accessToken)
+    const rows = await supabaseRest(`profiles?select=instagram_token&id=eq.${clinicAdminId}`, { method: 'GET' })
+    const p = Array.isArray(rows) ? rows[0] : rows
+    if (!p?.instagram_token) return res.status(401).json({ error: 'Instagram não conectado' })
+    const { id } = req.params
+    const delRes = await axios.delete(`${IG_GRAPH_BASE}/${id}`, {
+      params: { access_token: p.instagram_token },
+      validateStatus: () => true,
+    })
+    if (delRes.status < 200 || delRes.status >= 300) throw new Error(delRes.data?.error?.message || 'Falha ao excluir post')
+    res.json({ ok: true })
+  } catch (err) {
+    console.error('[instagram/media/delete]', err?.response?.data || err?.message)
+    res.status(500).json({ error: err?.response?.data?.error?.message || err?.message })
+  }
+})
+
+// GET /api/instagram/media/:id/comments — get comments for a specific post
+app.get('/api/instagram/media/:id/comments', requireAuth, async (req, res) => {
+  try {
+    const { clinicAdminId } = await resolveClinicAdminAndInstance(req.accessToken)
+    const rows = await supabaseRest(`profiles?select=instagram_token&id=eq.${clinicAdminId}`, { method: 'GET' })
+    const p = Array.isArray(rows) ? rows[0] : rows
+    if (!p?.instagram_token) return res.status(401).json({ error: 'Instagram não conectado' })
+    const { id } = req.params
+    const commRes = await axios.get(`${IG_GRAPH_BASE}/${id}/comments`, {
+      params: { fields: 'id,text,username,timestamp,replies{id,text,username,timestamp}', access_token: p.instagram_token },
+      validateStatus: () => true,
+    })
+    if (commRes.status < 200 || commRes.status >= 300) throw new Error(commRes.data?.error?.message || 'Falha ao buscar comentários')
+    res.json(commRes.data)
+  } catch (err) {
+    console.error('[instagram/media/comments]', err?.response?.data || err?.message)
+    res.status(500).json({ error: err?.response?.data?.error?.message || err?.message })
+  }
+})
+
+// POST /api/instagram/media/create — create and publish a new post (image URL required)
+app.post('/api/instagram/media/create', requireAuth, async (req, res) => {
+  try {
+    const { clinicAdminId } = await resolveClinicAdminAndInstance(req.accessToken)
+    const rows = await supabaseRest(`profiles?select=instagram_token,instagram_user_id&id=eq.${clinicAdminId}`, { method: 'GET' })
+    const p = Array.isArray(rows) ? rows[0] : rows
+    if (!p?.instagram_token) return res.status(401).json({ error: 'Instagram não conectado' })
+    const { image_url, caption } = req.body
+    if (!image_url) return res.status(400).json({ error: 'image_url é obrigatório' })
+    const userId = p.instagram_user_id
+    if (!userId) return res.status(400).json({ error: 'instagram_user_id não encontrado no perfil' })
+    const containerRes = await axios.post(`${IG_GRAPH_BASE}/${userId}/media`, {
+      image_url,
+      caption: caption || '',
+      access_token: p.instagram_token,
+    }, { validateStatus: () => true })
+    if (containerRes.status < 200 || containerRes.status >= 300) {
+      throw new Error(containerRes.data?.error?.message || 'Falha ao criar container de mídia')
+    }
+    const containerId = containerRes.data?.id
+    if (!containerId) throw new Error('Container ID não retornado pela API')
+    // Poll for container FINISHED status (up to 30s)
+    let ready = false
+    for (let i = 0; i < 6; i++) {
+      await new Promise(r => setTimeout(r, 5000))
+      const statusRes = await axios.get(`${IG_GRAPH_BASE}/${containerId}`, {
+        params: { fields: 'status_code', access_token: p.instagram_token },
+        validateStatus: () => true,
+      })
+      if (statusRes.data?.status_code === 'FINISHED') { ready = true; break }
+      if (statusRes.data?.status_code === 'ERROR') throw new Error('Instagram rejeitou a mídia. Verifique se a URL da imagem é pública e acessível.')
+    }
+    if (!ready) throw new Error('Timeout ao aguardar processamento da mídia pelo Instagram. Tente novamente.')
+    const publishRes = await axios.post(`${IG_GRAPH_BASE}/${userId}/media_publish`, {
+      creation_id: containerId,
+      access_token: p.instagram_token,
+    }, { validateStatus: () => true })
+    if (publishRes.status < 200 || publishRes.status >= 300) {
+      throw new Error(publishRes.data?.error?.message || 'Falha ao publicar post')
+    }
+    res.json({ ok: true, id: publishRes.data?.id })
+  } catch (err) {
+    console.error('[instagram/media/create]', err?.response?.data || err?.message)
     res.status(500).json({ error: err?.response?.data?.error?.message || err?.message })
   }
 })

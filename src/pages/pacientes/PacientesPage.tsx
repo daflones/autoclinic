@@ -6,6 +6,7 @@ import { Loader2, Plus, Search, Users, UserPlus, Activity, Ban, Trash2, Pencil }
 import { useQueryClient } from '@tanstack/react-query'
 
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { FileUploadButton } from '@/components/ui/file-upload-button'
 import { Input } from '@/components/ui/input'
@@ -728,7 +729,9 @@ export function PacientesPage() {
                     </Avatar>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center justify-between gap-2">
-                        <p className="truncate text-sm font-medium text-foreground">{paciente.nome_completo}</p>
+                        <p className="truncate text-sm font-medium text-foreground">
+                          {paciente.nome_completo || <Badge variant="secondary" className="text-[10px]">Coletando Nome</Badge>}
+                        </p>
                         <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium ${getStatusColor(paciente.status)}`}>
                           {formatStatus(paciente.status)}
                         </span>
@@ -807,7 +810,9 @@ export function PacientesPage() {
                                 </AvatarFallback>
                               </Avatar>
                               <div>
-                                <div className="font-medium text-foreground">{paciente.nome_completo}</div>
+                                <div className="font-medium text-foreground">
+                                  {paciente.nome_completo || <Badge variant="secondary" className="text-[10px]">Coletando Nome</Badge>}
+                                </div>
                                 {paciente.fonte_captacao && (
                                   <p className="text-xs text-muted-foreground">Fonte: {paciente.fonte_captacao}</p>
                                 )}

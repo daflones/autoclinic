@@ -8,10 +8,11 @@ export function usePacientes(filters: PacienteFilters = {}) {
   const query = useQuery({
     queryKey: ['pacientes', filters],
     queryFn: () => pacientesService.getAll(filters),
-    staleTime: 1000 * 60 * 5,
+    staleTime: 0,
     gcTime: 1000 * 60 * 10,
-    refetchInterval: false,
-    refetchOnWindowFocus: false,
+    refetchInterval: 10000,
+    refetchIntervalInBackground: false,
+    refetchOnWindowFocus: true,
     refetchOnReconnect: true,
   })
 
@@ -40,8 +41,10 @@ export function usePacientesStatusStats() {
   return useQuery({
     queryKey: ['pacientes-status-stats'],
     queryFn: () => pacientesService.getStatusStats(),
-    staleTime: 1000 * 60 * 2,
-    refetchOnWindowFocus: false,
+    staleTime: 0,
+    refetchInterval: 10000,
+    refetchIntervalInBackground: false,
+    refetchOnWindowFocus: true,
   })
 }
 

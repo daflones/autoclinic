@@ -4356,11 +4356,66 @@ app.get(/^(?!\/api\/).*/, (req, res) => {
   res.sendFile(path.join(distDir, 'index.html'))
 })
 
+// =====================================================
+// Backend Polling: Pacientes Data Change Detection
+// =====================================================
+let pacientesLastHash = new Map() // Map<adminProfileId, hash>
+
+async function fetchPacientesHash(adminProfileId) {
+  try {
+    const data = await supabaseRest(`pacientes?select=id,updated_at&admin_profile_id=eq.${adminProfileId}&order=updated_at.desc&limit=1000`, { method: 'GET' })
+    const items = Array.isArray(data) ? data : []
+    return JSON.stringify(items.map(p => ({ id: p.id, updated_at: p.updated_at })))
+  } catch (err) {
+    console.error('[pacientes-polling] Error fetching hash:', err.message)
+    return null
+  }
+}
+
+// Poll all active admin profiles every 10s
+setInterval(async () => {
+  try {
+    const profiles = await supabaseRest('profiles?select=id&role=eq.profissional', { method: 'GET' })
+    const adminIds = Array.isArray(profiles) ? profiles.map(p => p.id) : []
+    
+    for (const adminId of adminIds) {
+      const freshHash = await fetchPacientesHash(adminId)
+      if (freshHash && pacientesLastHash.get(adminId) !== freshHash) {
+        pacientesLastHash.set(adminId, freshHash)
+      }
+    }
+  } catch (err) {
+    console.error('[pacientes-polling] Error in interval:', err.message)
+  }
+}, 10000)
+
+// GET /api/pacientes/check-updates — lightweight endpoint to check if data changed
+app.get('/api/pacientes/check-updates', requireAuth, async (req, res) => {
+  try {
+    const { clinicAdminId } = await resolveClinicAdminAndInstance(req.accessToken)
+    const currentHash = await fetchPacientesHash(clinicAdminId)
+    const lastHash = pacientesLastHash.get(clinicAdminId)
+    
+    // First time or data changed
+    const hasUpdates = !lastHash || lastHash !== currentHash
+    
+    if (hasUpdates && currentHash) {
+      pacientesLastHash.set(clinicAdminId, currentHash)
+    }
+    
+    res.json({ hasUpdates })
+  } catch (err) {
+    console.error('[pacientes/check-updates]', err.message)
+    res.status(500).json({ error: err.message })
+  }
+})
+
 // Iniciar servidor HTTP
 server.listen(PORT, () => {
   console.log(`Servidor HTTP rodando na porta ${PORT}`);
   console.log(`WebSocket rodando em /whatsapp-web`);
   console.log('Servidor WhatsApp Web pronto. Aguardando conexões...');
+  console.log('Backend polling de pacientes iniciado (10s interval)');
 });
 
 // Lidar com sinais de encerramento

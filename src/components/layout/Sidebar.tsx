@@ -150,7 +150,7 @@ const menuItems: MenuItem[] = [
     icon: MessageCircle,
     href: '/app/whatsapp',
     color: 'from-primary-400 to-secondary-400',
-    allowedRoles: ADMIN_ROLES,
+    allowedRoles: ALL_ROLES,
     subItems: [
       {
         label: 'Chat WhatsApp',
@@ -164,14 +164,14 @@ const menuItems: MenuItem[] = [
         icon: Send,
         href: '/app/whatsapp?section=disparos',
         color: 'from-primary-400 to-secondary-400',
-        allowedRoles: ADMIN_ROLES,
+        allowedRoles: ALL_ROLES,
       },
       {
         label: 'Instagram',
         icon: Instagram,
         href: '/app/instagram',
         color: 'from-pink-400 to-purple-500',
-        allowedRoles: ADMIN_ROLES,
+        allowedRoles: ALL_ROLES,
       },
     ],
   },
